@@ -18,16 +18,15 @@ Get the latest stable build directly from GitHub:
 
 ## 📺 Features
 
-* Optimized for TV remotes and leanback interfaces
+* Optimized for stability and performance with integrated discord Rich presence 
 * Clean, ad-free navigation
 * Lightweight playback engine with subtitle support
-* Multi-platform support (Android TV, Google TV, Firestick)
 
 ---
 
 ## 🛠️ Installation Guide
 
-### Android TV / Google TV / Firestick
+### Android 8+ Devices
 1. Install **Downloader** by AFTVnews from your device's app store.
 2. In your device settings, enable **Install unknown apps** for the Downloader application.
 3. Open Downloader and paste the direct APK URL from the [Releases](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest) section.
