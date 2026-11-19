@@ -11,7 +11,7 @@ name: publish Kuro 5.81 release
 
 on:
   push:
-    branches: [arena/0514044e-kuro-tv-releases]
+    branches: [arena/be079b46-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APK_SHA256: bcfe3e2f05f8e13b36469d71abcb71ff4f3c31a9744217247055f82d2a25f891
+      APK_SHA256: d4abcf1cd30ab7c7dc59bc604f6489dc8e8570f57443ae8fb6ab5fee9152ec56
       TAG: v5.81
     steps:
       - uses: actions/checkout@v4
@@ -44,9 +44,9 @@ jobs:
               "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t"
             printf '  %s  %s bytes\n' "$name" "$(stat -c%s "dist/$name")"
           }
-          dl 1lbKoY6dk649lMcMWRdr0kFHYczi85aKW Kuro-tv-5.81.apk
-          dl 1ty61WZz_IajSQD0jhiuy-HyyzEp7Cg4P Kuro-tv-5.81.apk.sha256
-          dl 1ujNX216o4mJGeRpO6e3yXoIwzXDSeQYA Kuro-tv-5.81-Source.zip
+          dl 1ytsxEQ5oq19BEqDEpxY8XGYdJDHaNENZ Kuro-tv-5.81.apk
+          dl 1-1KotjkZmGW8VQ1bubC7078o81JX-WMb Kuro-tv-5.81.apk.sha256
+          dl 1xUtHzZ1OYHRtr12R1i8UCtVER2-bkFgp Kuro-tv-5.81-Source.zip
           file dist/* | sed 's/^/  /'
 
       - name: Gate on the exact build that was signed
@@ -76,6 +76,8 @@ jobs:
             echo "::error::the APK is missing assets/smooth-ui.js - wrong build attached"; exit 1; }
           unzip -p "$APK" 'classes*.dex' | grep -aq 'castStart561' || {
             echo "::error::the APK has no cast hand-back code - wrong build attached"; exit 1; }
+          unzip -p "$APK" 'assets/accounts542.js' | grep -aq 'profile-stats571' || {
+            echo "::error::the APK has no account activity strip - wrong build attached"; exit 1; }
           echo "All artifacts sane; APK matches the signed build."
 
       - name: Publish the release

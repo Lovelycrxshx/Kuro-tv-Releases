@@ -8,3 +8,6 @@ work/
 
 # build artifacts from the CI runner stay out of the published site tree
 dist/*.apk
+
+# temporary staging copies pulled by fetch-source.yml
+staging/*.zip

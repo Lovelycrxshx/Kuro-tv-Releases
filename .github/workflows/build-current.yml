@@ -18,7 +18,7 @@ name: build Kuro (current version)
 
 on:
   push:
-    branches: [arena/0514044e-kuro-tv-releases]
+    branches: [arena/be079b46-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
@@ -30,7 +30,7 @@ concurrency:
 
 env:
   APK_NAME: Kuro-tv-5.81
-  SOURCE_ID: 1ujNX216o4mJGeRpO6e3yXoIwzXDSeQYA
+  SOURCE_ID: 1xUtHzZ1OYHRtr12R1i8UCtVER2-bkFgp
   EXPECT_VERSION_NAME: "5.81"
   EXPECT_VERSION_CODE: "84"
 
@@ -112,6 +112,14 @@ jobs:
             || { echo "::error::smooth-ui.css is not linked in index.html."; exit 1; }
           grep -q 'smooth-ui.js' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" \
             || { echo "::error::smooth-ui assets are not whitelisted in the WebView."; exit 1; }
+          grep -q 'profile-stats571' "$PROJECT/assets/accounts542.js" \
+            || { echo "::error::the account activity strip is missing."; exit 1; }
+          grep -q 'profile-stats571' "$PROJECT/assets/accounts542.css" \
+            || { echo "::error::the account activity strip has no styles."; exit 1; }
+          grep -q 'profile-art-row571' "$PROJECT/assets/accounts542.js" \
+            || { echo "::error::the profile art strip is missing."; exit 1; }
+          grep -q 'profile-art-tile571' "$PROJECT/assets/accounts542.css" \
+            || { echo "::error::the profile art strip has no styles."; exit 1; }
           grep -q 'name="KuroDialogTheme"' "$PROJECT/res/values/styles.xml" \
             || { echo "::error::KuroDialogTheme missing from styles.xml."; exit 1; }
           themed=$(grep -c 'KuroDialogs581.themed' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java")
@@ -256,7 +264,8 @@ jobs:
           cd out
           git config user.name  "kuro-build"
           git config user.email "kuro-build@users.noreply.github.com"
-          git add -A dist 2>/dev/null
+          # -f: dist/*.apk is ignored in the repo, but the build artifact must travel back
+          git add -f -A dist 2>/dev/null
           git commit -m "build: current-version runner log + aligned APK (unsigned)" 2>/dev/null
           if ! OUT_ERR=$(git push origin "HEAD:${GITHUB_REF_NAME}" 2>&1); then
             echo "::warning::push failed: $(printf '%s' "$OUT_ERR" | tr '\n' ' ' | cut -c1-400)"
