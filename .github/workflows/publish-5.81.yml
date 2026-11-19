@@ -55,7 +55,9 @@ jobs:
           APK=dist/Kuro-tv-5.81.apk
           SIZE=$(stat -c%s "$APK")
           echo "APK size: $SIZE"
-          if [ "$SIZE" -lt 50000000 ]; then
+          # rev 7 dropped 483 artwork files, so the APK is ~45 MB; 30 MB still catches
+          # a Drive interstitial page, which is a few kilobytes.
+          if [ "$SIZE" -lt 30000000 ]; then
             echo "::error::APK is only $SIZE bytes - that looks like a Drive interstitial page, not the build."
             head -c 300 "$APK"; exit 1
           fi
