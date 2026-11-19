@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      SOURCE_ID: 1pQgzHzATuw6UDz_X5H0eP6AqMZUbpMuk
+      SOURCE_ID: 1C6WvMPpDZIyyn4UMcIARIchD9Ydz2LeT
       OUT: staging/Kuro-tv-5.81-Source.zip
       MIN_BYTES: 15000000
     steps:
