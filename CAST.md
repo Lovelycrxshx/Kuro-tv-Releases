@@ -1,6 +1,6 @@
-# Cast in 5.82 — what changed and what it costs
+# Cast — what changed and what it costs
 
-## What 5.81 actually had
+## What the Cast screen was before
 
 `KuroCastActivity561` was a 73-line screen: a device picker, three buttons (Play / Pause /
 Stop) and two hardcoded colours (`0xff12091c`, `0xff44265b`) that match nothing else in the
@@ -19,9 +19,9 @@ Four consequences, all real:
 4. **No state.** "Buffering", "TV disconnected", "receiver refused the stream" and
    "finished" all rendered as the same grey sentence.
 
-## What 5.82 does
+## What it does now
 
-| Area | 5.81 | 5.82 |
+| Area | Before | Now |
 |---|---|---|
 | Panel | two hardcoded colours | app palette (`KuroDialogs581`): panel, card, violet accent, ink/muted, focus rings |
 | Timeline | none | live position + duration, scrub sends `RemoteMediaClient.seek` |

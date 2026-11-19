@@ -1,6 +1,6 @@
-name: build Kuro 5.82 APK
+name: build Kuro (current version)
 
-# Builds Kuro 5.82 (versionCode 85) from the source zip stored in Drive, commits the
+# Builds the CURRENT Kuro version from the source zip stored in Drive, commits the
 # *aligned but unsigned* APK back to this branch, and never sees the signing key — the
 # owner signs afterwards with the existing release key (CN=Kuro Anime), so no repository
 # secrets are involved.
@@ -12,9 +12,9 @@ name: build Kuro 5.82 APK
 # The Discord Social SDK URL is a short-lived signed URL and must not be stored, so it
 # travels in the commit message:
 #
-#     git commit --allow-empty -m "[build82] sdk=<signed sdk zip url>"
+#     git commit --allow-empty -m "[build] sdk=<signed sdk zip url>"
 #
-# Only commits whose message contains "[build82]" run the job.
+# Only commits whose message contains "[build]" run the job.
 
 on:
   push:
@@ -25,18 +25,18 @@ permissions:
   contents: write
 
 concurrency:
-  group: kuro-5.82
+  group: kuro-current
   cancel-in-progress: false
 
 env:
-  APK_NAME: Kuro-tv-5.82
-  SOURCE_ID: 18lN5krY6oqXmhKUdHiwfVInYjGYf_pnh
-  EXPECT_VERSION_NAME: "5.82"
-  EXPECT_VERSION_CODE: "85"
+  APK_NAME: Kuro-tv-5.81
+  SOURCE_ID: 185taXBjaZwmosfLheCIRXdw1uLCS145w
+  EXPECT_VERSION_NAME: "5.81"
+  EXPECT_VERSION_CODE: "84"
 
 jobs:
   apk:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[build82]')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[build]')
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -74,7 +74,7 @@ jobs:
           test -x "$ANDROID_HOME/build-tools/35.0.1/zipalign"
           echo "SDK pieces verified."
 
-      - name: Download the 5.82 source zip from Drive
+      - name: Download the current source zip from Drive
         run: |
           set -euo pipefail
           URL="https://drive.usercontent.google.com/download?id=${SOURCE_ID}&export=download&confirm=t"
@@ -93,7 +93,7 @@ jobs:
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
           grep -o 'android:versionCode="[0-9]*" android:versionName="[^"]*"' "$PROJECT/AndroidManifest.xml"
 
-      - name: Verify the 5.82 changes are in this source
+      - name: Verify the expected changes are in this source
         run: |
           set -euo pipefail
           test -f "$PROJECT/src/app/lovelycrxshx/kuro/KuroDialogs581.java" \
@@ -121,7 +121,7 @@ jobs:
           set -euo pipefail
           URL=$(printf '%s\n' "$MSG" | tr -d '\r' | grep -oE 'sdk=[^ ]+' | head -1 | cut -d= -f2-)
           if [ -z "${URL:-}" ]; then
-            echo "::error::No sdk=<url> in the commit message. Push '[build82] sdk=<signed url>'."
+            echo "::error::No sdk=<url> in the commit message. Push '[build] sdk=<signed url>'."
             exit 1
           fi
           echo "Discord SDK host: $(printf '%s' "$URL" | cut -d/ -f3)"
@@ -189,7 +189,7 @@ jobs:
             ls -lR build/outputs
           } > "$LOG" 2>&1 || rc=$?
           [ "$(grep -cE 'FAILURE: Build failed|Execution failed for task' "$LOG" || true)" -gt 0 ] && rc=1
-          cp -f "$LOG" "$GITHUB_WORKSPACE/out/dist/build-5.82.log" 2>/dev/null || cp -f "$LOG" "$GITHUB_WORKSPACE/build.log" 2>/dev/null || true
+          cp -f "$LOG" "$GITHUB_WORKSPACE/out/dist/build-current.log" 2>/dev/null || cp -f "$LOG" "$GITHUB_WORKSPACE/build.log" 2>/dev/null || true
           echo "::warning::build exit=$rc, $(wc -l < "$LOG") log lines"
           grep -nE 'error:|error;|FAILURE|Execution failed|cannot find symbol|Caused by:|^\s*\^|What went wrong' "$LOG" \
             | tail -40 | while IFS= read -r line; do echo "::error::$(printf '%s' "$line" | cut -c1-380)"; done
@@ -218,12 +218,12 @@ jobs:
         run: |
           set +e
           mkdir -p out/dist out/dist/toolchain
-          for candidate in "$RUNNER_TEMP/build.log" out/dist/build-5.82.log "$GITHUB_WORKSPACE/build.log"; do
-            if [ -s "$candidate" ]; then cp -f "$candidate" out/dist/build-5.82.log; break; fi
+          for candidate in "$RUNNER_TEMP/build.log" out/dist/build-current.log "$GITHUB_WORKSPACE/build.log"; do
+            if [ -s "$candidate" ]; then cp -f "$candidate" out/dist/build-current.log; break; fi
           done
-          if [ -s out/dist/build-5.82.log ]; then
-            echo "::warning::build log has $(wc -l < out/dist/build-5.82.log) lines"
-            grep -nE 'error:|Execution failed|FAILURE' out/dist/build-5.82.log | tail -20 \
+          if [ -s out/dist/build-current.log ]; then
+            echo "::warning::build log has $(wc -l < out/dist/build-current.log) lines"
+            grep -nE 'error:|Execution failed|FAILURE' out/dist/build-current.log | tail -20 \
               | while IFS= read -r line; do echo "::warning::${line}"; done
           else
             echo "::warning::no build log produced"
@@ -249,7 +249,7 @@ jobs:
           git config user.name  "kuro-build"
           git config user.email "kuro-build@users.noreply.github.com"
           git add -A dist 2>/dev/null
-          git commit -m "build: 5.82 runner log + aligned APK (unsigned)" 2>/dev/null
+          git commit -m "build: current-version runner log + aligned APK (unsigned)" 2>/dev/null
           if ! OUT_ERR=$(git push origin "HEAD:${GITHUB_REF_NAME}" 2>&1); then
             echo "::warning::push failed: $(printf '%s' "$OUT_ERR" | tr '\n' ' ' | cut -c1-400)"
           else
@@ -260,5 +260,5 @@ jobs:
       - name: Fail the run if the build failed
         if: always() && steps.build.outcome != 'success'
         run: |
-          echo "::error::compile failed - see dist/build-5.82.log on ${GITHUB_REF_NAME}"
+          echo "::error::compile failed - see dist/build-current.log on ${GITHUB_REF_NAME}"
           exit 1

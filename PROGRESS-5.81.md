@@ -1,5 +1,16 @@
 # Kuro 5.81 — build progress
 
+## Version policy (owner instruction)
+
+**The version is never bumped unless the owner says so.** `versionName 5.81` / `versionCode 84`
+stay in `build.gradle` and `AndroidManifest.xml` while improvements accumulate in this line.
+The build workflow asserts the *existing* version rather than a new one, and release notes /
+`index.html` keep pointing at 5.81.
+
+Consequence to keep in mind: an APK rebuilt with the same `versionCode` cannot be offered by the
+in-app updater (it only offers a strictly higher code), so an improved 5.81 has to be sideloaded
+until the owner asks for a bump.
+
 **Status: released.** `v5.81` is live and is the latest release —
 `Kuro-tv-5.81.apk` (55,021,231 B, sha256 `209b799d525450a59d36811c3c46238acd1fe92b6085bb544f87cdc0a60c9fe1`),
 `Kuro-tv-5.81.apk.sha256`, `Kuro-tv-5.81-Source.zip` (16,270,964 B). Version 5.81 / versionCode 84,
@@ -45,7 +56,8 @@ class touches was verified to exist in `android-35/android.jar`
 `ViewTreeObserver`, `ContextThemeWrapper`, `Window`, `MarginLayoutParams.setMarginStart`, …).
 
 ### Version
-`AndroidManifest.xml` in the 5.81 source: `versionCode 84`, `versionName 5.81`.
+Unchanged: `versionCode 84`, `versionName 5.81` in both `build.gradle` (the value AGP actually
+uses) and `AndroidManifest.xml`. See the version policy above.
 
 ## Build pipeline (used for the 5.81 release)
 - `Kuro-tv-5.81-Source.zip` — uploaded to the Drive **Kuro** folder
@@ -64,9 +76,17 @@ Resolved while cutting the release:
 - **AGP ignores the manifest version**: the first green build was still 5.80/83. `build.gradle`
   is the source of truth, and the workflow now asserts `versionCode 84` on the built artifact.
 
+### Cast handoff rebuild (in the current version)
+See [CAST.md](CAST.md). Replaces the 73-line device picker with a themed panel, a real
+`MediaSession` + notification, a working timeline, and a position hand-back so the phone
+resumes where the TV stopped (`KuroNativePlayer561.seekTo582`, `MainActivity.returnFromCast582`).
+Packaged as `Kuro-tv-5.81-Source.zip` rev 2 (Drive id `185taXBjaZwmosfLheCIRXdw1uLCS145w`).
+
 ## Still to do
 1. Merge the page update to `main` so the published download page shows 5.81 (Pages serves from `main`).
 2. Drive cleanup: move the superseded 5.80 APK, its checksum and the empty
    `Kuro-tv-5.81-Source.zip` revision (id `1_ofr8V7nVGlavv-sNVNziu5oaz6tCFoJ`, 0 bytes) to trash.
-3. Feature work from [PLAN-5.81.md](PLAN-5.81.md) wave A (#1, #3, #4, #15, #17) and the profile
+3. Build + sign the current version once a fresh Discord SDK URL is available:
+   `git commit --allow-empty -m "[build] sdk=<url>"`.
+4. Feature work from [PLAN-5.81.md](PLAN-5.81.md) wave A (#1, #3, #4, #15, #17) and the profile
    section from [SPEC-PROFILES.md](SPEC-PROFILES.md) — the dialog theming was the presentation slice.
