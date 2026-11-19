@@ -6,7 +6,7 @@ Signed with the original Kuro release key (`CN=Kuro Anime`), so this installs st
 5.72 – 5.80. **Do not uninstall or clear data.**
 
 ```
-SHA-256  bcfe3e2f05f8e13b36469d71abcb71ff4f3c31a9744217247055f82d2a25f891
+SHA-256  d4abcf1cd30ab7c7dc59bc604f6489dc8e8570f57443ae8fb6ab5fee9152ec56
 Size     55,045,938 bytes
 ```
 
@@ -45,6 +45,12 @@ that dropped you on the TV with no controls and threw away your position on the 
 - everything collapses to no-motion under Android's *Remove animations* setting, and the
   haptic tick on press is a single 6 ms pulse.
 
+**The account page now answers "how much have I watched?"** — a three-up strip under the
+hero (episodes, series tracked, saved bookmarks) built from data the page already had, a
+"Your art" row showing the current avatar and banner choices that opens the artwork picker
+on the right tab, and press feedback on the avatar chip. Nothing new to store, nothing new
+to sync.
+
 **Profiles and settings keep the app's own palette.** The 5.81 dialog toolkit is unchanged and
 still covers every native alert — no stock-Material grey left in settings.
 
@@ -70,7 +76,7 @@ adb install -r Kuro-tv-5.81.apk
 
 ```bash
 sha256sum Kuro-tv-5.81.apk
-# bcfe3e2f05f8e13b36469d71abcb71ff4f3c31a9744217247055f82d2a25f891
+# d4abcf1cd30ab7c7dc59bc604f6489dc8e8570f57443ae8fb6ab5fee9152ec56
 
 apksigner verify --print-certs Kuro-tv-5.81.apk
 # CN=Kuro Anime
