@@ -5,3 +5,6 @@ tools/kuro-keystore.b64.txt
 # working tree: downloaded source zips and unpacked trees stay out of git
 google_drive/
 work/
+
+# build artifacts from the CI runner stay out of the published site tree
+dist/*.apk

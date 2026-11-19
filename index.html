@@ -141,7 +141,9 @@
     </ol>
     <p class="warn" style="margin-top:16px">
       Already on an older Kuro? Install straight over it — <strong>do not uninstall first</strong>.
-      Same package, same signing key, higher version code, so your profiles, watch list, history and logins stay put.
+      Same package, same signing key, so your profiles, watch list, history and logins stay put.
+      This re-cut of 5.81 keeps the same version code, so the in-app updater won't offer it — install it
+      by hand, over the top, to get it.
     </p>
   </section>
 
@@ -150,7 +152,7 @@
     <p class="muted">Every build is signed with the same key since 5.62. Compare the SHA-256 of the file you
       downloaded with this one.</p>
     <div class="hashbox">
-      <code id="sha">209b799d525450a59d36811c3c46238acd1fe92b6085bb544f87cdc0a60c9fe1</code>
+      <code id="sha">bcfe3e2f05f8e13b36469d71abcb71ff4f3c31a9744217247055f82d2a25f891</code>
       <button class="copy" onclick="copyHash(this)">Copy</button>
     </div>
     <p class="muted" style="margin-top:12px">
@@ -162,6 +164,18 @@
   <section class="card new">
     <h2>What's new in 5.81</h2>
     <ul>
+      <li><strong>Casting to Google TV works.</strong> The old hand-off was a bare list of device names that
+        dropped you on the TV with no controls. Now there is a themed cast panel with the device name and a
+        live state line, a one-second timeline with a seek bar, Play/Pause and Stop that act on the session,
+        &ldquo;Keep playing on TV&rdquo; vs &ldquo;Resume here&rdquo;, a media-style notification so the phone
+        can be locked, and a position hand-back so you never lose your place.</li>
+      <li><strong>One motion language everywhere.</strong> Spring press feedback, keyboard-only focus rings,
+        a blurred header that gains a shadow as you scroll, dialogs and hero banners that ease in, cards that
+        lift, artwork that fades in as it decodes, and crossfade page transitions where the platform supports
+        them.</li>
+      <li><strong>The profile section is smoother.</strong> Banner parallax that is transform-only, an avatar
+        grid that sweeps in when you change artwork, and a 6 ms haptic tick on press. Everything collapses to
+        no-motion when Android's animations are turned off.</li>
       <li><strong>Settings dialogs match the app.</strong> The update dialogs were the last stock-Material
         surface in Kuro — grey panel, system accent, flat rows. They are rebuilt on the app's own palette:
         rounded violet panel, ink and muted text, and footer actions with real focus rings.</li>
@@ -175,8 +189,8 @@
       <li><strong>Remote first.</strong> Every action and option is focusable with a visible ring, and focus
         starts on the primary action or the selected option, so a DPAD never has to hunt.</li>
     </ul>
-    <p class="muted">Playback, catalogue parsing, mirrors, Discord presence, downloads, Cast, PiP and update
-      behaviour are unchanged from 5.80 — this build changes presentation and the version stamp.</p>
+    <p class="muted">Playback engine, catalogue parsing, mirrors, Discord presence, downloads, PiP and the
+      updater behave exactly as they did in 5.80 — this cut adds the cast screen and the motion layer.</p>
   </section>
 
   <section class="card">
@@ -240,7 +254,7 @@
     </details>
     <details>
       <summary>What are the source files for?</summary>
-      <p>Transparency. <span class="mono">Kuro-tv-5.81-Source.zip</span> (15.52 MiB) is the complete Gradle tree this APK was built from, for
+      <p>Transparency. <span class="mono">Kuro-tv-5.81-Source.zip</span> (15.53 MiB) is the complete Gradle tree this APK was built from, for
         anyone who wants to read the code that handles their data.</p>
     </details>
     <details>
@@ -254,7 +268,7 @@
     <p>Kuro.tv is built by <strong>lovelycrxshx</strong>.<br>
       Independent project — not affiliated with Google, Android, or any streaming service.<br>
       <a href="https://github.com/Lovelycrxshx/Kuro-tv-Releases">GitHub repository</a> · <a href="https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/tag/v5.81">Release v5.81</a> ·
-      <span class="mono">209b799d5254…</span></p>
+      <span class="mono">bcfe3e2f05f8…</span></p>
   </footer>
 
 </div>
