@@ -99,8 +99,8 @@ jobs:
             fi
             echo "$OUT"
           fi
-          gh release view "$TAG" --json tagName,name,isLatest,assets \
-            --jq '"published \(.tagName) | latest=\(.isLatest) | assets: \(.assets|map("\(.name) \(.size)B")|join(", "))"'
+          gh release view "$TAG" --json tagName,name,assets \
+            --jq '"published \(.tagName) \(.name) | assets: \(.assets|map("\(.name) \(.size)B")|join(", "))"'
 
       - name: Summary
         if: always()
