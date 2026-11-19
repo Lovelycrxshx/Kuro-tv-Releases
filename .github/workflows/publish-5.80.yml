@@ -78,21 +78,29 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           ASSETS=(dist/Kuro-tv-5.80.apk dist/Kuro-tv-5.80.apk.sha256
                   dist/Kuro-tv-5.80-Source.zip dist/Kuro-tv-5.80-Source.txt)
+          echo "--- token/repo visibility ---"
+          gh auth status 2>&1 | head -5
+          gh api "repos/${GITHUB_REPOSITORY}" --jq '"repo=\(.full_name) private=\(.private) permissions=\(.permissions)"' 2>&1 | head -3
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "release $TAG exists - uploading assets with --clobber"
-            gh release upload "$TAG" "${ASSETS[@]}" --clobber
-            gh release edit "$TAG" --notes-file RELEASE-5.80.md --latest
+            echo "release $TAG exists - uploading assets"
+            if ! OUT=$(gh release upload "$TAG" "${ASSETS[@]}" --clobber 2>&1); then
+              echo "::error::release upload failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
+            fi
+            if ! OUT=$(gh release edit "$TAG" --notes-file RELEASE-5.80.md --latest 2>&1); then
+              echo "::error::release edit failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
+            fi
           else
-            gh release create "$TAG" "${ASSETS[@]}" \
-              --title "Kuro 5.80" \
-              --notes-file RELEASE-5.80.md \
-              --latest
+            if ! OUT=$(gh release create "$TAG" "${ASSETS[@]}" \
+                 --title "Kuro 5.80" --notes-file RELEASE-5.80.md --latest 2>&1); then
+              echo "::error::release create failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
+            fi
+            echo "$OUT"
           fi
           gh release view "$TAG" --json tagName,name,isLatest,assets \
-            --jq '"published \(.tagName) | latest=\(.isLatest) | assets: \(.assets|map("\(.name) (\(.size) B)")|join(", "))"'
+            --jq '"published \(.tagName) | latest=\(.isLatest) | assets: \(.assets|map("\(.name) \(.size)B")|join(", "))"'
 
       - name: Summary
         if: always()
