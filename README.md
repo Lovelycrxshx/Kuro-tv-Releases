@@ -12,13 +12,26 @@ An open-source media client designed for Android TV, Fire TV, and mobile devices
 Get the latest stable build directly from GitHub:
 
 * **[Download Latest APK](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)**
-* **Downloader Code (AFTV):** `[Your Downloader shortcode if you have one, or remove this line]`
+* Direct APK: [`Kuro-tv-5.80.apk`](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v5.80/Kuro-tv-5.80.apk)
 
 ---
 
+## 🗂️ Sources & mirrors
+
+Kuro is a player / front-end and hosts no media. The catalogue comes from these public
+HiAnime mirrors, tried in order — first host that answers wins:
+
+| Domain | Home |
+|---|---|
+| hianime.fm | https://hianime.fm/home |
+| hianime.al | https://hianime.al/home |
+| hianimes.es | https://hianimes.es/home |
+
 ## 📺 Features
 
-* Optimized for stability and performance with integrated discord Rich presence 
+* Optimized for stability and performance with integrated Discord Rich Presence (Social SDK 1.11.24259)
+* Native Media3 / ExoPlayer playback, offline downloads, Google Cast and picture-in-picture
+* Built against Android 15 (API 35) with 16 KB page-aligned native libraries
 * Clean, ad-free navigation
 * Lightweight playback engine with subtitle support
 
