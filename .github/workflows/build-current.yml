@@ -30,7 +30,7 @@ concurrency:
 
 env:
   APK_NAME: Kuro-tv-5.81
-  SOURCE_ID: 1IfgynziYo6Wb8yTtf2tychbIn02Ttw00
+  SOURCE_ID: 1ujNX216o4mJGeRpO6e3yXoIwzXDSeQYA
   EXPECT_VERSION_NAME: "5.81"
   EXPECT_VERSION_CODE: "84"
 
@@ -104,6 +104,8 @@ jobs:
             || { echo "::error::seekTo582 missing from the native player."; exit 1; }
           grep -q 'returnFromCast582' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" \
             || { echo "::error::returnFromCast582 missing from MainActivity."; exit 1; }
+          grep -q 'castStart561=0' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" \
+            || { echo "::error::the castStart561 field is missing from MainActivity."; exit 1; }
           test -f "$PROJECT/assets/smooth-ui.css" && test -f "$PROJECT/assets/smooth-ui.js" \
             || { echo "::error::smooth-ui layer missing from assets."; exit 1; }
           grep -q 'smooth-ui.css' "$PROJECT/assets/index.html" \
