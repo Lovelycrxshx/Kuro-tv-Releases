@@ -18,14 +18,7 @@ Get the latest stable build directly from GitHub:
 
 ## 🗂️ Sources & mirrors
 
-Kuro is a player / front-end and hosts no media. The catalogue comes from these public
-HiAnime mirrors, tried in order — first host that answers wins:
-
-| Domain | Home |
-|---|---|
-| hianime.fm | https://hianime.fm/home |
-| hianime.al | https://hianime.al/home |
-| hianimes.es | https://hianimes.es/home |
+Kuro is a player / front-end and hosts no media. The catalogue comes from these public mirrors, tried in order — first host 
 
 ## 📺 Features
 
