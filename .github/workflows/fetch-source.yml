@@ -10,7 +10,7 @@ name: fetch current source for editing
 
 on:
   push:
-    branches: [arena/550cae70-kuro-tv-releases]
+    branches: [arena/35efde43-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      SOURCE_ID: 1_qX9fJFFXIcTVDcBHLQBmKL_3PIUwHNs
+      SOURCE_ID: 19mIs0kzSaVjceQAfzTClOUYgUe4GO4Cl
       OUT: staging/Kuro-tv-5.81-Source.zip
       MIN_BYTES: 15000000
     steps:
