@@ -189,3 +189,18 @@ Rev 8 moves the features onto the surfaces the app really renders:
 Verified offline: `tests/smoke-unified581.cjs` (hero deck through `unifiedSpotlight`, duplicate
 suppression, NEW chip markup, chip facets/counts/combined filter) and `tests/smoke-profile571.cjs`
 both pass; all four touched Java files parse; the build guards were extended and pass locally.
+
+### Rev 8 shipped (2026-11-19)
+
+- Build run `44596547566` — success; the first attempt (`44595951472`) failed on one typo,
+  `gradientHud()` instead of `gradientHud581()` in the HUD constructor. Fixed, re-cut, rebuilt.
+- Signed locally with the original `CN=Kuro Anime` key recovered from Drive
+  (`Kuro-Anime-Signing-Key.p12`, legacy PKCS#12 → `openssl pkcs12 -legacy` → modern.p12, alias
+  `kuroanime`). Cert fingerprint unchanged: `1D:37:C3:CA:…:3E`.
+- **APK 45,441,821 B, sha256 `264dba12268c6e6d8cebcdeef4ed15277ba4962dcdbcaad0c5c00cde388fca60`**,
+  release `v5.81` re-cut (publish run `44597435272`, all gates green including the new rev-8 gates),
+  merged to `main` as `2169c42` via squash (binary-free), Pages deployed.
+- Drive: APK `1hAnxwYtEhRQMogbKCTqEAmMNY-1waWNx`, sha `1Rqeu8yLaKG6jTDpt6PAP_kCk4r0Dz8jC`,
+  source `1_qX9fJFFXIcTVDcBHLQBmKL_3PIUwHNs` (also the `SOURCE_ID` both build workflows fetch).
+- The chat-visible SDK URL in the build commit expires an hour after issue; a fresh one is needed
+  for the next build.
