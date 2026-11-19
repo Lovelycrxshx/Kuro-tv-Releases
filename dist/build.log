@@ -1,0 +1,151 @@
+=== env ===
+ANDROID_HOME=/usr/local/lib/android/sdk
+ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/27.2.12479018
+KURO_DISCORD_SDK_AAR=/home/runner/work/_temp/sdk/discord_social_sdk/lib/release/discord_partner_sdk.aar
+aarch64-linux-android21-clang
+aarch64-linux-android21-clang++
+aarch64-linux-android22-clang
+aarch64-linux-android22-clang++
+aarch64-linux-android23-clang
+=== gradle wrapper ===
+-rwxr-xr-x 1 runner runner 8762 Nov 19 15:46 gradlew
+
+gradle/wrapper/:
+total 48
+-rw-r--r-- 1 runner runner 43583 Nov 19 15:46 gradle-wrapper.jar
+-rw-r--r-- 1 runner runner   341 Nov 19 15:46 gradle-wrapper.properties
+=== native bridge ===
+Built Kuro RPC bridge for arm64-v8a
+Built Kuro RPC bridge for armeabi-v7a
+Built Kuro RPC bridge for x86_64
+Built Kuro RPC bridge for x86
+=== gradle assembleRelease ===
+Downloading https://downloads.gradle.org/distributions/gradle-8.10.2-bin.zip
+.............10%.............20%.............30%.............40%.............50%.............60%.............70%.............80%.............90%.............100%
+
+Welcome to Gradle 8.10.2!
+
+Here are the highlights of this release:
+ - Support for Java 23
+ - Faster configuration cache
+ - Better configuration cache reports
+
+For more details see https://docs.gradle.org/8.10.2/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :preBuild UP-TO-DATE
+> Task :preReleaseBuild UP-TO-DATE
+> Task :javaPreCompileRelease
+> Task :checkReleaseAarMetadata
+> Task :generateReleaseResValues
+> Task :mapReleaseSourceSetPaths
+> Task :generateReleaseResources
+> Task :mergeReleaseResources
+> Task :packageReleaseResources
+> Task :parseReleaseLocalResources
+> Task :createReleaseCompatibleScreenManifests
+> Task :extractDeepLinksRelease
+
+> Task :processReleaseMainManifest
+package="app.lovelycrxshx.kuro" found in source AndroidManifest.xml: /home/runner/work/Kuro-tv-Releases/Kuro-tv-Releases/src/app/AndroidManifest.xml.
+Setting the namespace via the package attribute in the source AndroidManifest.xml is no longer supported, and the value is ignored.
+Recommendation: remove package="app.lovelycrxshx.kuro" from the source AndroidManifest.xml: /home/runner/work/Kuro-tv-Releases/Kuro-tv-Releases/src/app/AndroidManifest.xml.
+
+> Task :processReleaseManifest
+> Task :processReleaseManifestForPackage
+> Task :processReleaseResources
+
+> Task :compileReleaseJavaWithJavac
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :extractProguardFiles
+> Task :generateReleaseLintVitalReportModel
+> Task :lintVitalAnalyzeRelease
+> Task :lintVitalReportRelease
+> Task :lintVitalRelease
+> Task :mergeReleaseJniLibFolders
+> Task :mergeReleaseNativeLibs
+
+> Task :stripReleaseDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libkuro_discord_rpc563.so.
+
+> Task :extractReleaseNativeSymbolTables
+> Task :mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :checkReleaseDuplicateClasses
+> Task :dexBuilderRelease
+> Task :desugarReleaseFileDependencies
+> Task :mergeReleaseStartupProfile
+The Daemon will expire after the build after running out of JVM Metaspace.
+The project memory settings are likely not configured or are configured to an insufficient value.
+The daemon will restart for the next build, which may increase subsequent build times.
+These settings can be adjusted by setting 'org.gradle.jvmargs' in 'gradle.properties'.
+The currently configured max heap space is '512 MiB' and the configured max metaspace is '256 MiB'.
+For more information on how to set these values, please refer to https://docs.gradle.org/8.10.2/userguide/build_environment.html#sec:configuring_jvm_memory in the Gradle documentation.
+To disable this warning, set 'org.gradle.daemon.performance.disable-logging=true'.
+> Task :mergeExtDexRelease
+> Task :mergeDexRelease
+> Task :mergeReleaseArtProfile
+> Task :mergeReleaseGlobalSynthetics
+> Task :compileReleaseArtProfile
+> Task :mergeReleaseShaders
+> Task :compileReleaseShaders NO-SOURCE
+> Task :generateReleaseAssets UP-TO-DATE
+> Task :mergeReleaseAssets
+> Task :compressReleaseAssets
+> Task :extractReleaseVersionControlInfo
+> Task :processReleaseJavaRes NO-SOURCE
+> Task :mergeReleaseJavaResource
+> Task :optimizeReleaseResources
+> Task :collectReleaseDependencies
+> Task :sdkReleaseDependencyData
+> Task :writeReleaseAppMetadata
+> Task :writeReleaseSigningConfigVersions
+> Task :packageRelease
+> Task :createReleaseApkListingFileRedirect
+> Task :assembleRelease
+
+BUILD SUCCESSFUL in 1m 42s
+45 actionable tasks: 45 executed
+=== outputs ===
+build/outputs:
+total 12
+drwxr-xr-x 3 runner runner 4096 Nov 19 15:49 apk
+drwxr-xr-x 2 runner runner 4096 Nov 19 15:48 logs
+drwxr-xr-x 3 runner runner 4096 Nov 19 15:49 sdk-dependencies
+
+build/outputs/apk:
+total 4
+drwxr-xr-x 3 runner runner 4096 Nov 19 15:49 release
+
+build/outputs/apk/release:
+total 53576
+-rw-r--r-- 1 runner runner 54850352 Nov 19 15:49 Kuro-tv-release-unsigned.apk
+drwxr-xr-x 4 runner runner     4096 Nov 19 15:49 baselineProfiles
+-rw-r--r-- 1 runner runner      750 Nov 19 15:49 output-metadata.json
+
+build/outputs/apk/release/baselineProfiles:
+total 8
+drwxr-xr-x 2 runner runner 4096 Nov 19 15:49 0
+drwxr-xr-x 2 runner runner 4096 Nov 19 15:49 1
+
+build/outputs/apk/release/baselineProfiles/0:
+total 4
+-rw-r--r-- 1 runner runner 4002 Nov 19 15:49 Kuro-tv-release-unsigned.dm
+
+build/outputs/apk/release/baselineProfiles/1:
+total 4
+-rw-r--r-- 1 runner runner 3914 Nov 19 15:49 Kuro-tv-release-unsigned.dm
+
+build/outputs/logs:
+total 88
+-rw-r--r-- 1 runner runner 86371 Nov 19 15:48 manifest-merger-release-report.txt
+
+build/outputs/sdk-dependencies:
+total 4
+drwxr-xr-x 2 runner runner 4096 Nov 19 15:49 release
+
+build/outputs/sdk-dependencies/release:
+total 36
+-rw-r--r-- 1 runner runner 34152 Nov 19 15:49 sdkDependencies.txt
