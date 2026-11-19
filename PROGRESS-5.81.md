@@ -135,3 +135,25 @@ Done in the working source tree (`work/source/Kuro-tv-5.81-Source`, rev-6 base):
 Still to do: **8** search filter chips, **9** player gestures + HUD, **10** episode drawer +
 auto-next countdown; then repack, Drive, `[build]`, sign, upload, `[release]`, `index.html`,
 merge.
+
+### Wave 2 shipped as a 5.81 re-cut (rev 7, versionCode 84)
+
+```
+APK      Kuro-tv-5.81.apk · 45,437,725 B (was 55,045,938 B)
+SHA-256  541f1b73ad1ad32ec92a3bba880cedbd67a3a829a4b0f4c28632812be10c960a
+Source   Kuro-tv-5.81-Source.zip · 6,778,856 B (was 16,283,649 B)
+cert     CN=Kuro Anime (unchanged, SHA-256 1d37c3ca…)
+```
+
+Build run **44592292525** (`[build]` on this branch), publish run **44593259680** (`[release]`).
+Drive folder now holds exactly one copy of each: APK `1rdI8LetQXVYZtEeo2K-26c328KmbSU3e`,
+sha `1vLeyQKRFcS22C3l-6U5L5Zdydm9_cAXk`, source `1pQgzHzATuw6UDz_X5H0eP6AqMZUbpMuk`;
+the two superseded sources (incl. the rev-6 one) and the old APK/sha were trashed.
+
+Two pipeline fixes are needed every time this branch changes:
+`build-current.yml` and `publish-5.81.yml` still filtered on the previous editing branch
+(`arena/d9a61230-…`) — both now point at `arena/c7139fd4-…`. The publish size gate refused
+anything under 50 MB as a "Drive interstitial page"; with the artwork gone the APK is 45 MB,
+so the floor is now 30 MB (an interstitial is a few KB). New gates assert the APK carries
+`profile-mono571` and `hero-track581`, and that no `preset571-`/`profile-avatar547` artwork
+is shipped.
