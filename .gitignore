@@ -1,3 +1,7 @@
 
 # signing material - never commit
 tools/kuro-keystore.b64.txt
+
+# working tree: downloaded source zips and unpacked trees stay out of git
+google_drive/
+work/
