@@ -114,15 +114,29 @@ jobs:
           echo "KURO_DISCORD_SDK_AAR=$AAR" >> "$GITHUB_ENV"
 
       - name: Build the JNI bridge and the unsigned APK
+        id: build
         working-directory: src/app
-        env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.2.12479018
+        continue-on-error: true
         run: |
-          set -euo pipefail
-          chmod +x build.sh scripts/build-discord-jni.sh gradlew
-          ./scripts/build-discord-jni.sh
-          ./gradlew --no-daemon assembleRelease
-          ls -l build/outputs/apk/release/
+          set -o pipefail
+          export ANDROID_NDK_HOME="${ANDROID_HOME}/ndk/27.2.12479018"
+          chmod +x scripts/build-discord-jni.sh gradlew build.sh || true
+          {
+            echo "=== env ==="
+            echo "ANDROID_HOME=$ANDROID_HOME"
+            echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME"
+            echo "KURO_DISCORD_SDK_AAR=$KURO_DISCORD_SDK_AAR"
+            ls "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" 2>&1 | head -5
+            echo "=== gradle wrapper ==="
+            ls -l gradlew gradle/wrapper/ 2>&1 | head
+            echo "=== native bridge ==="
+            ./scripts/build-discord-jni.sh 2>&1
+            echo "=== gradle assembleRelease ==="
+            ./gradlew --no-daemon --stacktrace assembleRelease 2>&1
+            echo "=== outputs ==="
+            ls -lR build/outputs 2>&1 | head -40
+          } | tee "$RUNNER_TEMP/build.log"
+          cp "$RUNNER_TEMP/build.log" "$GITHUB_WORKSPACE/build.log"
 
       - name: Align the APK (signing happens later, off this runner)
         working-directory: src/app
@@ -135,26 +149,43 @@ jobs:
           ls -lh "$RUNNER_TEMP/$APK_NAME-aligned.apk"
           sha256sum "$RUNNER_TEMP/$APK_NAME-aligned.apk"
 
-      - name: Commit the aligned APK and the signer toolchain
+      - name: Report the build log
+        if: always()
         run: |
           set -euo pipefail
           mkdir -p out/dist out/dist/toolchain
-          cp "$RUNNER_TEMP/$APK_NAME-aligned.apk" "out/dist/$APK_NAME-aligned.apk"
+          if [ -f "$GITHUB_WORKSPACE/build.log" ]; then cp "$GITHUB_WORKSPACE/build.log" out/dist/build.log; fi
           cp "$ANDROID_HOME/build-tools/35.0.1/lib/apksigner.jar" out/dist/toolchain/apksigner.jar
           cp "$ANDROID_HOME/build-tools/35.0.1/zipalign" out/dist/toolchain/zipalign
           chmod +x out/dist/toolchain/zipalign
+          cd out
+          git config user.name  "kuro-build"
+          git config user.email "kuro-build@users.noreply.github.com"
+          git add -f dist/build.log dist/toolchain 2>/dev/null || true
+          git commit -m "build: runner log + signer toolchain" || echo "nothing to commit"
+          git push origin "HEAD:${GITHUB_REF_NAME}" || echo "push failed"
+
+      - name: Commit the aligned APK
+        if: steps.build.outcome == 'success'
+        run: |
+          set -euo pipefail
+          cp "$RUNNER_TEMP/$APK_NAME-aligned.apk" "out/dist/$APK_NAME-aligned.apk"
           ( cd out/dist && sha256sum "$APK_NAME-aligned.apk" | tee "$APK_NAME-aligned.apk.sha256" )
           {
             echo "### Built \`$APK_NAME-aligned.apk\` (unsigned, zipaligned -P 16)"
             echo '```'
             cat "out/dist/$APK_NAME-aligned.apk.sha256"
             echo '```'
-            echo "Sign with the owner's PKCS#12 key; nothing secret touched this runner."
           } >> "$GITHUB_STEP_SUMMARY"
           cd out
           git config user.name  "kuro-build"
           git config user.email "kuro-build@users.noreply.github.com"
-          git add dist
-          git commit -m "build: $APK_NAME aligned APK + signer toolchain (unsigned)"
+          git add "dist/$APK_NAME-aligned.apk" "dist/$APK_NAME-aligned.apk.sha256"
+          git commit -m "build: $APK_NAME aligned APK (unsigned)"
           git push origin "HEAD:${GITHUB_REF_NAME}"
-          echo "Committed dist/ to ${GITHUB_REF_NAME}"
+
+      - name: Fail the run if the build failed
+        if: steps.build.outcome != 'success'
+        run: |
+          echo "::error::build step failed - see dist/build.log committed to ${GITHUB_REF_NAME}"
+          exit 1
