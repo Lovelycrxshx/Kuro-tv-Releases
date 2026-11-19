@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APK_SHA256: 209b799d525450a59d36811c3c46238acd1fe92b6085bb544f87cdc0a60c9fe1
+      APK_SHA256: bcfe3e2f05f8e13b36469d71abcb71ff4f3c31a9744217247055f82d2a25f891
       TAG: v5.81
     steps:
       - uses: actions/checkout@v4
@@ -44,9 +44,9 @@ jobs:
               "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t"
             printf '  %s  %s bytes\n' "$name" "$(stat -c%s "dist/$name")"
           }
-          dl 129WlkHt20iJjMdhWtFigKxlnXrrU6Gk7 Kuro-tv-5.81.apk
-          dl 1yDmS1xQEbqe4R71rBJpmNktPj9jzwWNa Kuro-tv-5.81.apk.sha256
-          dl 1mnb2Lco8kVKmvDmh3sa7sbrrCRBpqnPn Kuro-tv-5.81-Source.zip
+          dl 1lbKoY6dk649lMcMWRdr0kFHYczi85aKW Kuro-tv-5.81.apk
+          dl 1ty61WZz_IajSQD0jhiuy-HyyzEp7Cg4P Kuro-tv-5.81.apk.sha256
+          dl 1ujNX216o4mJGeRpO6e3yXoIwzXDSeQYA Kuro-tv-5.81-Source.zip
           file dist/* | sed 's/^/  /'
 
       - name: Gate on the exact build that was signed
@@ -71,6 +71,11 @@ jobs:
             echo "::error::the .sha256 file does not match the APK"; exit 1; }
           unzip -l dist/Kuro-tv-5.81-Source.zip | head -5 >/dev/null || {
             echo "::error::source zip is not a zip"; exit 1; }
+          # this cut must actually contain the cast screen and the motion layer
+          unzip -l "$APK" | grep -q 'assets/smooth-ui.js' || {
+            echo "::error::the APK is missing assets/smooth-ui.js - wrong build attached"; exit 1; }
+          unzip -p "$APK" 'classes*.dex' | grep -aq 'castStart561' || {
+            echo "::error::the APK has no cast hand-back code - wrong build attached"; exit 1; }
           echo "All artifacts sane; APK matches the signed build."
 
       - name: Publish the release

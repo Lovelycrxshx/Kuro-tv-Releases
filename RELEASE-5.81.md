@@ -6,33 +6,53 @@ Signed with the original Kuro release key (`CN=Kuro Anime`), so this installs st
 5.72 – 5.80. **Do not uninstall or clear data.**
 
 ```
-SHA-256  209b799d525450a59d36811c3c46238acd1fe92b6085bb544f87cdc0a60c9fe1
-Size     55,021,231 bytes
+SHA-256  bcfe3e2f05f8e13b36469d71abcb71ff4f3c31a9744217247055f82d2a25f891
+Size     55,045,938 bytes
 ```
+
+> **This is a re-cut of 5.81, same versionCode 84.** Because the version code did not change,
+> the in-app updater will not offer it (it only offers strictly higher builds). Install this
+> one manually — over the top, no uninstall — to get the casting screen and the new motion
+> layer.
 
 ## What's new
 
-**Settings dialogs now speak the app's own visual language.** The update dialogs were the last
-stock-Material surface in Kuro: grey panel, system teal accent, flat list rows, next to app
-cards in dark violet. They are rebuilt on the same palette the player already uses.
+**Casting to Google TV actually works now.** The old hand-off was a bare list of device names
+that dropped you on the TV with no controls and threw away your position on the phone.
 
-- **Themed dialog toolkit** — rounded panel with the app's violet accent, ink and muted text,
-  fade-and-rise entry, and footer actions with real focus states.
-- **Kuro updates** is now a status panel: Installed, Automatic checks, Downloads, Reminder
-  spacing, GitHub offers and Last check render as label/value rows (they were one grey
-  paragraph of text), with Install / Check now / Turn off / Close as focusable actions.
-- **Update reminder spacing** and **Update download network** are proper radio lists, each
-  option carrying a short explanation of what it does.
-- **Every other native alert** (cache clear, licences, Discord link/unlink, skip markers,
-  Cast handoff, install prompts) inherits the same theme — no grey dialogs left in settings.
-- **Remote-first:** every action and option is focusable with a visible ring, and initial
-  focus lands on the primary action or the selected option, so DPAD users never hunt.
+- **Themed cast panel** — palette-matched sheet, device name, and a live state line
+  ("Casting", "Paused", "Buffering", "Idle") read straight from the TV's media status.
+- **Real timeline** — a 1-second ticker and a seek bar (1/1000 resolution, seeks on release)
+  that stays in step with the TV, clamped just short of the end.
+- **Transport that obeys the TV** — Play/Pause and Stop act on the session; the panel keeps
+  playing on the TV or resumes locally with **Keep playing on TV** / **Resume here**.
+- **Background continuation** — a `MediaSession` plus a media-style notification
+  (channel `kuro_cast_582`) so the phone can be locked or put away while the TV keeps playing.
+- **Position hand-back** — returning from the cast seeks the phone player to where the TV was
+  left, and only if it actually moved (≥2 s), so you never lose your place.
+- **Settings → Cast handoff** shows the same themed surface, focusable with a visible ring.
+
+**A single motion language across the whole shell** (`assets/smooth-ui.css` + `smooth-ui.js`):
+
+- spring-based press feedback, keyboard-only focus rings, and a blurred sticky header that
+  gains a shadow as you scroll;
+- entrance animations for dialogs, hero banners and page content (staggered, not all at once);
+- **profile-section polish** — banner parallax that is transform-only (no repaint), an avatar
+  grid that sweeps in when you change artwork, cards that lift on hover/focus, and artwork that
+  fades in as it decodes instead of popping;
+- crossfade page transitions where the WebView supports them, a `.ku-pill` toast helper, and
+  skeleton shimmer for loading rows;
+- everything collapses to no-motion under Android's *Remove animations* setting, and the
+  haptic tick on press is a single 6 ms pulse.
+
+**Profiles and settings keep the app's own palette.** The 5.81 dialog toolkit is unchanged and
+still covers every native alert — no stock-Material grey left in settings.
 
 ## Unchanged
 
-Playback engine, catalogue parsing, mirrors, Discord presence, downloads, Cast, PiP and the
-updater's behaviour are identical to 5.80 — this build changes presentation and the version
-stamp, nothing else. No playback or network behaviour was altered.
+Playback engine, catalogue parsing, mirrors, Discord presence, downloads, PiP and the
+updater's behaviour are identical to the previous 5.81 build — this cut adds the cast screen
+and the motion layer, nothing else. No playback or network behaviour was altered.
 
 ## Install
 
@@ -50,7 +70,7 @@ adb install -r Kuro-tv-5.81.apk
 
 ```bash
 sha256sum Kuro-tv-5.81.apk
-# 209b799d525450a59d36811c3c46238acd1fe92b6085bb544f87cdc0a60c9fe1
+# bcfe3e2f05f8e13b36469d71abcb71ff4f3c31a9744217247055f82d2a25f891
 
 apksigner verify --print-certs Kuro-tv-5.81.apk
 # CN=Kuro Anime

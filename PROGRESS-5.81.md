@@ -90,3 +90,18 @@ Packaged as `Kuro-tv-5.81-Source.zip` rev 2 (Drive id `185taXBjaZwmosfLheCIRXdw1
    `git commit --allow-empty -m "[build] sdk=<url>"`.
 4. Feature work from [PLAN-5.81.md](PLAN-5.81.md) wave A (#1, #3, #4, #15, #17) and the profile
    section from [SPEC-PROFILES.md](SPEC-PROFILES.md) — the dialog theming was the presentation slice.
+
+### Re-cut of the current version (cast + motion layer) — shipped
+Run `44575516108` built rev 4 of the source (the rev-3 compile failure was a single missing
+field, `castStart561`, never inserted by an earlier patch). Signed locally with the existing
+key, published as a replacement for 5.81 with the **same versionCode 84**:
+
+```
+APK 55,045,938 B · SHA-256 bcfe3e2f05f8e13b36469d71abcb71ff4f3c31a9744217247055f82d2a25f891
+cert CN=Kuro Anime (unchanged) · v2+v3 signatures
+```
+
+Drive: APK `1lbKoY6dk649lMcMWRdr0kFHYczi85aKW`, sha `1ty61WZz_IajSQD0jhiuy-HyyzEp7Cg4P`,
+source `1ujNX216o4mJGeRpO6e3yXoIwzXDSeQYA` (all public).
+Because the code is unchanged the in-app updater cannot offer it — this one is a manual
+install over the top.
