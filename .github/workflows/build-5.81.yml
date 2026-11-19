@@ -140,31 +140,38 @@ jobs:
 
       - name: Build the JNI bridge and the unsigned APK
         id: build
-        working-directory: ${{ env.PROJECT }}
         continue-on-error: true
         run: |
-          set -o pipefail
-          export ANDROID_NDK_HOME="${ANDROID_HOME}/ndk/27.2.12479018"
-          chmod +x scripts/build-discord-jni.sh gradlew build.sh || true
+          LOG="$RUNNER_TEMP/build.log"
+          rc=0
           {
             echo "=== env ==="
+            echo "PROJECT=$PROJECT"
             echo "ANDROID_HOME=$ANDROID_HOME"
-            echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME"
             echo "KURO_DISCORD_SDK_AAR=$KURO_DISCORD_SDK_AAR"
+            cd "$PROJECT" || exit 1
+            pwd
+            export ANDROID_NDK_HOME="${ANDROID_HOME}/ndk/27.2.12479018"
+            chmod +x scripts/build-discord-jni.sh gradlew build.sh 2>/dev/null || true
             echo "=== native bridge ==="
-            ./scripts/build-discord-jni.sh 2>&1
+            ./scripts/build-discord-jni.sh
             echo "=== gradle assembleRelease ==="
-            ./gradlew --no-daemon --stacktrace assembleRelease 2>&1
+            ./gradlew --no-daemon --stacktrace assembleRelease
             echo "=== outputs ==="
-            ls -lR build/outputs 2>&1 | head -40
-          } | tee "$RUNNER_TEMP/build.log"
-          cp "$RUNNER_TEMP/build.log" "$GITHUB_WORKSPACE/build.log"
+            ls -lR build/outputs
+          } > "$LOG" 2>&1 || rc=$?
+          cp -f "$LOG" "$GITHUB_WORKSPACE/out/dist/build-5.81.log" 2>/dev/null || cp -f "$LOG" "$GITHUB_WORKSPACE/build.log" 2>/dev/null || true
+          echo "::warning::build exit=$rc, $(wc -l < "$LOG") log lines"
+          grep -nE 'error:|error;|FAILURE|Execution failed|cannot find symbol|Caused by:|^\s*\^|What went wrong' "$LOG" \
+            | tail -40 | while IFS= read -r line; do echo "::error::$(printf '%s' "$line" | cut -c1-380)"; done
+          tail -20 "$LOG" | while IFS= read -r line; do echo "::warning::tail: $(printf '%s' "$line" | cut -c1-380)"; done
+          exit "$rc"
 
       - name: Align the APK (signing happens later, off this runner)
         if: steps.build.outcome == 'success'
-        working-directory: ${{ env.PROJECT }}
         run: |
           set -euo pipefail
+          cd "$PROJECT"
           IN=build/outputs/apk/release/Kuro-tv-release-unsigned.apk
           [ -f "$IN" ] || { echo "::error::unsigned APK missing"; ls -R build/outputs | head -30; exit 1; }
           "$ANDROID_HOME/build-tools/35.0.1/zipalign" -f -P 16 4 "$IN" "$RUNNER_TEMP/$APK_NAME-aligned.apk"
@@ -177,8 +184,11 @@ jobs:
         run: |
           set -uo pipefail
           mkdir -p out/dist out/dist/toolchain
-          if [ -s "$GITHUB_WORKSPACE/build.log" ]; then
-            cp "$GITHUB_WORKSPACE/build.log" out/dist/build-5.81.log
+          for candidate in "$GITHUB_WORKSPACE/build.log" out/dist/build-5.81.log "$RUNNER_TEMP/build.log"; do
+            if [ -s "$candidate" ]; then cp -f "$candidate" out/dist/build-5.81.log; fi
+          done
+          if [ -s "out/dist/build-5.81.log" ]; then
+            cp out/dist/build-5.81.log "$GITHUB_WORKSPACE/build.log" 
             echo "::warning::build log has $(wc -l < "$GITHUB_WORKSPACE/build.log") lines"
             grep -nE 'error:|error;|Error|FAILURE|Could not|not found|Exception|cannot find symbol' "$GITHUB_WORKSPACE/build.log" \
               | tail -30 | while IFS= read -r line; do echo "::warning::${line}"; done
