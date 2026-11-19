@@ -1,46 +1,41 @@
 name: build Kuro 5.80 APK
 
-# Builds Kuro 5.80 (versionCode 83) from the source tree that already lives on
-# branch arena/c8020225-kuro-tv-releases, signs it with the owner's existing
-# key (so it installs as an update over 5.72-5.75), and commits the finished
-# APK back to this branch so it can be published to Drive.
+# Builds Kuro 5.80 (versionCode 83) from the source tree on branch
+# arena/c8020225-kuro-tv-releases, signs it with the owner's existing key so it
+# installs as an update over 5.72-5.75, and commits the APK back to this branch
+# so it can be published to Drive.
 #
-# Runs *unsigned* -> signed in one pass. Nothing secret is committed.
+# Why `push` and not only `workflow_dispatch`: GitHub only registers manually
+# dispatchable workflows that exist on the default branch, and the REST API
+# returns 404 for anything newer. Push-triggered runs work on any branch, so the
+# build is gated on a "[build]" marker in the commit message instead.
 #
-# Inputs
-#   discord_url   required - fresh signed URL for the Discord Social SDK zip (expires ~1h)
-#   keystore_url  optional - direct download URL for Kuro-Anime-Signing-Key.p12.
-#                             Used only when the KURO_KEYSTORE_BASE64 secret is absent.
-#   out_name      optional - APK file name (default Kuro-tv-5.80.apk)
-#
-# Secrets (either path works, secrets win)
+# Repository secrets (Settings -> Secrets and variables -> Actions):
 #   KURO_KEYSTORE_BASE64    base64 -w0 Kuro-Anime-Signing-Key.p12
 #   KURO_KEYSTORE_PASSWORD  the .p12 store password
-#   KURO_KEY_ALIAS          alias inside the .p12 (kuroanime)
-#   KURO_KEY_PASSWORD       only if it differs from the store password
+#   KURO_KEY_ALIAS          alias inside the .p12  (kuroanime)
+#   DISCORD_SDK_URL         fresh signed URL for the Discord Social SDK zip (expires ~1h)
+#   KURO_KEY_PASSWORD       optional, only when it differs from the store password
 
 on:
+  push:
+    branches: [arena/454cd01a-kuro-tv-releases]
   workflow_dispatch:
-    inputs:
-      discord_url:
-        description: Fresh signed URL for the Discord Social SDK zip
-        required: true
-      keystore_url:
-        description: Optional direct URL for Kuro-Anime-Signing-Key.p12
-        required: false
-        default: ''
-      out_name:
-        description: Output APK name
-        required: true
-        default: Kuro-tv-5.80.apk
 
 permissions:
   contents: write
 
+concurrency:
+  group: kuro-5.80
+  cancel-in-progress: false
+
 jobs:
   apk:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[build]')
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      APK_NAME: Kuro-tv-5.80.apk
     steps:
       - name: Check out the source tree
         uses: actions/checkout@v4
@@ -81,45 +76,51 @@ jobs:
           test -d "$ANDROID_HOME/platforms/android-35"
           echo "SDK pieces verified."
 
+      - name: Check the required secrets exist
+        env:
+          KS_B64: ${{ secrets.KURO_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KURO_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.KURO_KEY_ALIAS }}
+          SDK_URL: ${{ secrets.DISCORD_SDK_URL }}
+        run: |
+          missing=""
+          [ -n "${KS_B64:-}" ]   || missing="$missing KURO_KEYSTORE_BASE64"
+          [ -n "${KS_PASS:-}" ]  || missing="$missing KURO_KEYSTORE_PASSWORD"
+          [ -n "${KS_ALIAS:-}" ] || missing="$missing KURO_KEY_ALIAS"
+          [ -n "${SDK_URL:-}" ]  || missing="$missing DISCORD_SDK_URL"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secret(s):$missing  (Settings -> Secrets and variables -> Actions)"
+            exit 1
+          fi
+          echo "All four secrets present."
+
       - name: Materialise the signing key
         env:
           KS_B64: ${{ secrets.KURO_KEYSTORE_BASE64 }}
           KS_PASS: ${{ secrets.KURO_KEYSTORE_PASSWORD }}
           KS_ALIAS: ${{ secrets.KURO_KEY_ALIAS }}
           KS_KEY_PASS: ${{ secrets.KURO_KEY_PASSWORD }}
-          KS_URL: ${{ inputs.keystore_url }}
         run: |
           set -euo pipefail
-          RAW="$RUNNER_TEMP/kuro-legacy.p12"
-          if [ -n "${KS_B64:-}" ]; then
-            echo "Using the KURO_KEYSTORE_BASE64 secret."
-            printf '%s' "$KS_B64" | base64 -d > "$RAW"
-          elif [ -n "${KS_URL:-}" ]; then
-            echo "Fetching the keystore from keystore_url."
-            curl -sSL --retry 2 -o "$RAW" "$KS_URL"
-          else
-            echo "::error::No keystore: set KURO_KEYSTORE_BASE64 or pass keystore_url."
-            exit 1
-          fi
-          [ -n "${KS_PASS:-}" ] || { echo "::error::KURO_KEYSTORE_PASSWORD is empty."; exit 1; }
-
-          # The .p12 is legacy PKCS#12 (RC2-40 cert bag); JDK 17+ and apksigner
-          # reject it. Re-export with modern algorithms - same cert, same key.
+          printf '%s' "$KS_B64" | base64 -d > "$RUNNER_TEMP/kuro-legacy.p12"
           printf '%s' "$KS_PASS" > "$RUNNER_TEMP/ks.pass"
-          openssl pkcs12 -in "$RAW" -passin file:"$RUNNER_TEMP/ks.pass" -legacy -nodes \
+
+          # The stored .p12 is legacy PKCS#12 (RC2-40 cert bag) which JDK 17+ and
+          # apksigner reject. Re-export with modern algorithms: same cert, same key.
+          openssl pkcs12 -in "$RUNNER_TEMP/kuro-legacy.p12" -passin file:"$RUNNER_TEMP/ks.pass" -legacy -nodes \
             > "$RUNNER_TEMP/bundle.pem"
-          openssl pkcs12 -export -in "$RUNNER_TEMP/bundle.pem" -name "${KS_ALIAS:-kuroanime}" \
+          openssl pkcs12 -export -in "$RUNNER_TEMP/bundle.pem" -name "$KS_ALIAS" \
             -out "$RUNNER_TEMP/kuro.p12" -passout file:"$RUNNER_TEMP/ks.pass"
 
           keytool -list -keystore "$RUNNER_TEMP/kuro.p12" -storetype PKCS12 \
             -storepass "$KS_PASS" | head -5
           openssl pkcs12 -in "$RUNNER_TEMP/kuro.p12" -passin file:"$RUNNER_TEMP/ks.pass" \
-            -nokeys -clcerts 2>/dev/null | openssl x509 -noout -fingerprint -sha256 | tee fp.txt
+            -nokeys -clcerts 2>/dev/null | openssl x509 -noout -fingerprint -sha256 | tee "$RUNNER_TEMP/fp.txt"
 
           {
             echo "KEYSTORE=$RUNNER_TEMP/kuro.p12"
             echo "KS_PASS=$KS_PASS"
-            echo "KURO_KEY_ALIAS=${KS_ALIAS:-kuroanime}"
+            echo "KURO_KEY_ALIAS=$KS_ALIAS"
             echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018"
           } >> "$GITHUB_ENV"
           if [ -n "${KS_KEY_PASS:-}" ]; then
@@ -128,11 +129,11 @@ jobs:
 
       - name: Fetch the Discord Social SDK
         env:
-          URL: ${{ inputs.discord_url }}
+          URL: ${{ secrets.DISCORD_SDK_URL }}
         run: |
           code=$(curl -sSL --retry 2 --retry-delay 3 -o "$RUNNER_TEMP/discord-sdk.zip" -w '%{http_code}' "$URL")
           if [ "$code" != "200" ]; then
-            echo "::error::Discord SDK download failed with HTTP $code - signed URLs expire after about an hour; generate a fresh one and re-run."
+            echo "::error::Discord SDK download failed with HTTP $code - signed URLs expire after about an hour; refresh DISCORD_SDK_URL and re-run."
             exit 1
           fi
           file "$RUNNER_TEMP/discord-sdk.zip"
@@ -143,39 +144,48 @@ jobs:
           mkdir -p "$RUNNER_TEMP/sdk"
           unzip -q -o "$RUNNER_TEMP/discord-sdk.zip" -d "$RUNNER_TEMP/sdk"
           AAR=$(find "$RUNNER_TEMP/sdk" -name '*.aar' -print -quit)
-          [ -n "$AAR" ] || { echo "::error::No .aar inside the SDK zip"; exit 1; }
+          [ -n "$AAR" ] || { echo "::error::No .aar inside the SDK zip - see the listing above."; exit 1; }
           echo "Using $AAR"
           unzip -l "$AAR" | grep -E 'prefab/modules/discord_partner_sdk/include/|jni/.*libdiscord_partner_sdk\.so' | head -10 \
-            || echo "::warning::Expected prefab headers / jni libs not listed"
+            || echo "::warning::Expected prefab headers / jni libs not listed; the JNI step may fail."
           echo "KURO_DISCORD_SDK_AAR=$AAR" >> "$GITHUB_ENV"
 
       - name: Build, sign and verify
         working-directory: src/app
-        env:
-          OUT: ${{ github.workspace }}/src/app/${{ inputs.out_name }}
         run: |
           set -euo pipefail
+          export OUT="$PWD/$APK_NAME"
           chmod +x build.sh scripts/build-discord-jni.sh gradlew
           ./build.sh
           sha256sum "$OUT" | tee "$OUT.sha256"
           {
-            echo "### Built \`${{ inputs.out_name }}\`"
+            echo "### Built \`$APK_NAME\`"
             echo '```'
             cat "$OUT.sha256"
             echo '```'
-            echo "Signer: $(cat "$GITHUB_WORKSPACE/fp.txt" 2>/dev/null || true)"
+            echo "Signer: $(cat "$RUNNER_TEMP/fp.txt")"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit the APK to this branch
         run: |
           set -euo pipefail
           mkdir -p out/dist
-          cp "src/app/${{ inputs.out_name }}" "out/dist/${{ inputs.out_name }}"
-          cp "src/app/${{ inputs.out_name }}.sha256" "out/dist/${{ inputs.out_name }}.sha256"
+          cp "src/app/$APK_NAME" "out/dist/$APK_NAME"
+          cp "src/app/$APK_NAME.sha256" "out/dist/$APK_NAME.sha256"
           cd out
           git config user.name  "kuro-build"
           git config user.email "kuro-build@users.noreply.github.com"
-          git add "dist/${{ inputs.out_name }}" "dist/${{ inputs.out_name }}.sha256"
-          git commit -m "build: ${{ inputs.out_name }} (signed, versionCode 83)"
-          git push origin "HEAD:${{ github.ref_name }}"
-          echo "Committed dist/${{ inputs.out_name }} to ${{ github.ref_name }}"
+          git add "dist/$APK_NAME" "dist/$APK_NAME.sha256"
+          git commit -m "build: $APK_NAME (signed, versionCode 83)"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          echo "Committed dist/$APK_NAME to ${GITHUB_REF_NAME}"
+
+      - name: Stash the APK as a workflow artifact too
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kuro-5.80-apk
+          path: |
+            src/app/Kuro-tv-5.80.apk
+            src/app/Kuro-tv-5.80.apk.sha256
+          if-no-files-found: warn
