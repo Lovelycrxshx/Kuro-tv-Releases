@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APK_SHA256: 264dba12268c6e6d8cebcdeef4ed15277ba4962dcdbcaad0c5c00cde388fca60
+      APK_SHA256: f7b069d220c7805913df1885e67a148c6cba321a3dedc17238ec5038020e8965
       TAG: v5.81
     steps:
       - uses: actions/checkout@v4
@@ -44,9 +44,9 @@ jobs:
               "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t"
             printf '  %s  %s bytes\n' "$name" "$(stat -c%s "dist/$name")"
           }
-          dl 1hAnxwYtEhRQMogbKCTqEAmMNY-1waWNx Kuro-tv-5.81.apk
-          dl 1Rqeu8yLaKG6jTDpt6PAP_kCk4r0Dz8jC Kuro-tv-5.81.apk.sha256
-          dl 1_qX9fJFFXIcTVDcBHLQBmKL_3PIUwHNs Kuro-tv-5.81-Source.zip
+          dl 1dSuhp93onn9Vlj_vrac1e791lp6U_MQ- Kuro-tv-5.81.apk
+          dl 1z9Sj8CKWLyC8M-2VJEKFdlMqVMMzHkcC Kuro-tv-5.81.apk.sha256
+          dl 19mIs0kzSaVjceQAfzTClOUYgUe4GO4Cl Kuro-tv-5.81-Source.zip
           file dist/* | sed 's/^/  /'
 
       - name: Gate on the exact build that was signed
@@ -99,6 +99,17 @@ jobs:
             unzip -p "$APK" 'classes*.dex' | grep -aq "$needle" || {
               echo "::error::the APK has no $needle - rev-8 native fix not in this build"; exit 1; }
           done
+          # rev 9: the profile art pack must be inside the binary
+          unzip -p "$APK" 'assets/index.html' | grep -aq 'profile-art-arm.js' || {
+            echo "::error::the profile art picker is not linked in index.html"; exit 1; }
+          unzip -p "$APK" 'assets/index.html' | grep -aq 'profile-art-arm.css' || {
+            echo "::error::the profile art styles are not linked in index.html"; exit 1; }
+          COUNT=$(unzip -l "$APK" | grep -cE 'assets/profile-art/(pfp|banner)/art-[0-9]{2}\.webp')
+          echo "profile art files in the APK: $COUNT"
+          [ "$COUNT" -ge 10 ] || {
+            echo "::error::only $COUNT profile art files in the APK - the pack did not ship"; exit 1; }
+          unzip -p "$APK" 'assets/profile-art-arm.js' | grep -aq 'kuro-profile-art-v1' || {
+            echo "::error::the profile art module is missing its store key"; exit 1; }
           echo "All artifacts sane; APK matches the signed build."
 
       - name: Publish the release
