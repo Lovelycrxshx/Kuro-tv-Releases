@@ -53,6 +53,14 @@ Kuro TV is purely a media player / front-end interface. It does not host, upload
 
 ---
 
+## 🗺️ Roadmap
+
+What's planned for 5.81 and beyond — 20 tracked improvements with effort and acceptance
+criteria — lives in **[ROADMAP-5.81.md](ROADMAP-5.81.md)**. Nothing there needs a server or
+an account: Kuro stays local-first.
+
+---
+
 ## 📄 License
 
 Distributed under the [GPL-3.0 License](LICENSE).

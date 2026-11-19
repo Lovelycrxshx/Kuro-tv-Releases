@@ -1,0 +1,272 @@
+name: build Kuro (current version)
+
+# Builds the CURRENT Kuro version from the source zip stored in Drive, commits the
+# *aligned but unsigned* APK back to this branch, and never sees the signing key — the
+# owner signs afterwards with the existing release key (CN=Kuro Anime), so no repository
+# secrets are involved.
+#
+# The source lives at Drive file 1_ofr8V7nVGlavv-sNVNziu5oaz6tCFoJ and must be readable
+# by "anyone with the link" while the job runs (it is a GPL-3.0 source tree that is
+# published as a release asset anyway).
+#
+# The Discord Social SDK URL is a short-lived signed URL and must not be stored, so it
+# travels in the commit message:
+#
+#     git commit --allow-empty -m "[build] sdk=<signed sdk zip url>"
+#
+# Only commits whose message contains "[build]" run the job.
+
+on:
+  push:
+    branches: [arena/0514044e-kuro-tv-releases]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kuro-current
+  cancel-in-progress: false
+
+env:
+  APK_NAME: Kuro-tv-5.81
+  SOURCE_ID: 1ujNX216o4mJGeRpO6e3yXoIwzXDSeQYA
+  EXPECT_VERSION_NAME: "5.81"
+  EXPECT_VERSION_CODE: "84"
+
+jobs:
+  apk:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[build]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out this branch (receives the artifacts)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          path: out
+          fetch-depth: 1
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configure Android SDK
+        run: |
+          if [ -z "${ANDROID_HOME:-}" ] || [ ! -d "${ANDROID_HOME:-/nonexistent}" ]; then
+            export ANDROID_HOME=/usr/local/lib/android/sdk
+          fi
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          ls "$ANDROID_HOME" | head
+
+      - name: Install platform 35, build-tools 35.0.1 and NDK r27c
+        run: |
+          SDKMANAGER=$(command -v sdkmanager || true)
+          [ -n "$SDKMANAGER" ] || SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || { echo "::error::sdkmanager not found"; exit 1; }
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-35" \
+            "build-tools;35.0.1" "ndk;27.2.12479018"
+          test -d "$ANDROID_HOME/platforms/android-35"
+          test -f "$ANDROID_HOME/build-tools/35.0.1/lib/apksigner.jar"
+          test -x "$ANDROID_HOME/build-tools/35.0.1/zipalign"
+          echo "SDK pieces verified."
+
+      - name: Download the current source zip from Drive
+        run: |
+          set -euo pipefail
+          URL="https://drive.usercontent.google.com/download?id=${SOURCE_ID}&export=download&confirm=t"
+          code=$(curl -sSL --retry 2 --retry-delay 3 -o "$RUNNER_TEMP/src.zip" -w '%{http_code}' "$URL")
+          bytes=$(stat -c%s "$RUNNER_TEMP/src.zip" 2>/dev/null || echo 0)
+          echo "HTTP $code, $bytes bytes"
+          if [ "$code" != "200" ] || [ "$bytes" -lt 1000000 ]; then
+            echo "::error::Source download failed (HTTP $code, $bytes bytes). Is the Drive file still shared with anyone-with-the-link?"
+            exit 1
+          fi
+          mkdir -p src
+          unzip -q "$RUNNER_TEMP/src.zip" -d src
+          PROJECT=$(dirname "$(find src -maxdepth 3 -name settings.gradle -print -quit)")
+          [ -n "$PROJECT" ] || { echo "::error::No settings.gradle in the source zip."; exit 1; }
+          echo "Project root: $PROJECT"
+          echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
+          grep -o 'android:versionCode="[0-9]*" android:versionName="[^"]*"' "$PROJECT/AndroidManifest.xml"
+
+      - name: Verify the expected changes are in this source
+        run: |
+          set -euo pipefail
+          test -f "$PROJECT/src/app/lovelycrxshx/kuro/KuroDialogs581.java" \
+            || { echo "::error::KuroDialogs581.java missing from the source zip."; exit 1; }
+          grep -q 'EXTRA_CAST_POSITION' "$PROJECT/src/app/lovelycrxshx/kuro/KuroCastActivity561.java" \
+            || { echo "::error::Cast position hand-back missing from KuroCastActivity561."; exit 1; }
+          grep -q 'seekTo582' "$PROJECT/src/app/lovelycrxshx/kuro/KuroNativePlayer561.java" \
+            || { echo "::error::seekTo582 missing from the native player."; exit 1; }
+          grep -q 'returnFromCast582' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" \
+            || { echo "::error::returnFromCast582 missing from MainActivity."; exit 1; }
+          grep -q 'castStart561=0' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" \
+            || { echo "::error::the castStart561 field is missing from MainActivity."; exit 1; }
+          test -f "$PROJECT/assets/smooth-ui.css" && test -f "$PROJECT/assets/smooth-ui.js" \
+            || { echo "::error::smooth-ui layer missing from assets."; exit 1; }
+          grep -q 'smooth-ui.css' "$PROJECT/assets/index.html" \
+            || { echo "::error::smooth-ui.css is not linked in index.html."; exit 1; }
+          grep -q 'smooth-ui.js' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" \
+            || { echo "::error::smooth-ui assets are not whitelisted in the WebView."; exit 1; }
+          grep -q 'name="KuroDialogTheme"' "$PROJECT/res/values/styles.xml" \
+            || { echo "::error::KuroDialogTheme missing from styles.xml."; exit 1; }
+          themed=$(grep -c 'KuroDialogs581.themed' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java")
+          echo "Themed alert dialogs: $themed"
+          [ "$themed" -ge 15 ] || { echo "::error::Expected the settings dialogs to use the themed context."; exit 1; }
+          grep -q "versionCode ${EXPECT_VERSION_CODE}" "$PROJECT/build.gradle" \
+            || { echo "::error::build.gradle versionCode is not ${EXPECT_VERSION_CODE}."; exit 1; }
+          grep -q "versionName '${EXPECT_VERSION_NAME}'" "$PROJECT/build.gradle" \
+            || { echo "::error::build.gradle versionName is not ${EXPECT_VERSION_NAME}."; exit 1; }
+
+      - name: Extract the Discord SDK URL from the commit message
+        env:
+          MSG: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          URL=$(printf '%s\n' "$MSG" | tr -d '\r' | grep -oE 'sdk=[^ ]+' | head -1 | cut -d= -f2-)
+          if [ -z "${URL:-}" ]; then
+            echo "::error::No sdk=<url> in the commit message. Push '[build] sdk=<signed url>'."
+            exit 1
+          fi
+          echo "Discord SDK host: $(printf '%s' "$URL" | cut -d/ -f3)"
+          echo "SDK_URL=$URL" >> "$GITHUB_ENV"
+
+      - name: Fetch the Discord Social SDK
+        run: |
+          code=$(curl -sSL --retry 2 --retry-delay 3 -o "$RUNNER_TEMP/discord-sdk.zip" -w '%{http_code}' "$SDK_URL")
+          if [ "$code" != "200" ]; then
+            echo "::error::Discord SDK download failed with HTTP $code - signed URLs expire after about an hour."
+            exit 1
+          fi
+          unzip -l "$RUNNER_TEMP/discord-sdk.zip" | head -20
+
+      - name: Locate the Discord AAR
+        run: |
+          set -uo pipefail
+          mkdir -p "$RUNNER_TEMP/sdk"
+          unzip -q -o "$RUNNER_TEMP/discord-sdk.zip" -d "$RUNNER_TEMP/sdk"
+          mapfile -t AARS < <(find "$RUNNER_TEMP/sdk" -name '*.aar' | sort)
+          echo "AAR candidates: ${#AARS[@]}"
+          for aar in "${AARS[@]}"; do echo "candidate: $aar"; done
+          # The SDK ships release/debug and krisp voice variants; only the plain release
+          # partner AAR carries com.discord.socialsdk, so never take the first match.
+          PICK=$(printf '%s\n' "${AARS[@]:-}" | grep -E '/lib/release/discord_partner_sdk\.aar$' | head -1)
+          [ -n "$PICK" ] || PICK=$(printf '%s\n' "${AARS[@]:-}" | grep -v krisp | grep -i '/release/' | head -1)
+          [ -n "$PICK" ] || PICK=$(printf '%s\n' "${AARS[@]:-}" | grep -v krisp | head -1)
+          [ -n "$PICK" ] || PICK="${AARS[0]:-}"
+          if [ -z "$PICK" ] || [ ! -f "$PICK" ]; then
+            echo "::error::No usable AAR inside the SDK zip."
+            exit 1
+          fi
+          echo "Chosen AAR: $PICK"
+          echo "::warning::chosen AAR: $PICK"
+          unzip -l "$PICK" | head -12 | while IFS= read -r line; do echo "::warning::aar: $line"; done
+          if unzip -p "$PICK" classes.jar > "$RUNNER_TEMP/probe.jar" 2>/dev/null; then
+            echo "::warning::classes.jar entries: $(unzip -l "$RUNNER_TEMP/probe.jar" | wc -l), socialsdk mentions: $(unzip -l "$RUNNER_TEMP/probe.jar" | grep -c 'com/discord/socialsdk' || true)"
+          else
+            echo "::warning::this AAR has no readable classes.jar"
+          fi
+          echo "KURO_DISCORD_SDK_AAR=$PICK" >> "$GITHUB_ENV"
+
+      - name: Build the JNI bridge and the unsigned APK
+        id: build
+        continue-on-error: true
+        run: |
+          LOG="$RUNNER_TEMP/build.log"
+          rc=0
+          {
+            echo "=== env ==="
+            echo "PROJECT=$PROJECT"
+            echo "ANDROID_HOME=$ANDROID_HOME"
+            echo "KURO_DISCORD_SDK_AAR=$KURO_DISCORD_SDK_AAR"
+            cd "$PROJECT" || exit 1
+            pwd
+            export ANDROID_NDK_HOME="${ANDROID_HOME}/ndk/27.2.12479018"
+            chmod +x scripts/build-discord-jni.sh gradlew build.sh 2>/dev/null || true
+            echo "=== native bridge ==="
+            ./scripts/build-discord-jni.sh
+            echo "=== gradle assembleRelease ==="
+            ./gradlew --no-daemon --stacktrace --max-workers=2 \
+              -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" \
+              assembleRelease
+            echo "=== outputs ==="
+            ls -lR build/outputs
+          } > "$LOG" 2>&1 || rc=$?
+          [ "$(grep -cE 'FAILURE: Build failed|Execution failed for task' "$LOG" || true)" -gt 0 ] && rc=1
+          cp -f "$LOG" "$GITHUB_WORKSPACE/out/dist/build-current.log" 2>/dev/null || cp -f "$LOG" "$GITHUB_WORKSPACE/build.log" 2>/dev/null || true
+          echo "::warning::build exit=$rc, $(wc -l < "$LOG") log lines"
+          grep -nE 'error:|error;|FAILURE|Execution failed|cannot find symbol|Caused by:|^\s*\^|What went wrong' "$LOG" \
+            | tail -40 | while IFS= read -r line; do echo "::error::$(printf '%s' "$line" | cut -c1-380)"; done
+          tail -20 "$LOG" | while IFS= read -r line; do echo "::warning::tail: $(printf '%s' "$line" | cut -c1-380)"; done
+          exit "$rc"
+
+      - name: Align the APK (signing happens later, off this runner)
+        if: steps.build.outcome == 'success'
+        run: |
+          set -euo pipefail
+          cd "$PROJECT"
+          IN=build/outputs/apk/release/Kuro-tv-release-unsigned.apk
+          [ -f "$IN" ] || { echo "::error::unsigned APK missing"; ls -R build/outputs | head -30; exit 1; }
+          "$ANDROID_HOME/build-tools/35.0.1/zipalign" -f -P 16 4 "$IN" "$RUNNER_TEMP/$APK_NAME-aligned.apk"
+          "$ANDROID_HOME/build-tools/35.0.1/zipalign" -c -P 16 4 "$RUNNER_TEMP/$APK_NAME-aligned.apk"
+          ls -lh "$RUNNER_TEMP/$APK_NAME-aligned.apk"
+          "$ANDROID_HOME/build-tools/35.0.1/aapt2" dump badging "$RUNNER_TEMP/$APK_NAME-aligned.apk" \
+            | head -1 | while IFS= read -r line; do echo "::warning::badging: $line"; done
+          "$ANDROID_HOME/build-tools/35.0.1/aapt2" dump badging "$RUNNER_TEMP/$APK_NAME-aligned.apk" \
+            | grep -q "versionCode='${EXPECT_VERSION_CODE}'" \
+            || { echo "::error::the built APK is not versionCode ${EXPECT_VERSION_CODE}"; exit 1; }
+          sha256sum "$RUNNER_TEMP/$APK_NAME-aligned.apk"
+
+      - name: Collect the log and the aligned APK
+        if: always()
+        run: |
+          set +e
+          mkdir -p out/dist out/dist/toolchain
+          for candidate in "$RUNNER_TEMP/build.log" out/dist/build-current.log "$GITHUB_WORKSPACE/build.log"; do
+            if [ -s "$candidate" ]; then cp -f "$candidate" out/dist/build-current.log; break; fi
+          done
+          if [ -s out/dist/build-current.log ]; then
+            echo "::warning::build log has $(wc -l < out/dist/build-current.log) lines"
+            grep -nE 'error:|Execution failed|FAILURE' out/dist/build-current.log | tail -20 \
+              | while IFS= read -r line; do echo "::warning::${line}"; done
+          else
+            echo "::warning::no build log produced"
+          fi
+          cp "$ANDROID_HOME/build-tools/35.0.1/lib/apksigner.jar" out/dist/toolchain/apksigner.jar 2>/dev/null
+          cp "$ANDROID_HOME/build-tools/35.0.1/zipalign" out/dist/toolchain/zipalign 2>/dev/null
+          chmod +x out/dist/toolchain/zipalign 2>/dev/null
+
+          if [ -s "$RUNNER_TEMP/$APK_NAME-aligned.apk" ]; then
+            cp -f "$RUNNER_TEMP/$APK_NAME-aligned.apk" "out/dist/$APK_NAME-aligned.apk"
+            ( cd out/dist && sha256sum "$APK_NAME-aligned.apk" > "$APK_NAME-aligned.apk.sha256" && cat "$APK_NAME-aligned.apk.sha256" )
+            {
+              echo "### Built \`$APK_NAME-aligned.apk\` (unsigned, zipaligned -P 16)"
+              echo '```'
+              cat "out/dist/$APK_NAME-aligned.apk.sha256"
+              echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::no aligned APK to collect"
+          fi
+
+          cd out
+          git config user.name  "kuro-build"
+          git config user.email "kuro-build@users.noreply.github.com"
+          git add -A dist 2>/dev/null
+          git commit -m "build: current-version runner log + aligned APK (unsigned)" 2>/dev/null
+          if ! OUT_ERR=$(git push origin "HEAD:${GITHUB_REF_NAME}" 2>&1); then
+            echo "::warning::push failed: $(printf '%s' "$OUT_ERR" | tr '\n' ' ' | cut -c1-400)"
+          else
+            echo "pushed artifacts to ${GITHUB_REF_NAME}"
+          fi
+          exit 0
+
+      - name: Fail the run if the build failed
+        if: always() && steps.build.outcome != 'success'
+        run: |
+          echo "::error::compile failed - see dist/build-current.log on ${GITHUB_REF_NAME}"
+          exit 1
