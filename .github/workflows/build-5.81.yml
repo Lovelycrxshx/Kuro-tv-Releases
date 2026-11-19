@@ -30,7 +30,7 @@ concurrency:
 
 env:
   APK_NAME: Kuro-tv-5.81
-  SOURCE_ID: 1_ofr8V7nVGlavv-sNVNziu5oaz6tCFoJ
+  SOURCE_ID: 1mnb2Lco8kVKmvDmh3sa7sbrrCRBpqnPn
   EXPECT_VERSION_NAME: "5.81"
   EXPECT_VERSION_CODE: "84"
 
@@ -103,8 +103,10 @@ jobs:
           themed=$(grep -c 'KuroDialogs581.themed' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java")
           echo "Themed alert dialogs: $themed"
           [ "$themed" -ge 15 ] || { echo "::error::Expected the settings dialogs to use the themed context."; exit 1; }
-          grep -q "android:versionName=\"${EXPECT_VERSION_NAME}\"" "$PROJECT/AndroidManifest.xml" \
-            || { echo "::error::versionName is not ${EXPECT_VERSION_NAME}."; exit 1; }
+          grep -q "versionCode ${EXPECT_VERSION_CODE}" "$PROJECT/build.gradle" \
+            || { echo "::error::build.gradle versionCode is not ${EXPECT_VERSION_CODE}."; exit 1; }
+          grep -q "versionName '${EXPECT_VERSION_NAME}'" "$PROJECT/build.gradle" \
+            || { echo "::error::build.gradle versionName is not ${EXPECT_VERSION_NAME}."; exit 1; }
 
       - name: Extract the Discord SDK URL from the commit message
         env:
@@ -198,6 +200,11 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.1/zipalign" -f -P 16 4 "$IN" "$RUNNER_TEMP/$APK_NAME-aligned.apk"
           "$ANDROID_HOME/build-tools/35.0.1/zipalign" -c -P 16 4 "$RUNNER_TEMP/$APK_NAME-aligned.apk"
           ls -lh "$RUNNER_TEMP/$APK_NAME-aligned.apk"
+          "$ANDROID_HOME/build-tools/35.0.1/aapt2" dump badging "$RUNNER_TEMP/$APK_NAME-aligned.apk" \
+            | head -1 | while IFS= read -r line; do echo "::warning::badging: $line"; done
+          "$ANDROID_HOME/build-tools/35.0.1/aapt2" dump badging "$RUNNER_TEMP/$APK_NAME-aligned.apk" \
+            | grep -q "versionCode='${EXPECT_VERSION_CODE}'" \
+            || { echo "::error::the built APK is not versionCode ${EXPECT_VERSION_CODE}"; exit 1; }
           sha256sum "$RUNNER_TEMP/$APK_NAME-aligned.apk"
 
       - name: Collect the log and the aligned APK
