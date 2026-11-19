@@ -1,5 +1,11 @@
 # Kuro 5.81 — build progress
 
+**Status: released.** `v5.81` is live and is the latest release —
+`Kuro-tv-5.81.apk` (55,021,231 B, sha256 `209b799d525450a59d36811c3c46238acd1fe92b6085bb544f87cdc0a60c9fe1`),
+`Kuro-tv-5.81.apk.sha256`, `Kuro-tv-5.81-Source.zip` (16,270,964 B). Version 5.81 / versionCode 84,
+signed with the existing `CN=Kuro Anime` key (cert SHA-256 `1d37c3ca…03e93e`), v2+v3, all 8 native
+libs 16 KB-aligned. Drive copies are private again.
+
 Working notes for the 5.81 line. Scope and waves are in
 [PLAN-5.81.md](PLAN-5.81.md); the profile section is specced in
 [SPEC-PROFILES.md](SPEC-PROFILES.md).
@@ -41,7 +47,7 @@ class touches was verified to exist in `android-35/android.jar`
 ### Version
 `AndroidManifest.xml` in the 5.81 source: `versionCode 84`, `versionName 5.81`.
 
-## Staged, not built
+## Build pipeline (used for the 5.81 release)
 - `Kuro-tv-5.81-Source.zip` — uploaded to the Drive **Kuro** folder
   (id `1_ofr8V7nVGlavv-sNVNziu5oaz6tCFoJ`, 16,270,964 B).
 - `.github/workflows/build-5.81.yml` — downloads that zip, asserts the 5.81 changes are
@@ -50,15 +56,17 @@ class touches was verified to exist in `android-35/android.jar`
   branch. No repository secrets: the Discord Social SDK arrives as a short-lived signed URL
   in the commit message.
 
-**Blocked on:** a fresh Discord Social SDK signed URL
-(`git commit --allow-empty -m "[build81] sdk=<url>"`), because `app/build.gradle` fails
-without `KURO_DISCORD_SDK_AAR` and the sandbox cannot download it. The Drive source zip must
-also be link-shared while the job runs, then set back to private.
+Resolved while cutting the release:
+- the project pins `org.gradle.jvmargs=-Xmx512m`, which OOMs AGP's `:collectReleaseDependencies`;
+  CI overrides it to 4 GB rather than editing the published source;
+- the SDK zip contains several AARs — the krisp/debug one has no `com.discord.socialsdk`, so the
+  AAR is now chosen by path (`lib/release/discord_partner_sdk.aar`), not by `find` order;
+- **AGP ignores the manifest version**: the first green build was still 5.80/83. `build.gradle`
+  is the source of truth, and the workflow now asserts `versionCode 84` on the built artifact.
 
-## Still to do for a 5.81 release
-1. Green compile run, then sign the aligned APK with the existing key (`CN=Kuro Anime`) and
-   audit 16 KB alignment — same procedure as 5.80.
-2. Publish `v5.81` with APK + source + checksums, update `index.html`, and keep 5.80 only as
-   history (superseded builds still go to Drive trash, per the standing cleanup rule).
-3. Feature work from [PLAN-5.81.md](PLAN-5.81.md) wave A (#1, #3, #4, #15, #17) and the
-   profile section from [SPEC-PROFILES.md](SPEC-PROFILES.md).
+## Still to do
+1. Merge the page update to `main` so the published download page shows 5.81 (Pages serves from `main`).
+2. Drive cleanup: move the superseded 5.80 APK, its checksum and the empty
+   `Kuro-tv-5.81-Source.zip` revision (id `1_ofr8V7nVGlavv-sNVNziu5oaz6tCFoJ`, 0 bytes) to trash.
+3. Feature work from [PLAN-5.81.md](PLAN-5.81.md) wave A (#1, #3, #4, #15, #17) and the profile
+   section from [SPEC-PROFILES.md](SPEC-PROFILES.md) — the dialog theming was the presentation slice.
