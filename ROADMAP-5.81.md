@@ -248,8 +248,11 @@ hosts and remembers which ones fail.
 Selected for the 5.81 line — **16 of 20**:
 **1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 19**
 
-Deferred: **2** (offline catalogue cache), **12** (profiles + kids mode), **13** (sleep timer /
-autoplay / queue), **20** (privacy & diagnostics).
+Deferred: **2** (offline catalogue cache), **13** (sleep timer / autoplay / queue), **20** (privacy
+& diagnostics).
+
+**#12 pulled forward by user request**, alongside new item **#21 — anime-themed profile art and
+banners, replacing the current set**. Both are specced in **[SPEC-PROFILES.md](SPEC-PROFILES.md)**.
 
 That set is ≈ 74 dev-days, so it ships in three waves rather than one release — the wave split,
 per-item implementation notes, dependency graph, risk register and the cost of the four deferrals
