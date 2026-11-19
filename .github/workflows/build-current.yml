@@ -264,7 +264,8 @@ jobs:
           cd out
           git config user.name  "kuro-build"
           git config user.email "kuro-build@users.noreply.github.com"
-          git add -A dist 2>/dev/null
+          # -f: dist/*.apk is ignored in the repo, but the build artifact must travel back
+          git add -f -A dist 2>/dev/null
           git commit -m "build: current-version runner log + aligned APK (unsigned)" 2>/dev/null
           if ! OUT_ERR=$(git push origin "HEAD:${GITHUB_REF_NAME}" 2>&1); then
             echo "::warning::push failed: $(printf '%s' "$OUT_ERR" | tr '\n' ' ' | cut -c1-400)"
