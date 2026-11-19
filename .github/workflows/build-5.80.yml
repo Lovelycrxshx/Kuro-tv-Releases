@@ -1,21 +1,17 @@
 name: build Kuro 5.80 APK
 
 # Builds Kuro 5.80 (versionCode 83) from the source tree on branch
-# arena/c8020225-kuro-tv-releases, signs it with the owner's existing key so it
-# installs as an update over 5.72-5.75, and commits the APK back to this branch
-# so it can be published to Drive.
+# arena/c8020225-kuro-tv-releases and commits the *aligned but unsigned* APK back
+# to this branch. It deliberately never sees the signing key: the owner signs the
+# aligned APK afterwards with the existing release key, so no repository secrets
+# are needed at all.
 #
-# Why `push` and not only `workflow_dispatch`: GitHub only registers manually
-# dispatchable workflows that exist on the default branch, and the REST API
-# returns 404 for anything newer. Push-triggered runs work on any branch, so the
-# build is gated on a "[build]" marker in the commit message instead.
+# The Discord Social SDK URL is a short-lived signed URL and must not be stored,
+# so it travels in the commit message:
 #
-# Repository secrets (Settings -> Secrets and variables -> Actions):
-#   KURO_KEYSTORE_BASE64    base64 -w0 Kuro-Anime-Signing-Key.p12
-#   KURO_KEYSTORE_PASSWORD  the .p12 store password
-#   KURO_KEY_ALIAS          alias inside the .p12  (kuroanime)
-#   DISCORD_SDK_URL         fresh signed URL for the Discord Social SDK zip (expires ~1h)
-#   KURO_KEY_PASSWORD       optional, only when it differs from the store password
+#     git commit --allow-empty -m "[build] sdk=<signed sdk zip url>"
+#
+# Only commits whose message contains "[build]" run the job.
 
 on:
   push:
@@ -35,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      APK_NAME: Kuro-tv-5.80.apk
+      APK_NAME: Kuro-tv-5.80
     steps:
       - name: Check out the source tree
         uses: actions/checkout@v4
@@ -43,7 +39,7 @@ jobs:
           ref: arena/c8020225-kuro-tv-releases
           path: src
 
-      - name: Check out this branch (receives the APK)
+      - name: Check out this branch (receives the artifacts)
         uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
@@ -73,71 +69,38 @@ jobs:
           "$SDKMANAGER" --install "platform-tools" "platforms;android-35" \
             "build-tools;35.0.1" "ndk;27.2.12479018"
           test -x "$ANDROID_HOME/build-tools/35.0.1/apksigner"
+          test -f "$ANDROID_HOME/build-tools/35.0.1/lib/apksigner.jar"
+          test -x "$ANDROID_HOME/build-tools/35.0.1/zipalign"
           test -d "$ANDROID_HOME/platforms/android-35"
           echo "SDK pieces verified."
 
-      - name: Check the required secrets exist
+      - name: Extract the Discord SDK URL from the commit message
         env:
-          KS_B64: ${{ secrets.KURO_KEYSTORE_BASE64 }}
-          KS_PASS: ${{ secrets.KURO_KEYSTORE_PASSWORD }}
-          KS_ALIAS: ${{ secrets.KURO_KEY_ALIAS }}
-          SDK_URL: ${{ secrets.DISCORD_SDK_URL }}
-        run: |
-          missing=""
-          [ -n "${KS_B64:-}" ]   || missing="$missing KURO_KEYSTORE_BASE64"
-          [ -n "${KS_PASS:-}" ]  || missing="$missing KURO_KEYSTORE_PASSWORD"
-          [ -n "${KS_ALIAS:-}" ] || missing="$missing KURO_KEY_ALIAS"
-          [ -n "${SDK_URL:-}" ]  || missing="$missing DISCORD_SDK_URL"
-          if [ -n "$missing" ]; then
-            echo "::error::Missing repository secret(s):$missing  (Settings -> Secrets and variables -> Actions)"
-            exit 1
-          fi
-          echo "All four secrets present."
-
-      - name: Materialise the signing key
-        env:
-          KS_B64: ${{ secrets.KURO_KEYSTORE_BASE64 }}
-          KS_PASS: ${{ secrets.KURO_KEYSTORE_PASSWORD }}
-          KS_ALIAS: ${{ secrets.KURO_KEY_ALIAS }}
-          KS_KEY_PASS: ${{ secrets.KURO_KEY_PASSWORD }}
+          MSG: ${{ github.event.head_commit.message }}
         run: |
           set -euo pipefail
-          printf '%s' "$KS_B64" | base64 -d > "$RUNNER_TEMP/kuro-legacy.p12"
-          printf '%s' "$KS_PASS" > "$RUNNER_TEMP/ks.pass"
-
-          # The stored .p12 is legacy PKCS#12 (RC2-40 cert bag) which JDK 17+ and
-          # apksigner reject. Re-export with modern algorithms: same cert, same key.
-          openssl pkcs12 -in "$RUNNER_TEMP/kuro-legacy.p12" -passin file:"$RUNNER_TEMP/ks.pass" -legacy -nodes \
-            > "$RUNNER_TEMP/bundle.pem"
-          openssl pkcs12 -export -in "$RUNNER_TEMP/bundle.pem" -name "$KS_ALIAS" \
-            -out "$RUNNER_TEMP/kuro.p12" -passout file:"$RUNNER_TEMP/ks.pass"
-
-          keytool -list -keystore "$RUNNER_TEMP/kuro.p12" -storetype PKCS12 \
-            -storepass "$KS_PASS" | head -5
-          openssl pkcs12 -in "$RUNNER_TEMP/kuro.p12" -passin file:"$RUNNER_TEMP/ks.pass" \
-            -nokeys -clcerts 2>/dev/null | openssl x509 -noout -fingerprint -sha256 | tee "$RUNNER_TEMP/fp.txt"
-
-          {
-            echo "KEYSTORE=$RUNNER_TEMP/kuro.p12"
-            echo "KS_PASS=$KS_PASS"
-            echo "KURO_KEY_ALIAS=$KS_ALIAS"
-            echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018"
-          } >> "$GITHUB_ENV"
-          if [ -n "${KS_KEY_PASS:-}" ]; then
-            printf 'KS_KEY_PASS=%s\n' "$KS_KEY_PASS" >> "$GITHUB_ENV"
+          URL=$(printf '%s\n' "$MSG" | tr -d '\r' | grep -oE 'sdk=[^ ]+' | head -1 | cut -d= -f2-)
+          if [ -z "${URL:-}" ]; then
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              echo "::error::No sdk= URL in a manual run; push a commit message containing '[build] sdk=<url>'."
+            else
+              echo "::error::No sdk=<url> found in the commit message."
+            fi
+            exit 1
           fi
+          # only the host is printed - the signed query string stays out of the log
+          echo "Discord SDK host: $(printf '%s' "$URL" | cut -d/ -f3)"
+          echo "SDK_URL=$URL" >> "$GITHUB_ENV"
 
       - name: Fetch the Discord Social SDK
-        env:
-          URL: ${{ secrets.DISCORD_SDK_URL }}
         run: |
-          code=$(curl -sSL --retry 2 --retry-delay 3 -o "$RUNNER_TEMP/discord-sdk.zip" -w '%{http_code}' "$URL")
+          code=$(curl -sSL --retry 2 --retry-delay 3 -o "$RUNNER_TEMP/discord-sdk.zip" -w '%{http_code}' "$SDK_URL")
           if [ "$code" != "200" ]; then
-            echo "::error::Discord SDK download failed with HTTP $code - signed URLs expire after about an hour; refresh DISCORD_SDK_URL and re-run."
+            echo "::error::Discord SDK download failed with HTTP $code - signed URLs expire after about an hour."
             exit 1
           fi
           file "$RUNNER_TEMP/discord-sdk.zip"
-          unzip -l "$RUNNER_TEMP/discord-sdk.zip" | head -40
+          unzip -l "$RUNNER_TEMP/discord-sdk.zip" | head -30
 
       - name: Locate the Discord AAR
         run: |
@@ -150,42 +113,48 @@ jobs:
             || echo "::warning::Expected prefab headers / jni libs not listed; the JNI step may fail."
           echo "KURO_DISCORD_SDK_AAR=$AAR" >> "$GITHUB_ENV"
 
-      - name: Build, sign and verify
+      - name: Build the JNI bridge and the unsigned APK
+        working-directory: src/app
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.2.12479018
+        run: |
+          set -euo pipefail
+          chmod +x build.sh scripts/build-discord-jni.sh gradlew
+          ./scripts/build-discord-jni.sh
+          ./gradlew --no-daemon assembleRelease
+          ls -l build/outputs/apk/release/
+
+      - name: Align the APK (signing happens later, off this runner)
         working-directory: src/app
         run: |
           set -euo pipefail
-          export OUT="$PWD/$APK_NAME"
-          chmod +x build.sh scripts/build-discord-jni.sh gradlew
-          ./build.sh
-          sha256sum "$OUT" | tee "$OUT.sha256"
-          {
-            echo "### Built \`$APK_NAME\`"
-            echo '```'
-            cat "$OUT.sha256"
-            echo '```'
-            echo "Signer: $(cat "$RUNNER_TEMP/fp.txt")"
-          } >> "$GITHUB_STEP_SUMMARY"
+          IN=build/outputs/apk/release/Kuro-tv-release-unsigned.apk
+          [ -f "$IN" ] || { echo "::error::unsigned APK missing"; ls -R build/outputs | head -30; exit 1; }
+          "$ANDROID_HOME/build-tools/35.0.1/zipalign" -f -P 16 4 "$IN" "$RUNNER_TEMP/$APK_NAME-aligned.apk"
+          "$ANDROID_HOME/build-tools/35.0.1/zipalign" -c -P 16 4 "$RUNNER_TEMP/$APK_NAME-aligned.apk"
+          ls -lh "$RUNNER_TEMP/$APK_NAME-aligned.apk"
+          sha256sum "$RUNNER_TEMP/$APK_NAME-aligned.apk"
 
-      - name: Commit the APK to this branch
+      - name: Commit the aligned APK and the signer toolchain
         run: |
           set -euo pipefail
-          mkdir -p out/dist
-          cp "src/app/$APK_NAME" "out/dist/$APK_NAME"
-          cp "src/app/$APK_NAME.sha256" "out/dist/$APK_NAME.sha256"
+          mkdir -p out/dist out/dist/toolchain
+          cp "$RUNNER_TEMP/$APK_NAME-aligned.apk" "out/dist/$APK_NAME-aligned.apk"
+          cp "$ANDROID_HOME/build-tools/35.0.1/lib/apksigner.jar" out/dist/toolchain/apksigner.jar
+          cp "$ANDROID_HOME/build-tools/35.0.1/zipalign" out/dist/toolchain/zipalign
+          chmod +x out/dist/toolchain/zipalign
+          ( cd out/dist && sha256sum "$APK_NAME-aligned.apk" | tee "$APK_NAME-aligned.apk.sha256" )
+          {
+            echo "### Built \`$APK_NAME-aligned.apk\` (unsigned, zipaligned -P 16)"
+            echo '```'
+            cat "out/dist/$APK_NAME-aligned.apk.sha256"
+            echo '```'
+            echo "Sign with the owner's PKCS#12 key; nothing secret touched this runner."
+          } >> "$GITHUB_STEP_SUMMARY"
           cd out
           git config user.name  "kuro-build"
           git config user.email "kuro-build@users.noreply.github.com"
-          git add "dist/$APK_NAME" "dist/$APK_NAME.sha256"
-          git commit -m "build: $APK_NAME (signed, versionCode 83)"
+          git add dist
+          git commit -m "build: $APK_NAME aligned APK + signer toolchain (unsigned)"
           git push origin "HEAD:${GITHUB_REF_NAME}"
-          echo "Committed dist/$APK_NAME to ${GITHUB_REF_NAME}"
-
-      - name: Stash the APK as a workflow artifact too
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: kuro-5.80-apk
-          path: |
-            src/app/Kuro-tv-5.80.apk
-            src/app/Kuro-tv-5.80.apk.sha256
-          if-no-files-found: warn
+          echo "Committed dist/ to ${GITHUB_REF_NAME}"
