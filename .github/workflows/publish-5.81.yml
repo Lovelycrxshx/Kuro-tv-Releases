@@ -11,7 +11,7 @@ name: publish Kuro 5.81 release
 
 on:
   push:
-    branches: [arena/d9a61230-kuro-tv-releases]
+    branches: [arena/c7139fd4-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APK_SHA256: ed06a8baf2c6827c6adb30a148fa26bc597866843239eacecad759a308dc9995
+      APK_SHA256: 541f1b73ad1ad32ec92a3bba880cedbd67a3a829a4b0f4c28632812be10c960a
       TAG: v5.81
     steps:
       - uses: actions/checkout@v4
@@ -44,9 +44,9 @@ jobs:
               "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t"
             printf '  %s  %s bytes\n' "$name" "$(stat -c%s "dist/$name")"
           }
-          dl 1zNvURJvRraMTsHpEUQ1XorR9tS_UQCGw Kuro-tv-5.81.apk
-          dl 1mU0-5k4hHu1RepcJlN9VIvP5XZ5W40U9 Kuro-tv-5.81.apk.sha256
-          dl 1epaz3LRCCovB6RcCoXagQ8KMPOxShBr9 Kuro-tv-5.81-Source.zip
+          dl 1rdI8LetQXVYZtEeo2K-26c328KmbSU3e Kuro-tv-5.81.apk
+          dl 1vLeyQKRFcS22C3l-6U5L5Zdydm9_cAXk Kuro-tv-5.81.apk.sha256
+          dl 1pQgzHzATuw6UDz_X5H0eP6AqMZUbpMuk Kuro-tv-5.81-Source.zip
           file dist/* | sed 's/^/  /'
 
       - name: Gate on the exact build that was signed
@@ -55,7 +55,9 @@ jobs:
           APK=dist/Kuro-tv-5.81.apk
           SIZE=$(stat -c%s "$APK")
           echo "APK size: $SIZE"
-          if [ "$SIZE" -lt 50000000 ]; then
+          # rev 7 dropped 483 artwork files, so the APK is ~45 MB; 30 MB still catches
+          # a Drive interstitial page, which is a few kilobytes.
+          if [ "$SIZE" -lt 30000000 ]; then
             echo "::error::APK is only $SIZE bytes - that looks like a Drive interstitial page, not the build."
             head -c 300 "$APK"; exit 1
           fi
@@ -80,6 +82,12 @@ jobs:
             echo "::error::the APK has no account activity strip - wrong build attached"; exit 1; }
           unzip -p "$APK" 'assets/accounts542.js' | grep -aq 'profile-continue571' || {
             echo "::error::the APK has no continue-watching row - wrong build attached"; exit 1; }
+          unzip -p "$APK" 'assets/accounts542.js' | grep -aq 'profile-mono571' || {
+            echo "::error::the APK has no profile monogram - wrong build attached"; exit 1; }
+          if unzip -l "$APK" | grep -qE 'preset571-|profile-(avatar547|banner54|character549|default571)'; then
+            echo "::error::the APK still ships profile artwork - wrong build attached"; exit 1; fi
+          unzip -p "$APK" 'assets/app.js' | grep -aq 'hero-track581' || {
+            echo "::error::the APK has no home hero deck - wrong build attached"; exit 1; }
           echo "All artifacts sane; APK matches the signed build."
 
       - name: Publish the release

@@ -6,16 +6,29 @@ Signed with the original Kuro release key (`CN=Kuro Anime`), so this installs st
 5.72 – 5.80. **Do not uninstall or clear data.**
 
 ```
-SHA-256  ed06a8baf2c6827c6adb30a148fa26bc597866843239eacecad759a308dc9995
-Size     55,045,938 bytes
+SHA-256  541f1b73ad1ad32ec92a3bba880cedbd67a3a829a4b0f4c28632812be10c960a
+Size     45,437,725 bytes
 ```
 
 > **This is a re-cut of 5.81, same versionCode 84.** Because the version code did not change,
 > the in-app updater will not offer it (it only offers strictly higher builds). Install this
-> one manually — over the top, no uninstall — to get the casting screen and the new motion
-> layer.
+> one manually — over the top, no uninstall — to get the casting screen, the new motion layer,
+> the text-only profiles and the home hero deck.
 
 ## What's new
+
+**Profiles are text only.** Every profile picture and banner is gone — the artwork picker, the
+character presets, the &ldquo;Your art&rdquo; strip, the change-banner button and the picture uploads
+have all been removed. Your profile is your username and a monogram of its initials, in the account
+page, the profile drawer and the player's header chip. Old backups still import: only the saved
+name is restored, and anything left over is dropped. Removing the artwork took 483 image files out
+of the APK, which is why this build is **about 9 MB smaller** than the last one.
+
+**The home hero is a deck.** The top of Home is now up to five real catalogue titles shown as
+rounded artwork with a gradient copy block, the title, one Watch pill each, page dots that follow
+the scroll, and swipe between slides. It auto-advances every 7 seconds but pauses on touch, in the
+background, and when Android's animations are turned off. Posters on the freshly-added shelf carry
+a **NEW** chip.
 
 **Casting to Google TV actually works now.** The old hand-off was a bare list of device names
 that dropped you on the TV with no controls and threw away your position on the phone.
@@ -81,7 +94,7 @@ adb install -r Kuro-tv-5.81.apk
 
 ```bash
 sha256sum Kuro-tv-5.81.apk
-# ed06a8baf2c6827c6adb30a148fa26bc597866843239eacecad759a308dc9995
+# 541f1b73ad1ad32ec92a3bba880cedbd67a3a829a4b0f4c28632812be10c960a
 
 apksigner verify --print-certs Kuro-tv-5.81.apk
 # CN=Kuro Anime

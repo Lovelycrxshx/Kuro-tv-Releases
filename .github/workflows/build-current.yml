@@ -5,7 +5,7 @@ name: build Kuro (current version)
 # owner signs afterwards with the existing release key (CN=Kuro Anime), so no repository
 # secrets are involved.
 #
-# The source lives at Drive file 1_ofr8V7nVGlavv-sNVNziu5oaz6tCFoJ and must be readable
+# The source lives at Drive file 1dpF_sn1TrL2gqFTW5fp9yA09QDhMGbj5 and must be readable
 # by "anyone with the link" while the job runs (it is a GPL-3.0 source tree that is
 # published as a release asset anyway).
 #
@@ -18,7 +18,7 @@ name: build Kuro (current version)
 
 on:
   push:
-    branches: [arena/d9a61230-kuro-tv-releases]
+    branches: [arena/c7139fd4-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
@@ -30,7 +30,7 @@ concurrency:
 
 env:
   APK_NAME: Kuro-tv-5.81
-  SOURCE_ID: 1epaz3LRCCovB6RcCoXagQ8KMPOxShBr9
+  SOURCE_ID: 1pQgzHzATuw6UDz_X5H0eP6AqMZUbpMuk
   EXPECT_VERSION_NAME: "5.81"
   EXPECT_VERSION_CODE: "84"
 
@@ -116,10 +116,26 @@ jobs:
             || { echo "::error::the account activity strip is missing."; exit 1; }
           grep -q 'profile-stats571' "$PROJECT/assets/accounts542.css" \
             || { echo "::error::the account activity strip has no styles."; exit 1; }
-          grep -q 'profile-art-row571' "$PROJECT/assets/accounts542.js" \
-            || { echo "::error::the profile art strip is missing."; exit 1; }
-          grep -q 'profile-art-tile571' "$PROJECT/assets/accounts542.css" \
-            || { echo "::error::the profile art strip has no styles."; exit 1; }
+          grep -q 'profile-mono571' "$PROJECT/assets/accounts542.js" \
+            || { echo "::error::the profile monogram is missing."; exit 1; }
+          grep -q 'profile-mono571' "$PROJECT/assets/accounts542.css" \
+            || { echo "::error::the profile monogram has no styles."; exit 1; }
+          if grep -qE 'profile-(avatar547|banner547|character549|banner549|default571)|preset571-|preset-manifest571|profile-presets571' \
+            "$PROJECT/assets/accounts542.js" "$PROJECT/assets/index.html" "$PROJECT/assets/backup560.js"; then
+            echo "::error::Profile pictures or banners are still referenced in the web layer."; exit 1
+          fi
+          if grep -qE 'profile-avatar547|profile-default571|preset571' "$PROJECT/src/app/lovelycrxshx/kuro/WatchHeader.java"; then
+            echo "::error::WatchHeader still loads profile pictures."; exit 1
+          fi
+          if ls "$PROJECT"/assets | grep -qE '^(preset571-|profile-(avatar547|banner54|character549|default571))'; then
+            echo "::error::Profile artwork files are still shipped in assets."; exit 1
+          fi
+          grep -q 'hero-deck581' "$PROJECT/assets/app.js" \
+            || { echo "::error::the home hero deck is missing."; exit 1; }
+          grep -q 'hero-track581' "$PROJECT/assets/style.css" \
+            || { echo "::error::the home hero deck has no styles."; exit 1; }
+          grep -q 'poster-new581' "$PROJECT/assets/app.js" \
+            || { echo "::error::the NEW shelf chip is missing."; exit 1; }
           grep -q 'profile-continue571' "$PROJECT/assets/accounts542.js" \
             || { echo "::error::the continue-watching row is missing."; exit 1; }
           grep -q 'profile-streak571' "$PROJECT/assets/accounts542.css" \
