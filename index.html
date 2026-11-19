@@ -142,8 +142,9 @@
     <p class="warn" style="margin-top:16px">
       Already on an older Kuro? Install straight over it — <strong>do not uninstall first</strong>.
       Same package, same signing key, so your profiles, watch list, history and logins stay put.
-      This re-cut of 5.81 keeps the same version code, so the in-app updater won't offer it — install it
-      by hand, over the top, to get it.
+      This second cut of 5.81 keeps the same version code, so the in-app updater won't offer it — install it
+      by hand, over the top, to get the hero deck, the search filters, the player gestures and the episode
+      drawer.
     </p>
   </section>
 
@@ -152,7 +153,7 @@
     <p class="muted">Every build is signed with the same key since 5.62. Compare the SHA-256 of the file you
       downloaded with this one.</p>
     <div class="hashbox">
-      <code id="sha">541f1b73ad1ad32ec92a3bba880cedbd67a3a829a4b0f4c28632812be10c960a</code>
+      <code id="sha">264dba12268c6e6d8cebcdeef4ed15277ba4962dcdbcaad0c5c00cde388fca60</code>
       <button class="copy" onclick="copyHash(this)">Copy</button>
     </div>
     <p class="muted" style="margin-top:12px">
@@ -164,6 +165,25 @@
   <section class="card new">
     <h2>What's new in 5.81</h2>
     <ul>
+      <li><strong>This build (rev 8) fixes the four that did not work.</strong> The hero deck, the NEW chip
+        and the search filters had been written into a home screen the app no longer draws &mdash; the live app
+        renders its home and search from a different layer, so those changes never appeared. All four are now
+        wired into the screens the app actually shows:
+        <ul>
+          <li><strong>Hero deck</strong> &mdash; the top of Home is the five-slide deck now, seeded from the
+            popularity lists and, when those are blocked, from your own history, so it is never empty.</li>
+          <li><strong>Search filters</strong> &mdash; a chip bar above the results: Format (TV / Movie / ONA /
+            OVA / Special) and Year, each chip counted from the titles that have loaded, a
+            &ldquo;N of M loaded&rdquo; line and a clear action. Filters keep applying to pages that load
+            after you tap.</li>
+          <li><strong>Player gestures</strong> &mdash; double-tap the left or right third of the native player
+            to jump 10&nbsp;s back or forward, double-tap the middle to play or pause, drag up or down on the
+            left half for brightness and on the right half for volume, each with a short readout.</li>
+          <li><strong>Episode drawer</strong> &mdash; a new Episodes button in the player header opens a
+            right-hand list of every episode, with the one you are watching pinned and marked; tap another to
+            switch straight over.</li>
+        </ul>
+      </li>
       <li><strong>No more profile pictures or banners.</strong> The whole avatar/banner/character artwork
         system is gone: no picker sheet, no picture uploads, no preset art. Your profile is your name and a
         clean monogram of its initials, in the account page, the drawer and the player's header chip.
@@ -268,7 +288,7 @@
     </details>
     <details>
       <summary>What are the source files for?</summary>
-      <p>Transparency. <span class="mono">Kuro-tv-5.81-Source.zip</span> (15.53 MiB) is the complete Gradle tree this APK was built from, for
+      <p>Transparency. <span class="mono">Kuro-tv-5.81-Source.zip</span> (6.47 MiB) is the complete Gradle tree this APK was built from, for
         anyone who wants to read the code that handles their data.</p>
     </details>
     <details>
@@ -282,7 +302,7 @@
     <p>Kuro.tv is built by <strong>lovelycrxshx</strong>.<br>
       Independent project — not affiliated with Google, Android, or any streaming service.<br>
       <a href="https://github.com/Lovelycrxshx/Kuro-tv-Releases">GitHub repository</a> · <a href="https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/tag/v5.81">Release v5.81</a> ·
-      <span class="mono">541f1b73ad1a…</span></p>
+      <span class="mono">264dba12268c…</span></p>
   </footer>
 
 </div>

@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APK_SHA256: 541f1b73ad1ad32ec92a3bba880cedbd67a3a829a4b0f4c28632812be10c960a
+      APK_SHA256: 264dba12268c6e6d8cebcdeef4ed15277ba4962dcdbcaad0c5c00cde388fca60
       TAG: v5.81
     steps:
       - uses: actions/checkout@v4
@@ -44,9 +44,9 @@ jobs:
               "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t"
             printf '  %s  %s bytes\n' "$name" "$(stat -c%s "dist/$name")"
           }
-          dl 1rdI8LetQXVYZtEeo2K-26c328KmbSU3e Kuro-tv-5.81.apk
-          dl 1vLeyQKRFcS22C3l-6U5L5Zdydm9_cAXk Kuro-tv-5.81.apk.sha256
-          dl 1pQgzHzATuw6UDz_X5H0eP6AqMZUbpMuk Kuro-tv-5.81-Source.zip
+          dl 1hAnxwYtEhRQMogbKCTqEAmMNY-1waWNx Kuro-tv-5.81.apk
+          dl 1Rqeu8yLaKG6jTDpt6PAP_kCk4r0Dz8jC Kuro-tv-5.81.apk.sha256
+          dl 1_qX9fJFFXIcTVDcBHLQBmKL_3PIUwHNs Kuro-tv-5.81-Source.zip
           file dist/* | sed 's/^/  /'
 
       - name: Gate on the exact build that was signed
@@ -88,6 +88,17 @@ jobs:
             echo "::error::the APK still ships profile artwork - wrong build attached"; exit 1; fi
           unzip -p "$APK" 'assets/app.js' | grep -aq 'hero-track581' || {
             echo "::error::the APK has no home hero deck - wrong build attached"; exit 1; }
+          # rev 8: the four fixes must be in the binary, not just in the source tree
+          for needle in unifiedSpotlight attachFilters581 filters581 chips581; do
+            unzip -p "$APK" 'assets/unified533.js' | grep -aq "$needle" || {
+              echo "::error::unified533.js is missing $needle - rev-8 fix not in this build"; exit 1; }
+          done
+          unzip -p "$APK" 'assets/app.js' | grep -aq 'poster-new581' || {
+            echo "::error::the NEW chip hook is missing from app.js"; exit 1; }
+          for needle in attachGestures581 native-hud-581 KuroEpisodeDrawer581 watch-episodes; do
+            unzip -p "$APK" 'classes*.dex' | grep -aq "$needle" || {
+              echo "::error::the APK has no $needle - rev-8 native fix not in this build"; exit 1; }
+          done
           echo "All artifacts sane; APK matches the signed build."
 
       - name: Publish the release
