@@ -5,7 +5,7 @@ name: build Kuro (current version)
 # owner signs afterwards with the existing release key (CN=Kuro Anime), so no repository
 # secrets are involved.
 #
-# The source lives at Drive file 1_ofr8V7nVGlavv-sNVNziu5oaz6tCFoJ and must be readable
+# The source lives at Drive file 1dpF_sn1TrL2gqFTW5fp9yA09QDhMGbj5 and must be readable
 # by "anyone with the link" while the job runs (it is a GPL-3.0 source tree that is
 # published as a release asset anyway).
 #
@@ -18,7 +18,7 @@ name: build Kuro (current version)
 
 on:
   push:
-    branches: [arena/d9a61230-kuro-tv-releases]
+    branches: [arena/c7139fd4-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
