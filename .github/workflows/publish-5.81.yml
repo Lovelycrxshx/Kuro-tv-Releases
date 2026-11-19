@@ -11,7 +11,7 @@ name: publish Kuro 5.81 release
 
 on:
   push:
-    branches: [arena/be079b46-kuro-tv-releases]
+    branches: [arena/d9a61230-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
