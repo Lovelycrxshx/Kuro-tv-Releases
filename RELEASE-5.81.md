@@ -6,16 +6,40 @@ Signed with the original Kuro release key (`CN=Kuro Anime`), so this installs st
 5.72 – 5.80. **Do not uninstall or clear data.**
 
 ```
-SHA-256  541f1b73ad1ad32ec92a3bba880cedbd67a3a829a4b0f4c28632812be10c960a
-Size     45,437,725 bytes
+SHA-256  264dba12268c6e6d8cebcdeef4ed15277ba4962dcdbcaad0c5c00cde388fca60
+Size     45,441,821 bytes
 ```
 
-> **This is a re-cut of 5.81, same versionCode 84.** Because the version code did not change,
-> the in-app updater will not offer it (it only offers strictly higher builds). Install this
-> one manually — over the top, no uninstall — to get the casting screen, the new motion layer,
-> the text-only profiles and the home hero deck.
+> **This is the second cut of 5.81, same versionCode 84.** Because the version code did not
+> change, the in-app updater will not offer it (it only offers strictly higher builds). Install
+> this one manually — over the top, no uninstall — to get the hero deck on the real home screen,
+> the search filter chips, the player gestures and the episode drawer, on top of the casting
+> screen, the motion layer and the text-only profiles from the first cut.
 
 ## What's new
+
+**Rev 8 fixes the four items that looked unchanged.** The hero deck, the NEW chip and the search
+filters had been added to the classic home renderer in `app.js` — but the shipped app re-points
+`home` and `searchPage` at the unified layer in `unified533.js`, so none of that code ran. All
+four now live on the surfaces the app actually draws:
+
+- **Hero deck** — `unifiedSpotlight()` feeds the shared deck from the top five ranked titles, falls
+  back to your recents when the popularity lists are blocked, suppresses a title that is already
+  on the first slide, and clears for every re-render, so it is never the old static block. Posters
+  on the freshly-added shelf keep the **NEW** chip.
+- **Search filter chips** — a chip bar above the results on the browse page: Format (TV, Movie,
+  ONA, OVA, Special) and Year, each counted from the titles that have loaded, plus a
+  "N of M loaded" line and a clear action. Facets come from each title's own metadata, so a chip
+  only exists when the catalogue reports it. Filtering runs through the pager's item hook, so a
+  page that loads after you tap is filtered too.
+- **Player gestures and HUD** — in the native player, double-tap the left third to go back 10 s,
+  the right third to go forward 10 s, the middle to play or pause; drag vertically on the left half
+  for brightness and on the right half for volume, each showing a short fading readout. A single
+  tap still opens the player's own controls.
+- **Episode drawer** — a new Episodes icon in the watch header opens a right-hand drawer listing
+  every episode, the current one pinned and marked with a play glyph and scrolled into view, a close
+  button and a scrim, and the hardware back key closes it. Picking an episode switches without
+  leaving the player. The existing cancellable "Next in 8 s" countdown is unchanged.
 
 **Profiles are text only.** Every profile picture and banner is gone — the artwork picker, the
 character presets, the &ldquo;Your art&rdquo; strip, the change-banner button and the picture uploads
@@ -75,8 +99,8 @@ still covers every native alert — no stock-Material grey left in settings.
 ## Unchanged
 
 Playback engine, catalogue parsing, mirrors, Discord presence, downloads, PiP and the
-updater's behaviour are identical to the previous 5.81 build — this cut adds the cast screen
-and the motion layer, nothing else. No playback or network behaviour was altered.
+updater's behaviour are identical to the previous 5.81 builds — this cut adds the four wired fixes above,
+nothing else. No playback or network behaviour was altered.
 
 ## Install
 
@@ -94,7 +118,7 @@ adb install -r Kuro-tv-5.81.apk
 
 ```bash
 sha256sum Kuro-tv-5.81.apk
-# 541f1b73ad1ad32ec92a3bba880cedbd67a3a829a4b0f4c28632812be10c960a
+# 264dba12268c6e6d8cebcdeef4ed15277ba4962dcdbcaad0c5c00cde388fca60
 
 apksigner verify --print-certs Kuro-tv-5.81.apk
 # CN=Kuro Anime

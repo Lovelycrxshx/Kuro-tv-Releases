@@ -18,7 +18,7 @@ name: build Kuro (current version)
 
 on:
   push:
-    branches: [arena/c7139fd4-kuro-tv-releases]
+    branches: [arena/550cae70-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
@@ -30,7 +30,7 @@ concurrency:
 
 env:
   APK_NAME: Kuro-tv-5.81
-  SOURCE_ID: 1pQgzHzATuw6UDz_X5H0eP6AqMZUbpMuk
+  SOURCE_ID: 1_qX9fJFFXIcTVDcBHLQBmKL_3PIUwHNs
   EXPECT_VERSION_NAME: "5.81"
   EXPECT_VERSION_CODE: "84"
 
@@ -118,6 +118,16 @@ jobs:
             || { echo "::error::the account activity strip has no styles."; exit 1; }
           grep -q 'profile-mono571' "$PROJECT/assets/accounts542.js" \
             || { echo "::error::the profile monogram is missing."; exit 1; }
+          test -f "$PROJECT/src/app/lovelycrxshx/kuro/KuroEpisodeDrawer581.java" \
+            || { echo "::error::the episode drawer class is missing."; exit 1; }
+          grep -q 'openEpisodeDrawer581' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" \
+            || { echo "::error::the episode drawer is not wired into the watch screen."; exit 1; }
+          grep -q 'attachGestures581' "$PROJECT/src/app/lovelycrxshx/kuro/KuroNativePlayer561.java" \
+            || { echo "::error::player gestures are missing from the native player."; exit 1; }
+          grep -q 'attachFilters581' "$PROJECT/assets/unified533.js" \
+            || { echo "::error::the browse filter chips are missing."; exit 1; }
+          grep -q 'unifiedSpotlight' "$PROJECT/assets/unified533.js" \
+            || { echo "::error::the home hero deck is not wired into the unified home."; exit 1; }
           grep -q 'profile-mono571' "$PROJECT/assets/accounts542.css" \
             || { echo "::error::the profile monogram has no styles."; exit 1; }
           if grep -qE 'profile-(avatar547|banner547|character549|banner549|default571)|preset571-|preset-manifest571|profile-presets571' \

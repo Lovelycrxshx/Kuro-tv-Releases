@@ -157,3 +157,35 @@ anything under 50 MB as a "Drive interstitial page"; with the artwork gone the A
 so the floor is now 30 MB (an interstitial is a few KB). New gates assert the APK carries
 `profile-mono571` and `hero-track581`, and that no `preset571-`/`profile-avatar547` artwork
 is shipped.
+
+### Rev 8 — why the last cut looked unchanged, and what is actually wired now
+
+The rev-7 hero deck was built in `app.js`, but the live app never runs that code: `app.js`
+re-points the whole shell at the unified layer (`home=unifiedHome;searchPage=unifiedSearchPage`),
+and `unifiedHome`/`unifiedSearchPage` live in `unified533.js`. So the deck, the NEW chip and the
+chips that were added to `app.js` were dead code on device. That is the "not working" report.
+
+Rev 8 moves the features onto the surfaces the app really renders:
+
+- **5 (hero)** — `unifiedSpotlight()` now feeds the shared deck, `unifiedHomeData()` passes the top
+  five ranked titles, `unifiedHome()` clears the deck for each render and seeds it from your
+  history when the popularity lists are blocked, so the hero is never the old static block.
+- **5 (NEW chip)** — `unifiedCard()/unifiedCards()` take an `isNew` flag; the freshly-added shelf
+  and its cache path both pass it.
+- **8 (chips)** — a chip bar above `#results` on the browse page: Format (TV/Movie/ONA/OVA/Special)
+  and Year, counted from the titles that have loaded, each chip carrying its own count, plus a
+  "N of M loaded" line and a Clear action. Facets come from each title's own metadata, so a chip
+  only exists when the catalogue reports that data — no invented year, format or dub flag.
+  Filtering is enforced through `renderPagerCards`'s item hook, so it also applies to pages that
+  load after the chip was set.
+- **9 (gestures)** — native player: double-tap left thirds seeks −10 s, right thirds +10 s (centre
+  toggles play), vertical drag on the left half is brightness and on the right half is volume,
+  each with a fading readout pill. A plain tap still reaches PlayerView's own controls.
+- **10 (episode drawer)** — new `KuroEpisodeDrawer581`: an "Episodes" icon in the native watch
+  header opens a right-hand drawer listing `watchInfo561.episodes`, the current episode pinned and
+  marked, tap switches episode through `window.kuroChooseEpisode(index)`. Auto-next already
+  shipped (`autoNextDialog573`, cancellable countdown), so it now has a manual companion.
+
+Verified offline: `tests/smoke-unified581.cjs` (hero deck through `unifiedSpotlight`, duplicate
+suppression, NEW chip markup, chip facets/counts/combined filter) and `tests/smoke-profile571.cjs`
+both pass; all four touched Java files parse; the build guards were extended and pass locally.
