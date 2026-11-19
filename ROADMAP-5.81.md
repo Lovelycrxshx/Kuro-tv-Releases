@@ -243,18 +243,23 @@ hosts and remembers which ones fail.
 
 ---
 
-## Suggested 5.81 scope
+## Confirmed scope (user-selected)
 
-A release-sized slice that fixes trust and annoyance rather than adding surface:
+Selected for the 5.81 line — **16 of 20**:
+**1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 19**
 
-**In:** 1, 3, 4, 6, 8, 13, 15, 17, 18, 19 — mirror ranking, failure recovery, resume v2,
-skip intro, DPAD, sleep timer/autoplay, RPC polish, updater hardening, size/startup, pipeline.
+Deferred: **2** (offline catalogue cache), **12** (profiles + kids mode), **13** (sleep timer /
+autoplay / queue), **20** (privacy & diagnostics).
 
-**Next (5.82):** 2, 7, 9, 10, 5, 20 — catalogue cache, downloads v2, search, home, libass
-subtitles, privacy.
+That set is ≈ 74 dev-days, so it ships in three waves rather than one release — the wave split,
+per-item implementation notes, dependency graph, risk register and the cost of the four deferrals
+are in **[PLAN-5.81.md](PLAN-5.81.md)**.
 
-**Later (5.83+):** 11, 12, 14, 16 — notifications, profiles/kids, theming, Cast v2.
+| Wave | Version | Items | Theme |
+|---|---|---|---|
+| A | 5.81 | 1, 3, 4, 15, 17 | Reliability + trust |
+| B | 5.82 | 6, 8, 10, 11, 14 | Living-room feel |
+| C | 5.83 | 5, 7, 9, 16, 18, 19 | Heavy engineering |
 
-**Explicitly out of scope for 5.81:** anything requiring a server, an account system, or a Play
-Store presence. Kuro stays a local-first sideload; every feature above works with zero backend
-except the optional Supabase progress sync in #4.
+**Out of scope for the whole line:** anything needing a server, an account system or a Play Store
+presence. Kuro stays local-first and sideload-only.
