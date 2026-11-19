@@ -135,19 +135,24 @@ jobs:
           unzip -q -o "$RUNNER_TEMP/discord-sdk.zip" -d "$RUNNER_TEMP/sdk"
           mapfile -t AARS < <(find "$RUNNER_TEMP/sdk" -name '*.aar' | sort)
           echo "AAR candidates: ${#AARS[@]}"
-          for aar in "${AARS[@]}"; do echo "::warning::candidate: $aar"; done
-          # The SDK ships several AARs (release/debug, krisp voice, partner). Pick the one
-          # that actually exposes com.discord.socialsdk - never just the first match.
-          PICK=""
-          for aar in "${AARS[@]}"; do
-            unzip -p "$aar" classes.jar > "$RUNNER_TEMP/probe.jar" 2>/dev/null || continue
-            if unzip -l "$RUNNER_TEMP/probe.jar" 2>/dev/null | grep -q 'com/discord/socialsdk/DiscordSocialSdkInit'; then
-              PICK="$aar"; echo "Chosen AAR: $PICK"; break
-            fi
-          done
-          if [ -z "$PICK" ]; then
-            echo "::error::No AAR exposes com/discord/socialsdk/DiscordSocialSdkInit - see the candidate list above."
+          for aar in "${AARS[@]}"; do echo "candidate: $aar"; done
+          # The SDK ships release/debug and krisp voice variants; only the plain release
+          # partner AAR carries com.discord.socialsdk, so never take the first match.
+          PICK=$(printf '%s\n' "${AARS[@]:-}" | grep -E '/lib/release/discord_partner_sdk\.aar$' | head -1)
+          [ -n "$PICK" ] || PICK=$(printf '%s\n' "${AARS[@]:-}" | grep -v krisp | grep -i '/release/' | head -1)
+          [ -n "$PICK" ] || PICK=$(printf '%s\n' "${AARS[@]:-}" | grep -v krisp | head -1)
+          [ -n "$PICK" ] || PICK="${AARS[0]:-}"
+          if [ -z "$PICK" ] || [ ! -f "$PICK" ]; then
+            echo "::error::No usable AAR inside the SDK zip."
             exit 1
+          fi
+          echo "Chosen AAR: $PICK"
+          echo "::warning::chosen AAR: $PICK"
+          unzip -l "$PICK" | head -12 | while IFS= read -r line; do echo "::warning::aar: $line"; done
+          if unzip -p "$PICK" classes.jar > "$RUNNER_TEMP/probe.jar" 2>/dev/null; then
+            echo "::warning::classes.jar entries: $(unzip -l "$RUNNER_TEMP/probe.jar" | wc -l), socialsdk mentions: $(unzip -l "$RUNNER_TEMP/probe.jar" | grep -c 'com/discord/socialsdk' || true)"
+          else
+            echo "::warning::this AAR has no readable classes.jar"
           fi
           echo "KURO_DISCORD_SDK_AAR=$PICK" >> "$GITHUB_ENV"
 
