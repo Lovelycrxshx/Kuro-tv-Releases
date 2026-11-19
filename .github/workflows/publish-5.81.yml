@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APK_SHA256: d4abcf1cd30ab7c7dc59bc604f6489dc8e8570f57443ae8fb6ab5fee9152ec56
+      APK_SHA256: ed06a8baf2c6827c6adb30a148fa26bc597866843239eacecad759a308dc9995
       TAG: v5.81
     steps:
       - uses: actions/checkout@v4
@@ -44,9 +44,9 @@ jobs:
               "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t"
             printf '  %s  %s bytes\n' "$name" "$(stat -c%s "dist/$name")"
           }
-          dl 1ytsxEQ5oq19BEqDEpxY8XGYdJDHaNENZ Kuro-tv-5.81.apk
-          dl 1-1KotjkZmGW8VQ1bubC7078o81JX-WMb Kuro-tv-5.81.apk.sha256
-          dl 1xUtHzZ1OYHRtr12R1i8UCtVER2-bkFgp Kuro-tv-5.81-Source.zip
+          dl 1zNvURJvRraMTsHpEUQ1XorR9tS_UQCGw Kuro-tv-5.81.apk
+          dl 1mU0-5k4hHu1RepcJlN9VIvP5XZ5W40U9 Kuro-tv-5.81.apk.sha256
+          dl 1epaz3LRCCovB6RcCoXagQ8KMPOxShBr9 Kuro-tv-5.81-Source.zip
           file dist/* | sed 's/^/  /'
 
       - name: Gate on the exact build that was signed
@@ -78,6 +78,8 @@ jobs:
             echo "::error::the APK has no cast hand-back code - wrong build attached"; exit 1; }
           unzip -p "$APK" 'assets/accounts542.js' | grep -aq 'profile-stats571' || {
             echo "::error::the APK has no account activity strip - wrong build attached"; exit 1; }
+          unzip -p "$APK" 'assets/accounts542.js' | grep -aq 'profile-continue571' || {
+            echo "::error::the APK has no continue-watching row - wrong build attached"; exit 1; }
           echo "All artifacts sane; APK matches the signed build."
 
       - name: Publish the release
