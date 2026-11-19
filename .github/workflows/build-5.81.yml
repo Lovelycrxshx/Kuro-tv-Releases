@@ -156,10 +156,13 @@ jobs:
             echo "=== native bridge ==="
             ./scripts/build-discord-jni.sh
             echo "=== gradle assembleRelease ==="
-            ./gradlew --no-daemon --stacktrace assembleRelease
+            ./gradlew --no-daemon --stacktrace --max-workers=2 \
+              -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" \
+              assembleRelease
             echo "=== outputs ==="
             ls -lR build/outputs
           } > "$LOG" 2>&1 || rc=$?
+          [ "$(grep -cE 'FAILURE: Build failed|Execution failed for task' "$LOG" || true)" -gt 0 ] && rc=1
           cp -f "$LOG" "$GITHUB_WORKSPACE/out/dist/build-5.81.log" 2>/dev/null || cp -f "$LOG" "$GITHUB_WORKSPACE/build.log" 2>/dev/null || true
           echo "::warning::build exit=$rc, $(wc -l < "$LOG") log lines"
           grep -nE 'error:|error;|FAILURE|Execution failed|cannot find symbol|Caused by:|^\s*\^|What went wrong' "$LOG" \
