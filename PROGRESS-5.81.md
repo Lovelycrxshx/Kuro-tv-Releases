@@ -204,3 +204,25 @@ both pass; all four touched Java files parse; the build guards were extended and
   source `1_qX9fJFFXIcTVDcBHLQBmKL_3PIUwHNs` (also the `SOURCE_ID` both build workflows fetch).
 - The chat-visible SDK URL in the build commit expires an hour after issue; a fresh one is needed
   for the next build.
+
+### Rev 9 — profile art pack (2026-11-19)
+
+- Source is pulled from Drive through the Google Drive connector into `google_drive/` — the sandbox
+  cannot reach `drive.google.com` or `release-assets.githubusercontent.com` over curl, so the
+  connector is the only way to get the source zip in.
+- New: `assets/profile-art/pfp|banner/art-01..05.webp` (10 files, 472 KB), `assets/profile-art-arm.js`
+  (self-painting picker + `kuro-profile-art-v1` store), `assets/profile-art-arm.css`, linked from
+  `index.html`. `MainActivity`'s WebView asset whitelist gained the three paths and an `image/webp`
+  MIME branch — without that the images 404 inside the WebView.
+- Build run `44604508021` (first attempt failed on a transient Gradle/Kotlin dependency resolution
+  error, retried unchanged). APK **45,905,627 B**, sha256
+  **`f7b069d220c7805913df1885e67a148c6cba321a3dedc17238ec5038020e8965`**; release `v5.81` refreshed by
+  publish run `44605323359` with new gates that require `profile-art-arm.js|css` in `index.html` and
+  at least ten `profile-art/{pfp,banner}/NN.webp` files inside the APK.
+- Drive: source `19mIs0kzSaVjceQAfzTClOUYgUe4GO4Cl`, APK `1dSuhp93onn9Vlj_vrac1e791lp6U_MQ-`,
+  sha `1z9Sj8CKWLyC8M-2VJEKFdlMqVMMzHkcC` (all public).
+- Proof: `tests/smoke-profile-art581.cjs` (jsdom) — picker injected, 6+6 tiles, 10 thumbnails,
+  avatar `<img>` and banner `background-image` painted on click, choice persisted, restored after a
+  page re-render, cleared back to initials, all ten WebPs valid RIFF containers. "problems none".
+- Pairs 06–20 are still queued in `profile-art/MANIFEST.md`; the same pipeline adds them (convert →
+  drop in `assets/profile-art/`, extend the `IDS` array, re-zip, rebuild).

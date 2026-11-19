@@ -6,17 +6,35 @@ Signed with the original Kuro release key (`CN=Kuro Anime`), so this installs st
 5.72 – 5.80. **Do not uninstall or clear data.**
 
 ```
-SHA-256  264dba12268c6e6d8cebcdeef4ed15277ba4962dcdbcaad0c5c00cde388fca60
-Size     45,441,821 bytes
+SHA-256  f7b069d220c7805913df1885e67a148c6cba321a3dedc17238ec5038020e8965
+Size     45,905,627 bytes
 ```
 
-> **This is the second cut of 5.81, same versionCode 84.** Because the version code did not
+> **This is the third cut of 5.81, same versionCode 84.** Because the version code did not
 > change, the in-app updater will not offer it (it only offers strictly higher builds). Install
-> this one manually — over the top, no uninstall — to get the hero deck on the real home screen,
-> the search filter chips, the player gestures and the episode drawer, on top of the casting
-> screen, the motion layer and the text-only profiles from the first cut.
+> this one manually — over the top, no uninstall — to get the anime profile art picker, on top of
+> the hero deck, the search filter chips, the player gestures, the episode drawer, the casting
+> screen and the motion layer.
 
 ## What's new
+
+**Rev 9 brings back profile art — as a curated anime pack.** Five avatars and five matching
+banners, drawn for Kuro in the app's palette: a flat-vector chibi bust on a solid colour tile for
+the avatar, and a wide scene from that same character's world for the banner, so a pair always
+looks like a set.
+
+- **Pick it on the Account page** — "Profile art" sits under your activity strip: tap an avatar,
+  tap a banner, both apply instantly. "Initials" and "None" clear the choice and give you the old
+  monogram back.
+- **Offline and on-device** — the ten WebP files ship inside the APK (about 470 KB) and the choice
+  is stored locally; nothing is uploaded and nothing is fetched.
+- **It survives re-renders** — the picker paints itself onto the profile page every time the page
+  is drawn, including after the edit toggle, so your art cannot be lost by navigating.
+- **Still no uploads** — there is no picture picker, no text field for a URL and no banner
+  cropping UI. It is pick-from-the-pack only.
+
+The banner crops from the left, so the character on the right third stays visible behind the
+avatar on wide screens and the scene survives a centre crop on phones.
 
 **Rev 8 fixes the four items that looked unchanged.** The hero deck, the NEW chip and the search
 filters had been added to the classic home renderer in `app.js` — but the shipped app re-points
@@ -118,7 +136,7 @@ adb install -r Kuro-tv-5.81.apk
 
 ```bash
 sha256sum Kuro-tv-5.81.apk
-# 264dba12268c6e6d8cebcdeef4ed15277ba4962dcdbcaad0c5c00cde388fca60
+# f7b069d220c7805913df1885e67a148c6cba321a3dedc17238ec5038020e8965
 
 apksigner verify --print-certs Kuro-tv-5.81.apk
 # CN=Kuro Anime
