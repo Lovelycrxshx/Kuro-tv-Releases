@@ -18,7 +18,7 @@ name: build Kuro (current version)
 
 on:
   push:
-    branches: [arena/f551e02f-kuro-tv-releases]
+    branches: [arena/0f7206f9-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
@@ -30,7 +30,7 @@ concurrency:
 
 env:
   APK_NAME: Kuro-tv-5.81
-  SOURCE_ID: 109qFGr1S3BA5jgJVT4AizwdYZ8HxrhOv
+  SOURCE_ID: 1bzl-I2nSij0hK7L3auUE9XLcIzXraB4D
   EXPECT_VERSION_NAME: "5.81"
   EXPECT_VERSION_CODE: "84"
 
@@ -114,6 +114,9 @@ jobs:
             || { echo "::error::the player chip has no profile art path."; exit 1; }
           grep -q 'Looking for an anime to watch' "$PROJECT/src/app/lovelycrxshx/kuro/KuroPresence564.java" \
             || { echo "::error::the browsing presence card was not updated."; exit 1; }
+          # The Discord Social SDK has to see the Discord app to connect (Android 11+).
+          grep -q '<package android:name="com.discord"/>' "$PROJECT/AndroidManifest.xml" \
+            || { echo "::error::the manifest no longer declares com.discord package visibility."; exit 1; }
           grep -q 'kuro-profile-art-v1' "$PROJECT/assets/backup560.js" \
             || { echo "::error::backup560.js does not export the profile art key."; exit 1; }
           test -f "$PROJECT/assets/smooth-ui.css" && test -f "$PROJECT/assets/smooth-ui.js" \
