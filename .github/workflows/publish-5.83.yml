@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APK_SHA256: c4ad59211b1f931c4696c90310daffda9e092177f595aadb6b9190bdb58b4566
+      APK_SHA256: b853e87b446d2abd15d20915c84a47966f5af6b892849a8c92371a164125a26a
       TAG: v5.83
     steps:
       - uses: actions/checkout@v4
@@ -44,8 +44,8 @@ jobs:
               "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t"
             printf '  %s  %s bytes\n' "$name" "$(stat -c%s "dist/$name")"
           }
-          dl 1CLNPCvvuYLRYJFyXCWo5yrSA7XORT3zY Kuro-tv-5.83.apk
-          dl 1oJ4eduuRZclXjXdVWHuBQfKxOdqAIOXI Kuro-tv-5.83.apk.sha256
+          dl 1dqTzwDYLvOZMEFTUV4rLwS5E4rz9u6dS Kuro-tv-5.83.apk
+          dl 1XQRol8oeChe5Oh8At4H7TDu_IA2HG7GV Kuro-tv-5.83.apk.sha256
           dl 1oTF0Il3vazhE2V8ghLxVDtW4lojsRWFj Kuro-tv-5.83-Source.zip
           file dist/* | sed 's/^/  /'
 
