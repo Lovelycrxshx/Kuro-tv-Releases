@@ -301,3 +301,30 @@ both pass; all four touched Java files parse; the build guards were extended and
   `76eb0595ea88c064ed824fa98c8409ba05e3fe7f88f4e79b47a17d8bbd06613d`, `CN=Kuro Anime`
   (`1d37c3ca…`); source `7,246,067 B`. Publish run `44677577182` refreshed `v5.81`. Drive holds
   only the newest APK, checksum and source (superseded rev-11 copies trashed).
+
+## Rev 11.2 — Discord Rich Presence actually connects (released)
+
+- **Cause.** In `native/kuro_discord_rpc563.cpp` the current-account client was built with
+  `SetApplicationId(...)` and then never `Connect()`ed: only the linked/OAuth client had a
+  `Connect()` call. Every `nativePublish` therefore called `UpdateRichPresence` on a client that
+  was not `Ready`, the SDK rejected it (or dropped it), and nothing ever appeared in Discord.
+  The pump's own polling also never re-tried a connection, so the state could not recover.
+- **Fix.** New `newDirect()` helper: creates the client, installs a status callback, calls
+  `Connect()`, and records `directState` (0 idle / 1 connecting / 2 ready / -1 refused).
+  `publishDirect()` publishes only when Ready and re-publishes `lastActivity` the moment the
+  connection becomes Ready. `keepDirect()` runs from every pump and retries `Connect()` every 3 s
+  while the client is `Disconnected` (so opening Discord later still works). `nativeInit` and
+  `nativeReconnectCurrent` both go through `newDirect()`, and `nativeDirectState` exposes the state.
+- **Java.** The pump paces to the connection instead of a fixed guess: 150 ms while an update is in
+  flight, 250 ms while connecting, 1 s while refused, 500 ms while playing, 1.5 s idle. The status
+  card reads "Connecting to the Discord app…", "The Discord app refused the connection" or
+  "Waiting for the Discord app", plus a "Current Discord app link: connected/connecting/not
+  connected yet" line.
+- **Tests.** `tests/KuroDiscordNative564Test.cpp` now asserts the client is `Ready` after init and
+  that `nativeDirectState` goes 1 → 2 across a pump; `tests/test-discord-rpc563-static.py` asserts
+  the new helpers and the `away` preference, and its stale fixed-12-second assertion was replaced
+  with the new expression. Both pass locally (the native test compiles the JNI glue against the
+  fake SDK header).
+- Build `44678627093`; signed APK **43,967,712 B**, sha256
+  `d215fa1aade2cec8690040a075b34534f64d10eaddaebcf6254e95609a88a615`; source `7,246,813 B`.
+  Publish run `44679089873` refreshed `v5.81`; Drive trimmed to the newest three files.
