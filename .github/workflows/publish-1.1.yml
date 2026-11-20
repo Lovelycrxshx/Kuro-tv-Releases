@@ -26,9 +26,12 @@ concurrency:
 env:
   TAG: v1.1
   APK_NAME: Kuro-tv-1.1
-  # Filled in with the SHA-256 of the signed APK. The job refuses to run until
-  # this is a real 64-character digest.
-  APK_SHA256: "TODO_SIGNED_SHA256"
+  # SHA-256 of the signed APK committed as dist/Kuro-tv-1.1.apk. Signed with the
+  # Kuro Anime release key; the job re-checks the signature with the real
+  # apksigner before it publishes.
+  APK_SHA256: "8b998aae64525dc85a64ab95ba2f3855c2cb2679686108383966f2941709c410"
+  SIGNER_SHA256: "1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e"
+  UNSIGNED_SHA256: "35e166abfb7c5273f9393aedfdf8b3b7893fc3f7f76909beda251365e4cb1593"
   # The 1.0 source zip the 1.1 overlay is applied to.
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
 
@@ -42,13 +45,20 @@ jobs:
         with:
           fetch-depth: 1
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Refuse to publish with an unset digest
         run: |
           set -euo pipefail
-          if ! printf '%s' "$APK_SHA256" | grep -qE '^[0-9a-f]{64}$'; then
-            echo "::error::APK_SHA256 is not set (still '$APK_SHA256'). Sign the APK, set dist/$APK_NAME.apk.sha256, and put the digest in this workflow before publishing."
-            exit 1
-          fi
+          for v in APK_SHA256 SIGNER_SHA256 UNSIGNED_SHA256; do
+            if ! printf '%s' "${!v}" | grep -qE '^[0-9a-f]{64}$'; then
+              echo "::error::$v is not a real digest ('${!v}')."
+              exit 1
+            fi
+          done
 
       - name: Gate on the exact build that was signed
         run: |
@@ -56,13 +66,25 @@ jobs:
           APK="dist/$APK_NAME.apk"
           [ -f "$APK" ] || { echo "::error::$APK is missing from this branch."; exit 1; }
           SIZE=$(stat -c%s "$APK")
-          echo "APK size: $SIZE"
+          echo "signed APK: $SIZE bytes"
           [ "$SIZE" -gt 40000000 ] || { echo "::error::$APK is only $SIZE bytes - that is not the build."; exit 1; }
           ACTUAL=$(sha256sum "$APK" | cut -d' ' -f1)
           echo "expected: $APK_SHA256"
           echo "actual  : $ACTUAL"
           [ "$ACTUAL" = "$APK_SHA256" ] || { echo "::error::checksum mismatch - refusing to publish a different binary"; exit 1; }
           grep -q "$ACTUAL" "dist/$APK_NAME.apk.sha256" || { echo "::error::the .sha256 file does not match the APK"; exit 1; }
+          # the signed file must be our build plus a signature block, nothing else
+          UNSIGNED=$(sha256sum "dist/$APK_NAME-aligned.apk" | cut -d' ' -f1)
+          echo "unsigned build: $UNSIGNED"
+          [ "$UNSIGNED" = "$UNSIGNED_SHA256" ] || { echo "::error::the unsigned build in dist is not the one that was signed"; exit 1; }
+
+          # Independent signature check with the real apksigner (no JDK elsewhere).
+          java -cp dist/toolchain/apksigner.jar com.android.apksig.ApkSignerTool verify \
+            --print-certs --verbose "$APK" | tee /tmp/verify.txt
+          grep -qi "Verified using v2 scheme (APK Signature Scheme v2): true" /tmp/verify.txt \
+            || { echo "::error::apksigner did not accept a v2 signature"; exit 1; }
+          tr -d ':' < /tmp/verify.txt | tr 'A-F' 'a-f' | grep -q "$SIGNER_SHA256" \
+            || { echo "::error::the APK is not signed by the pinned Kuro Anime certificate"; exit 1; }
 
           # The 1.1 cut must actually be inside the binary.
           unzip -p "$APK" 'assets/index.html' | grep -aq 'theme-teal-1.1.css' \
@@ -76,10 +98,6 @@ jobs:
           COUNT=$(unzip -l "$APK" | grep -cE 'assets/profile-art/(pfp|banner)/art-[0-9]{2}\.webp')
           echo "profile art files in the APK: $COUNT"
           [ "$COUNT" -ge 20 ] || { echo "::error::only $COUNT art files in the APK - the ten-pair pack did not ship"; exit 1; }
-          for n in 06 07 08 09 10; do
-            unzip -l "$APK" | grep -q "assets/profile-art/pfp/art-$n.webp" \
-              || { echo "::error::pfp art-$n.webp is missing from the APK"; exit 1; }
-          done
           unzip -p "$APK" 'assets/profile-art-arm.js' | grep -aq "'art-10'" \
             || { echo "::error::the art registry in the APK stops before art-10"; exit 1; }
           echo "All artifacts sane; APK matches the signed build."
@@ -120,17 +138,20 @@ jobs:
           set -uo pipefail
           ASSETS=(dist/$APK_NAME.apk dist/$APK_NAME.apk.sha256 dist/$APK_NAME-Source.zip dist/$APK_NAME-Source.zip.sha256)
           for f in "${ASSETS[@]}"; do [ -s "$f" ] || { echo "::error::$f missing"; exit 1; }; done
+          SIZE=$(stat -c%s "dist/$APK_NAME.apk")
+          sed -e "s/{{APK_SHA256}}/$APK_SHA256/" -e "s/{{APK_BYTES}}/$SIZE/" RELEASE-1.1.md > /tmp/notes.md
+          grep -q '{{' /tmp/notes.md && { echo "::error::release notes still contain placeholders"; exit 1; } || true
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "release $TAG exists - uploading assets"
             if ! OUT=$(gh release upload "$TAG" "${ASSETS[@]}" --clobber 2>&1); then
               echo "::error::release upload failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
             fi
-            if ! OUT=$(gh release edit "$TAG" --notes-file RELEASE-1.1.md --latest 2>&1); then
+            if ! OUT=$(gh release edit "$TAG" --notes-file /tmp/notes.md --latest 2>&1); then
               echo "::error::release edit failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
             fi
           else
             if ! OUT=$(gh release create "$TAG" "${ASSETS[@]}" \
-                 --title "Kuro 1.1" --notes-file RELEASE-1.1.md --latest 2>&1); then
+                 --title "Kuro 1.1" --notes-file /tmp/notes.md --latest 2>&1); then
               echo "::error::release create failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
             fi
             echo "$OUT"

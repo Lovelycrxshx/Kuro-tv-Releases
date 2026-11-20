@@ -13,3 +13,4 @@ dist/*.apk
 staging/*.zip
 dist/*.zip
 .venv-art/
+google_drive/
