@@ -394,3 +394,20 @@ both pass; all four touched Java files parse; the build guards were extended and
 - Tests: the fake SDK now mirrors the real `Status` ordering and can refuse updates; the native test
   asserts the client never connects, that presence publishes while `Disconnected`, and that a refusal
   rebuilds the transport; the static test pins all of it.
+
+## Rev 11.5 — skip suggestions for every episode, updater v2
+
+- **Skip intro/outro (roadmap item 6).** The Zenkai HLS route ships no markers, so `Skip` only ever
+  appeared when a provider happened to include them. `KuroSkipSuggestions581` now derives a window from
+  the episode duration (intro 8–98 s, ending the last 90 s, only for episodes over two minutes) and
+  `KuroNativePlayer561` fills it in the moment the duration is known. The windows are labelled as
+  suggestions in the content description and **auto-skip never applies them**; a source marker or a
+  saved manual marker always wins and a new item recomputes the window.
+- **Updater v2 (roadmap item 17).** `KuroApkPreflight572` pins the release certificate
+  `1d37c3ca…` in the binary and refuses anything else with `UNPINNED_SIGNER`, on top of the existing
+  package / version / installed-signer checks. `KuroUpdaterDownloadService` resumes a partial download
+  with a `Range` request, folds the bytes already on disk into the SHA-256, restarts cleanly when the
+  server answers 200, and keeps the partial file on a connection failure while still discarding it when
+  the bytes themselves were bad (`BadUpdate`).
+- Tests: `tests/test-skip-and-updater581.py` pins the constants, the non-overlap of the two windows, the
+  "never auto-apply a guess" rule, the pinned digest and the resume mechanics.

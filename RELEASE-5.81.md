@@ -6,20 +6,35 @@ Signed with the original Kuro release key (`CN=Kuro Anime`), so this installs st
 5.72 – 5.80. **Do not uninstall or clear data.**
 
 ```
-SHA-256  55a575595db414bfd435f580da25d7fcf7f66b52fc64f42372dd53b9b568e483
+SHA-256  d4e58ea003bac2f2986d08b130f98ee16a498566bdfabde6788cc45aa8f91e20
 Size     44,008,672 bytes
 ```
 
-> **This is the tenth cut of 5.81, same versionCode 84 — presence now goes through the Discord app's
-> own RPC service the way Discord documents it for Android, so nothing waits for a sign-in that never
-> comes.** Because the version code did not change, the in-app updater will not offer it; install it
-> over the top, no uninstall. Because the version code did not
+> **This is the eleventh cut of 5.81, same versionCode 84 — every episode now offers Skip for the
+> opening and ending, and the updater will not install anything that is not signed by the Kuro release
+> key.** Because the version code did not change, the in-app updater will not offer it; install it over
+> the top, no uninstall. Because the version code did not
 > change, the in-app updater will not offer it (it only offers strictly higher builds). Install
 > this one manually — over the top, no uninstall — to get the Cast screen removed, a quieter
 > Discord presence loop, the browsing card that says what it is, the profile art on the player
 > chip and per-episode resume labels in the episode drawer.
 
 ## What's new
+
+**Rev 11.5 offers Skip on every episode, and hardens the updater.** The HLS route carries no chapter
+data, so Skip only ever appeared when a provider happened to ship markers — which is almost never. The
+native player now fills in a conservative window once the duration is known: an intro between 8 s and
+98 s and an ending in the last 90 s of any episode longer than two minutes. Those windows are offered
+as *suggestions* — your auto-skip setting never applies them on its own — and a marker from the source
+or one you set yourself always wins. The text under the button says which it is.
+
+The updater now **pins the Kuro release key in the binary**: matching the installed app was not enough,
+because on a device where the installed app had been replaced the comparison would happily accept the
+replacement's key. Every update must carry the release certificate
+(`1d37c3ca…`) or it is refused before Android's installer is offered it. Downloads are also
+**resumable** — the partial file is kept across a dropped connection and the next attempt continues
+from the byte offset with a `Range` request, while the SHA-256 still covers the whole file because the
+bytes already on disk are folded into the digest.
 
 **Rev 11.4 is the fix, not another probe.** Discord's Social SDK has shipped Rich Presence for Android
 without authentication since 1.10: `SetApplicationId` + `UpdateRichPresence`, talking straight to the
@@ -211,7 +226,7 @@ adb install -r Kuro-tv-5.81.apk
 
 ```bash
 sha256sum Kuro-tv-5.81.apk
-# 55a575595db414bfd435f580da25d7fcf7f66b52fc64f42372dd53b9b568e483
+# d4e58ea003bac2f2986d08b130f98ee16a498566bdfabde6788cc45aa8f91e20
 
 apksigner verify --print-certs Kuro-tv-5.81.apk
 # CN=Kuro Anime
