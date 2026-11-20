@@ -1,9 +1,9 @@
-name: publish Kuro 5.81 release
+name: publish Kuro 5.82 release
 
 # The sandbox that drives this repo cannot reach uploads.github.com, but a runner
 # can. This job pulls the already-signed artifacts from Drive, proves the APK is
 # byte-identical to the one that was built and signed (SHA-256 gate), and then
-# publishes the v5.81 release with the binaries attached.
+# publishes the v5.82 release with the binaries attached.
 #
 # Trigger: a commit whose message contains "[release]" (or a manual dispatch).
 # The Drive files only need temporary "anyone with the link" access while this
@@ -11,7 +11,7 @@ name: publish Kuro 5.81 release
 
 on:
   push:
-    branches: [arena/a293dbd7-kuro-tv-releases]
+    branches: [arena/98533644-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
@@ -27,8 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APK_SHA256: d4e58ea003bac2f2986d08b130f98ee16a498566bdfabde6788cc45aa8f91e20
-      TAG: v5.81
+      APK_SHA256: PLACEHOLDER_HASH
+      TAG: v5.82
     steps:
       - uses: actions/checkout@v4
 
@@ -44,15 +44,15 @@ jobs:
               "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t"
             printf '  %s  %s bytes\n' "$name" "$(stat -c%s "dist/$name")"
           }
-          dl 1cb3BdDYq1nSIiaJsnvjHpLMM_I1yTpMj Kuro-tv-5.81.apk
-          dl 1_F6Kxw1ya4V-Q-YJMowekNBLDWo3GJ8W Kuro-tv-5.81.apk.sha256
-          dl 1h2Cy4_y8iJt1iYlnCx-zU-51pmF9tAZW Kuro-tv-5.81-Source.zip
+          dl PLACEHOLDER_APK Kuro-tv-5.82.apk
+          dl PLACEHOLDER_SHA Kuro-tv-5.82.apk.sha256
+          dl 1ygvb4HDRZXicUvueHqGYdSRt8utim8T0 Kuro-tv-5.82-Source.zip
           file dist/* | sed 's/^/  /'
 
       - name: Gate on the exact build that was signed
         run: |
           set -euo pipefail
-          APK=dist/Kuro-tv-5.81.apk
+          APK=dist/Kuro-tv-5.82.apk
           SIZE=$(stat -c%s "$APK")
           echo "APK size: $SIZE"
           # rev 7 dropped 483 artwork files, so the APK is ~45 MB; 30 MB still catches
@@ -69,9 +69,9 @@ jobs:
             exit 1
           fi
           # the attached checksum file must agree with the APK
-          grep -q "$ACTUAL" dist/Kuro-tv-5.81.apk.sha256 || {
+          grep -q "$ACTUAL" dist/Kuro-tv-5.82.apk.sha256 || {
             echo "::error::the .sha256 file does not match the APK"; exit 1; }
-          unzip -l dist/Kuro-tv-5.81-Source.zip | head -5 >/dev/null || {
+          unzip -l dist/Kuro-tv-5.82-Source.zip | head -5 >/dev/null || {
             echo "::error::source zip is not a zip"; exit 1; }
           # this cut must actually contain the cast screen and the motion layer
           unzip -l "$APK" | grep -q 'assets/smooth-ui.js' || {
@@ -123,7 +123,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
-          ASSETS=(dist/Kuro-tv-5.81.apk dist/Kuro-tv-5.81.apk.sha256 dist/Kuro-tv-5.81-Source.zip)
+          ASSETS=(dist/Kuro-tv-5.82.apk dist/Kuro-tv-5.82.apk.sha256 dist/Kuro-tv-5.82-Source.zip)
           echo "--- token/repo visibility ---"
           gh auth status 2>&1 | head -5
           gh api "repos/${GITHUB_REPOSITORY}" --jq '"repo=\(.full_name) private=\(.private) permissions=\(.permissions)"' 2>&1 | head -3
@@ -132,12 +132,12 @@ jobs:
             if ! OUT=$(gh release upload "$TAG" "${ASSETS[@]}" --clobber 2>&1); then
               echo "::error::release upload failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
             fi
-            if ! OUT=$(gh release edit "$TAG" --notes-file RELEASE-5.81.md --latest 2>&1); then
+            if ! OUT=$(gh release edit "$TAG" --notes-file RELEASE-5.82.md --latest 2>&1); then
               echo "::error::release edit failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
             fi
           else
             if ! OUT=$(gh release create "$TAG" "${ASSETS[@]}" \
-                 --title "Kuro 5.81" --notes-file RELEASE-5.81.md --latest 2>&1); then
+                 --title "Kuro 5.82" --notes-file RELEASE-5.82.md --latest 2>&1); then
               echo "::error::release create failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
             fi
             echo "$OUT"
@@ -152,5 +152,5 @@ jobs:
             echo "### Release $TAG"
             echo "- tag: \`$TAG\` (target \`${{ github.ref_name }}\`)"
             echo "- APK SHA-256 gate: \`$APK_SHA256\`"
-            echo "- notes: \`RELEASE-5.81.md\`"
+            echo "- notes: \`RELEASE-5.82.md\`"
           } >> "$GITHUB_STEP_SUMMARY"
