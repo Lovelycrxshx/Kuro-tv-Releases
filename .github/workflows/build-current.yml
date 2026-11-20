@@ -163,8 +163,10 @@ jobs:
           grep -q 'name="KuroDialogTheme"' "$PROJECT/res/values/styles.xml" \
             || { echo "::error::KuroDialogTheme missing from styles.xml."; exit 1; }
           themed=$(grep -c 'KuroDialogs581.themed' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java")
-          echo "Themed alert dialogs: $themed"
-          [ "$themed" -ge 15 ] || { echo "::error::Expected the settings dialogs to use the themed context."; exit 1; }
+          plain=$(grep -cE 'new AlertDialog\.Builder\([^K]' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" || true)
+          echo "Themed alert dialogs: $themed (plain builders: $plain)"
+          [ "$themed" -ge 14 ] || { echo "::error::Expected the settings dialogs to use the themed context."; exit 1; }
+          [ "$plain" -le 0 ] || { echo "::error::An alert dialog in MainActivity bypasses KuroDialogs581.themed."; exit 1; }
           grep -q "versionCode ${EXPECT_VERSION_CODE}" "$PROJECT/build.gradle" \
             || { echo "::error::build.gradle versionCode is not ${EXPECT_VERSION_CODE}."; exit 1; }
           grep -q "versionName '${EXPECT_VERSION_NAME}'" "$PROJECT/build.gradle" \
