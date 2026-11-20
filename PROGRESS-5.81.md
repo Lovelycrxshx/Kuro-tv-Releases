@@ -348,3 +348,17 @@ both pass; all four touched Java files parse; the build guards were extended and
   `6ce4d18897066753b978f27b2f761a507fab6044950e7c48dd6813c1c6491fc7` (compiled manifest verified
   to contain `com.discord`); source `7,247,110 B`; publish `44680044668` refreshed `v5.81`; Drive
   trimmed to the newest three files.
+
+## Rev 11.3.1 — trace the SDK handshake
+
+- The current-account client now records the SDK's own status/error pairs (`trace` ring in
+  `native/kuro_discord_rpc563.cpp`, exposed through `nativeTraceCount/nativeTraceStatus/nativeTraceError`)
+  and the status card prints them as `SDK events: …`, so a stuck "Connecting" says which statuses the
+  SDK actually delivered and with which error code.
+- `DiscordSocialSdkInit.setEngineActivity(this)` is called at the top of `MainActivity.onCreate`, before
+  the presence loop starts, so the SDK engine is bound to the Activity from the first frame.
+- The presence pump runs on the main looper (`new Handler(context.getMainLooper())`) instead of a private
+  `HandlerThread`: the SDK delivers callbacks on the looper, so a Ready/Disconnected transition is now
+  published on the very next pump (50 ms while the direct client is not Ready) rather than up to 1.5 s later.
+- Static test extended: manifest `com.discord` query, `nativeDirectError`, the trace natives and the
+  early `setEngineActivity` call are all asserted; native test covers the trace API.

@@ -6,18 +6,27 @@ Signed with the original Kuro release key (`CN=Kuro Anime`), so this installs st
 5.72 – 5.80. **Do not uninstall or clear data.**
 
 ```
-SHA-256  6ce4d18897066753b978f27b2f761a507fab6044950e7c48dd6813c1c6491fc7
-Size     43,984,096 bytes
+SHA-256  ced443076ad3e371703cd1e5c61840c73fa98328501bb29be546589acfde23f1
+Size     44,004,576 bytes
 ```
 
-> **This is the seventh cut of 5.81, same versionCode 84 — it lets the Discord SDK actually reach
-> the Discord app, on top of the presence connection and the launch-crash fix.** Because the version code did not
+> **This is the eighth cut of 5.81, same versionCode 84 — it instruments the Discord SDK handshake
+> so a stuck connection can be diagnosed on the phone itself, on top of the app-visibility fix,
+> the presence connection and the launch-crash fix.** Because the version code did not
 > change, the in-app updater will not offer it (it only offers strictly higher builds). Install
 > this one manually — over the top, no uninstall — to get the Cast screen removed, a quieter
 > Discord presence loop, the browsing card that says what it is, the profile art on the player
 > chip and per-episode resume labels in the episode drawer.
 
 ## What's new
+
+**Rev 11.3.1 stops guessing about the handshake.** The Discord client was still sitting on
+"Connecting to the Discord app…" — the SDK reports no error and no terminal status, so nothing
+said *why*. The client now records the SDK's own status/error pairs and the status card prints them
+("SDK events: Connecting · Connecting · Disconnected (error 4)"), the SDK engine is handed the
+Activity at `onCreate` (its engine binds to the Activity it is created with), and the presence pump
+runs on the main looper — the looper the SDK callbacks arrive on — instead of a private thread, so a
+status the SDK delivers is seen the moment it lands instead of up to a pump later.
 
 **Rev 11.3 gives the SDK sight of Discord.** Android 11 and later hide other installed apps unless
 the manifest asks for them, and Kuro never declared `com.discord` — so the newly connected client
@@ -185,7 +194,7 @@ adb install -r Kuro-tv-5.81.apk
 
 ```bash
 sha256sum Kuro-tv-5.81.apk
-# 6ce4d18897066753b978f27b2f761a507fab6044950e7c48dd6813c1c6491fc7
+# ced443076ad3e371703cd1e5c61840c73fa98328501bb29be546589acfde23f1
 
 apksigner verify --print-certs Kuro-tv-5.81.apk
 # CN=Kuro Anime
