@@ -18,7 +18,7 @@ name: build Kuro (current version)
 
 on:
   push:
-    branches: [arena/15c12177-kuro-tv-releases]
+    branches: [arena/1345b858-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
