@@ -247,3 +247,40 @@ both pass; all four touched Java files parse; the build guards were extended and
   cached copy and built clean, so signed URLs are only needed when the SDK version changes.
 - Test: `tests/smoke-profile-art581.cjs` extended to the badge, a late-created drawer, a rebuilt
   badge, and clearing — "problems none".
+
+## Rev 11 — Cast removed, presence overhaul (released)
+
+- **Cast is gone.** Deleted `KuroCastActivity561`, `KuroCastOptions561` and `KuroCastTheme`
+  (`res/values/cast_styles.xml`), the manifest activity + `OPTIONS_PROVIDER_CLASS_NAME` meta-data,
+  the `play-services-cast-framework:22.1.0` dependency, the `player-cast-561` chip, `cast561()`,
+  `returnFromCast582()`, `CAST_REQUEST561`, `castStart561`, `castSucceeded561` and
+  `webPausedForCast561` (plus the resume nudge that only existed for it). The stale
+  `KuroCast561Test` host test was dropped with the class. APK drops from 45.9 MB to 43.9 MB.
+- **RPC 2 — pump backoff.** `KuroDiscordRpc563.Pump` no longer wakes every 100 ms: 150 ms while an
+  update is in flight (`hotUntil`), 500 ms while something is playing, 1.5 s when idle.
+- **RPC 3 — browsing card.** `KuroPresence564.browsing()` now returns
+  “Looking for an anime to watch” / “Kuro.tv”, and stays neutral (“In the app”) when titles are
+  hidden. The unused `KuroPresence563.watching/browsing` builders and `castStart561`-era code are
+  gone (RPC e).
+- **RPC 6 — truncation.** The episode name is clipped inside the quotes with an ellipsis, with the
+  separator, both quotes and the ellipsis reserved inside the 120-byte budget.
+- **RPC 10 — diagnosability.** Status shows relative “last accepted” times, counts the retry down
+  while updates keep failing (`Retry.waitFor`), and history lines carry the SDK result code.
+- **RPC c/d.** “Rewatching” appears when an episode that already had saved progress is opened
+  (`rewatch563` set once at open, passed through `Options.rewatch`). New `away` preference
+  (`quick` default = the old 12 s stop, `min1`, `min5`, `keep`) controls how long presence
+  survives backgrounding; `keep` also lets the presence poll keep running in the background.
+- **Improvements 1, 2, 4.** `WatchHeader.setProfile(signedIn, mono, artId)` decodes
+  `profile-art/pfp/art-NN.webp` into the signed-in chip (circular clip, initials fallback), fed by
+  the `profileArt581(String)` bridge that `profile-art-arm.js` calls whenever the choice changes;
+  `backup560.js` now exports `kuro-profile-art-v1`; the episode drawer shows a “Resume 12:34”
+  label per started episode via `KuroEpisodeDrawer581.setProgress(Progress)`.
+- **Not done, and why.** Genre + Dubbed chips (improvement 3) need per-card metadata the unified
+  catalogue does not carry — items only expose `meta` (format/year) and `title`, so the chips would
+  never match. The season switcher (part of 4) has no season data either. Dead WebView whitelist
+  pruning (5) needs a per-source host audit before removing entries.
+- Build `44675856463`; signed APK **43,947,232 B**, sha256
+  `95ad74ec96ca3656a1f57f32cdaaf21f51818c3038c74ca889e25dd511e8e1ca`, header-only signature
+  verified against `CN=Kuro Anime` (`1d37c3ca…`); source `7,246,069 B`. Publish run
+  `44676375461` refreshed `v5.81`. Drive folder back to 11 files (old APK/sha and two older source
+  zips trashed).
