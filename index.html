@@ -143,8 +143,8 @@
       Already on an older Kuro? Install straight over it — <strong>do not uninstall first</strong>.
       Same package, same signing key, so your profiles, watch list, history and logins stay put.
       5.82 is the first cut whose version code (85) is newer than 5.81's (84), so the in-app updater
-      will finally offer it. It carries no new features — it is the 5.81 rev 11.5 code under a new
-      version code, which is exactly why the updater can see it now.
+      finally offers it — and this cut is the one that installs itself: a newer release is found,
+      downloaded, verified and handed to Android's installer on its own.
     </p>
   </section>
 
@@ -153,7 +153,7 @@
     <p class="muted">Every build is signed with the same key since 5.62. Compare the SHA-256 of the file you
       downloaded with this one.</p>
     <div class="hashbox">
-      <code id="sha">81f8b66ea6651b28cffdeca4f313f7e6e8e802a61f88ff91597e29b790ecb435</code>
+      <code id="sha">c4ad59211b1f931c4696c90310daffda9e092177f595aadb6b9190bdb58b4566</code>
       <button class="copy" onclick="copyHash(this)">Copy</button>
     </div>
     <p class="muted" style="margin-top:12px">
@@ -165,44 +165,53 @@
   <section class="card new">
     <h2>What's new in 5.82</h2>
     <p class="muted" style="margin-top:-4px">
-      <strong>This cut changes the version number and nothing else.</strong> The code inside is the same
-      code that shipped as 5.81 rev 11.5, with the version code moved from 84 to 85. The updater only
-      offers a build whose version code is strictly newer, so everything built on 84 was invisible to
-      anyone already on 5.81 &mdash; 85 is the first one it can see. The two features below arrived in the
-      5.81 line and are repeated here because, for most people, this build is the first time the updater
-      will hand them over.
+      <strong>Kuro now updates itself.</strong> Before this build the app could check for a release and
+      download it, but nothing happened until you found the notification and tapped it. A newer release is
+      now found, downloaded, verified and handed to Android's installer &mdash; with the whole transfer
+      visible in a download screen built from Kuro's own theme.
     </p>
     <ul>
-      <li><strong>Skip suggestions on every episode.</strong> The player now reads skip markers for the
-        episode you are actually watching, not just the one that happened to be first.
+      <li><strong>Updates go all the way through.</strong>
         <ul>
-          <li><strong>Suggested, never assumed.</strong> A source marker wins. A marker you set yourself
-            wins. A suggestion only fills the gap when neither exists, estimated from that episode's own
-            duration, and it never moves the playhead on its own.</li>
-          <li><strong>Labelled as a suggestion.</strong> The chip says so, so an estimate never looks like
-            a real marker. One tap skips, the same as a hand-set range.</li>
-          <li><strong>Auto-skip ignores suggestions.</strong> Automatic skipping stays reserved for ranges
-            that were explicitly marked, on this device or by the source.</li>
-          <li><strong>Quiet math.</strong> A 24-minute episode offers intro 8&nbsp;s &rarr; 98&nbsp;s and
-            outro 1348&nbsp;s &rarr; 1438&nbsp;s, with no overlap. Anything under 120&nbsp;s gets no
-            suggestion at all.</li>
+          <li><strong>No reminder cadence.</strong> A release found by the daily check starts downloading
+            immediately. The three-notice sequence is gone from the automatic path, and there is no
+            &ldquo;remind me later&rdquo; to dismiss.</li>
+          <li><strong>The installer opens on its own.</strong> Once the file passes verification Kuro opens
+            Android's installer. Android always shows its own confirmation &mdash; every Android app must
+            &mdash; and one tap finishes it. Install over the top and your library stays.</li>
+          <li><strong>Once per version.</strong> Kuro remembers that it already handed you a version, so a
+            cancelled install never turns into a loop.</li>
+          <li><strong>Your choice of depth.</strong> Settings &rarr; Kuro updates &rarr; Automatic updates:
+            check, download and install (the default); check and download only; or off &mdash; remind me
+            first, which is exactly the old behaviour.</li>
+          <li><strong>The network setting still rules.</strong> Wi-Fi-only downloads wait for Wi-Fi and
+            continue by themselves when it appears.</li>
         </ul>
       </li>
-      <li><strong>Updater v2.</strong> Updates are checked against a pinned certificate, and the download
-        resumes instead of restarting.
+      <li><strong>The download screen.</strong> The transfer is no longer only a notification. The in-app
+        update screen uses the app's palette &mdash; deep violet panel, rounded corners, the accent strip,
+        the same focus rings as the rest of the settings &mdash; and shows:
         <ul>
-          <li><strong>Pinned signer.</strong> An update is only accepted when the package name matches, the
-            installed signer set equals the downloaded one, and that set contains the release certificate.
-            A build signed by anyone else is refused before Android's installer is ever opened.</li>
-          <li><strong>Resumable download.</strong> An interrupted download continues from where it stopped,
-            and the SHA-256 is verified over the finished file. A truncated or altered file is deleted
-            rather than installed.</li>
+          <li>the release and a state chip: CHECKING, DOWNLOADING, VERIFYING, READY, WAITING, FAILED;</li>
+          <li>a large percentage and a bar that spins while the total is unknown and never claims more than
+            100%;</li>
+          <li>what actually arrived &mdash; <em>18.4 MiB of 41.97 MiB &middot; 2.1 MiB/s &middot; 14 s
+            left</em> &mdash; counted from bytes written, not from a timer;</li>
+          <li>Stop (the partial file is kept so the next attempt resumes), Hide (the download continues in
+            the background service), Retry, and Install now once the file is verified.</li>
         </ul>
+        It opens itself when a download starts or resumes, and stays closed once you close it.
       </li>
+      <li><strong>Nothing was loosened to make this possible.</strong> An update is still only accepted if
+        the package name matches, the signer set equals the installed one, it contains the pinned Kuro
+        certificate, and the version code is strictly newer. The published SHA-256 is verified over the
+        finished file, and anything truncated or altered is deleted instead of installed.</li>
     </ul>
-    <p class="muted">Playback engine, catalogue parsing, mirrors, Discord presence, downloads, PiP,
-      profiles, the gallery, search filters, the hero deck, casting and every theme behave exactly as they
-      did in 5.81. Nothing was refactored for this cut &mdash; that is the point of it.</p>
+    <p class="muted">Also in 5.82: version code 85, which is what lets the updater see these builds at all
+      (5.81 was pinned at 84), plus the 5.81 rev 11.5 work &mdash; skip suggestions on every episode with
+      source and user markers always winning, and updater v2 with the pinned signer and resumable
+      downloads. Playback, catalogue, mirrors, Discord presence, offline downloads, PiP, profiles, the
+      gallery, search filters, the hero deck, casting and every theme are unchanged.</p>
   </section>
 
   <section class="card">
@@ -280,7 +289,7 @@
     <p>Kuro.tv is built by <strong>lovelycrxshx</strong>.<br>
       Independent project — not affiliated with Google, Android, or any streaming service.<br>
       <a href="https://github.com/Lovelycrxshx/Kuro-tv-Releases">GitHub repository</a> · <a href="https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/tag/v5.82">Release v5.82</a> ·
-      <span class="mono">81f8b66ea665…</span></p>
+      <span class="mono">c4ad59211b1f…</span></p>
   </footer>
 
 </div>

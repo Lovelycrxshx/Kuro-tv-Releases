@@ -31,6 +31,24 @@ key, carrying:
 
 Signer: CN=Kuro Anime, `1D:37:C3:CA:28:ED:80:CC:48:46:01:A7:A7:90:7D:5C:43:97:0A:5D:57:D5:1A:A4:E9:14:75:A6:07:03:E9:3E`.
 
+## Cut 2 — automatic updates + in-app download screen
+
+New classes: `KuroUpdateCenter582` (policy, state, progress snapshot, strings) and
+`KuroUpdateDialog582` (the themed download screen). Touched: `KuroUpdater572` (release fetch
+extracted to `fetch()`; the scheduled pass hands a found release to automatic mode before the
+reminder state machine), `KuroUpdaterDownloadService` (writes `dlBytes`/`dlTotal`/`dlSpeed`,
+reports `verifying`, honours a cancel request), `MainActivity` (update panel, automatic-update
+chooser, resume watcher, `updatesAuto582` settings action), `assets/settings560.js` (the new
+row). Covered by `tests/test-auto-update-582.py`.
+
+Behaviour: found → queued → downloading (resumable) → verifying → installer, once per
+version. Default is full auto; "download only" and "off" are one chooser away. Wi-Fi-only
+still gates the transfer, and the file must still match the published SHA-256 and the pinned
+certificate (`1d37c3ca…`) before Android's installer is opened.
+
+Cut 2 build: CI run `44742158064` success, APK 44,008,672 B, SHA-256
+`c4ad59211b1f931c4696c90310daffda9e092177f595aadb6b9190bdb58b4566`, source zip 7,246,876 B.
+
 ## Next cuts (85 stays)
 
 5.82 feature work has not started. Candidates, in the order they were ranked for the 5.81 line:

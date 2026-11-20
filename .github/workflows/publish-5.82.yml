@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APK_SHA256: 81f8b66ea6651b28cffdeca4f313f7e6e8e802a61f88ff91597e29b790ecb435
+      APK_SHA256: c4ad59211b1f931c4696c90310daffda9e092177f595aadb6b9190bdb58b4566
       TAG: v5.82
     steps:
       - uses: actions/checkout@v4
@@ -44,9 +44,9 @@ jobs:
               "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t"
             printf '  %s  %s bytes\n' "$name" "$(stat -c%s "dist/$name")"
           }
-          dl 1SBl9Iv_S3C_jCAfXPjcRt5MdHxgxkIf9 Kuro-tv-5.82.apk
-          dl 14tmFQXcMkMgVirFKB3uQFtbKYkrSCodk Kuro-tv-5.82.apk.sha256
-          dl 1ygvb4HDRZXicUvueHqGYdSRt8utim8T0 Kuro-tv-5.82-Source.zip
+          dl 1CLNPCvvuYLRYJFyXCWo5yrSA7XORT3zY Kuro-tv-5.82.apk
+          dl 1oJ4eduuRZclXjXdVWHuBQfKxOdqAIOXI Kuro-tv-5.82.apk.sha256
+          dl 1R0yJ82KJFr4I1ZBbFLKHcyvVYbBZ3x2I Kuro-tv-5.82-Source.zip
           file dist/* | sed 's/^/  /'
 
       - name: Gate on the exact build that was signed
@@ -116,6 +116,13 @@ jobs:
             echo "::error::the profile avatar is not painted into the header and drawer"; exit 1; }
           unzip -p "$APK" 'assets/profile-art-arm.css' | grep -aq 'header-mono571.has-art581' || {
             echo "::error::the header avatar styles are missing"; exit 1; }
+          # cut 2: automatic updating and the in-app download screen must be in the binary
+          for needle in KuroUpdateCenter582 KuroUpdateDialog582 autoOffered582; do
+            unzip -p "$APK" 'classes*.dex' | grep -aq "$needle" || {
+              echo "::error::the APK has no $needle - the automatic update cut is not in this build"; exit 1; }
+          done
+          unzip -p "$APK" 'assets/settings560.js' | grep -aq 'updatesAuto582' || {
+            echo "::error::the automatic-update setting is missing from the settings list"; exit 1; }
           echo "All artifacts sane; APK matches the signed build."
 
       - name: Publish the release
