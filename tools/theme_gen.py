@@ -19,16 +19,25 @@ import os
 import re
 import sys
 
-# name -> (target hue in degrees, one-line description used by the picker)
-# name -> (hue, anchor lightness).  Anchor keeps every accent as visually
-# heavy as the purple it replaces: teal and indigo read lighter than purple at
-# the same HLS lightness, crimson and amber read heavier.
+# name -> (hue in degrees, anchor lightness, saturation scale).
+# Anchor keeps every accent as visually heavy as the purple it replaces: teal
+# and sky read lighter than purple at the same HLS lightness, crimson and amber
+# read heavier. Saturation scale 0 turns an accent into a grey ramp (graphite),
+# which keeps the depth of the palette without any hue at all.
 ACCENTS = {
-    "teal": (174, 0.50),      # default
-    "crimson": (348, 0.58),
-    "indigo": (232, 0.56),
-    "amber": (36, 0.55),
-    "violet": (272, 0.63),    # the 1.0 look, kept as an escape hatch
+    # signature
+    "teal":     (174, 0.50, 1.0),   # default
+    "violet":   (272, 0.63, 1.0),   # the 1.0 look, kept as an escape hatch
+    "graphite": (272, 0.60, 0.0),   # neutral: no hue, same depth
+    # cool
+    "sky":      (205, 0.52, 1.0),
+    "indigo":   (232, 0.56, 1.0),
+    "emerald":  (150, 0.52, 1.0),
+    # warm
+    "amber":    (36, 0.55, 1.0),
+    "sunset":   (18, 0.58, 1.0),
+    "crimson":  (348, 0.58, 1.0),
+    "magenta":  (312, 0.60, 1.0),
 }
 DEFAULT = "teal"
 
@@ -61,32 +70,32 @@ def _blend(h_from, h_to, t):
 
 def remap_hex(h, accent):
     """Return the re-hued hex (lowercase, no '#') or the original."""
-    target_hue, anchor = accent
+    target_hue, anchor, sat_scale = accent
     r, g, b = _rgb(h)
     hue, light, sat = colorsys.rgb_to_hls(r, g, b)
     hue *= 360.0
     if sat < MIN_SAT or not (PURPLE_LO <= hue <= PURPLE_HI):
         return h.lower()
-    if target_hue == 272:            # the 1.0 look: only tidy the case
+    if target_hue == 272 and sat_scale == 1.0:   # the 1.0 look: only tidy the case
         return h.lower()
     if light >= 0.88:
         # Ink and near-white tints stay neutral with just a hint of the accent.
-        new_hue, new_sat, new_light = target_hue, min(sat, 0.08), light
+        new_hue, new_sat, new_light = target_hue, min(sat, 0.08) * sat_scale, light
     elif light <= 0.25:
         # Backgrounds and panel tints keep their depth; they travel most of the
         # way to the accent so the app floor reads as the chosen colour.
         new_hue = target_hue
-        new_sat = sat
+        new_sat = sat * sat_scale
         new_light = light
     elif sat < NEUTRAL_SAT:
         # Muted text keeps its lightness and leans only slightly, so greys
         # stay greys instead of turning sickly.
         new_hue = _blend(hue, target_hue, 0.35 + 0.5 * sat)
-        new_sat = sat * 0.90
+        new_sat = sat * 0.90 * sat_scale
         new_light = light
     else:
         new_hue = target_hue
-        new_sat = min(1.0, 0.05 + sat * 0.90)
+        new_sat = min(1.0, 0.05 + sat * 0.90) * sat_scale
         new_light = max(0.26, min(0.97, anchor + (light - 0.63) * 0.85))
     return _hex(colorsys.hls_to_rgb(new_hue / 360.0, new_light, new_sat))
 

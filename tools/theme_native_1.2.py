@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Kuro 1.2 - give the native (Java) layer the same five accents as the web layer.
+"""Kuro 1.2 - give the native (Java) layer the same accents as the web layer.
 
 1.1 re-hued the stylesheets, so every *web* pixel follows the picker in Account.
 The Java side kept its own copy of the purple palette: the status and navigation
@@ -7,7 +7,7 @@ bars, the stock alert dialogs, the player options panel, the watch header, the
 episode drawer, the download bar and the update dialog. This tool
 
   * collects every ARGB literal the native palette is built from,
-  * re-hues each one into the five accents with the same HLS transform that
+  * re-hues each one into every accent with the same HLS transform that
     tools/theme_gen.py uses for the CSS, so the two layers agree colour for
     colour,
   * writes `KuroTheme12.java`, which holds that table, remembers the choice on
@@ -32,13 +32,22 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from theme_gen import ACCENTS, remap_hex  # noqa: E402
 
 PKG = os.path.join("src", "app", "lovelycrxshx", "kuro")
-ACCENT_ORDER = ["teal", "crimson", "indigo", "amber", "violet"]
+# Keep this order in step with theme_gen.ACCENTS: the generated Java table and
+# the picker both address accents by index, and the dialog styles are named after
+# the id.
+ACCENT_ORDER = ["teal", "violet", "graphite", "sky", "indigo",
+                "emerald", "amber", "sunset", "crimson", "magenta"]
 ACCENT_HEX = {                       # the picker's swatches, same values as the CSS
-    "teal": "2bd8c6",
-    "crimson": "de4e6b",
-    "indigo": "4559dc",
-    "amber": "dc9e41",
-    "violet": "a662e4",
+    "teal": "27d7c5",
+    "violet": "a65be4",
+    "graphite": "989898",
+    "sky": "2e92d9",
+    "indigo": "3f54dd",
+    "emerald": "2ed984",
+    "amber": "dc9b3b",
+    "sunset": "de7548",
+    "crimson": "de4866",
+    "magenta": "e050c3",
 }
 
 # Files whose `static final int` constants are the palette. Each entry lists the
@@ -190,10 +199,7 @@ public final class KuroTheme12 {
     private static final int[][] TABLE = {
 %(rows)s    };
 
-    private static final int[] DIALOG_THEMES = {
-        R.style.KuroDialogTeal, R.style.KuroDialogCrimson, R.style.KuroDialogIndigo,
-        R.style.KuroDialogAmber, R.style.KuroDialogViolet
-    };
+    private static final int[] DIALOG_THEMES = {%(dialog_themes)s};
 
     private static final List<Runnable> LISTENERS = new ArrayList<>();
     private static int accent = TEAL;
@@ -330,9 +336,11 @@ def write_palette(project, bases):
         rows.append("        {0x%s, %s}, // %s\n" % (
             base, ", ".join("0x%08x" % v for v in values), base[2:]))
     names = ", ".join('"%s"' % n for n in ACCENT_ORDER)
+    themes = ",\n        ".join("R.style.KuroDialog%s" % n.capitalize() for n in ACCENT_ORDER)
     path = os.path.join(project, PKG, "KuroTheme12.java")
     with open(path, "w", encoding="utf-8") as fh:
-        fh.write(KURO_THEME_12 % {"names": names, "rows": "".join(rows)})
+        fh.write(KURO_THEME_12 % {"names": names, "rows": "".join(rows),
+                                  "dialog_themes": themes})
     return path, len(bases)
 
 
