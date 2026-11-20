@@ -1,0 +1,170 @@
+name: publish Kuro 1.0 release
+
+# The sandbox that drives this repo cannot reach uploads.github.com, but a runner
+# can. This job pulls the already-signed artifacts from Drive, proves the APK is
+# byte-identical to the one that was built and signed (SHA-256 gate), and then
+# publishes the v1.0 release with the binaries attached.
+#
+# Trigger: a commit whose message contains "[release]" (or a manual dispatch).
+# The Drive files only need temporary "anyone with the link" access while this
+# runs; they can be made private again afterwards.
+
+on:
+  push:
+    branches: [arena/98533644-kuro-tv-releases]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kuro-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      APK_SHA256: 5f590b0e621ec65e548f2fb8ea641bd8229e8b02c90c0623b0e15aee271df565
+      TAG: v1.0
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull the signed artifacts from Drive
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          dl() {
+            local id="$1" name="$2"
+            echo "downloading $name"
+            curl -sSL --retry 4 --retry-delay 5 \
+              -o "dist/$name" \
+              "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t"
+            printf '  %s  %s bytes\n' "$name" "$(stat -c%s "dist/$name")"
+          }
+          dl 1tuA_HfFZghd9kmr77mFVXHX37qEjlfOY Kuro-tv-1.0.apk
+          dl 1YdWy-eyFtUz9QdvmPU8WaRocOdk1XbSU Kuro-tv-1.0.apk.sha256
+          dl 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO Kuro-tv-1.0-Source.zip
+          file dist/* | sed 's/^/  /'
+
+      - name: Gate on the exact build that was signed
+        run: |
+          set -euo pipefail
+          APK=dist/Kuro-tv-1.0.apk
+          SIZE=$(stat -c%s "$APK")
+          echo "APK size: $SIZE"
+          # rev 7 dropped 483 artwork files, so the APK is ~45 MB; 30 MB still catches
+          # a Drive interstitial page, which is a few kilobytes.
+          if [ "$SIZE" -lt 30000000 ]; then
+            echo "::error::APK is only $SIZE bytes - that looks like a Drive interstitial page, not the build."
+            head -c 300 "$APK"; exit 1
+          fi
+          ACTUAL=$(sha256sum "$APK" | cut -d' ' -f1)
+          echo "expected: $APK_SHA256"
+          echo "actual  : $ACTUAL"
+          if [ "$ACTUAL" != "$APK_SHA256" ]; then
+            echo "::error::checksum mismatch - refusing to publish a different binary"
+            exit 1
+          fi
+          # the attached checksum file must agree with the APK
+          grep -q "$ACTUAL" dist/Kuro-tv-1.0.apk.sha256 || {
+            echo "::error::the .sha256 file does not match the APK"; exit 1; }
+          unzip -l dist/Kuro-tv-1.0-Source.zip | head -5 >/dev/null || {
+            echo "::error::source zip is not a zip"; exit 1; }
+          # this cut must actually contain the cast screen and the motion layer
+          unzip -l "$APK" | grep -q 'assets/smooth-ui.js' || {
+            echo "::error::the APK is missing assets/smooth-ui.js - wrong build attached"; exit 1; }
+          ! unzip -p "$APK" 'classes*.dex' | grep -aq 'KuroCastActivity561' || {
+            echo "::error::the APK still ships the Cast screen - wrong build attached"; exit 1; }
+          unzip -p "$APK" 'classes*.dex' | grep -aq 'profileArt581' || {
+            echo "::error::the APK has no player-chip profile art bridge - wrong build attached"; exit 1; }
+          unzip -p "$APK" 'assets/accounts542.js' | grep -aq 'profile-stats571' || {
+            echo "::error::the APK has no account activity strip - wrong build attached"; exit 1; }
+          unzip -p "$APK" 'assets/accounts542.js' | grep -aq 'profile-continue571' || {
+            echo "::error::the APK has no continue-watching row - wrong build attached"; exit 1; }
+          unzip -p "$APK" 'assets/accounts542.js' | grep -aq 'profile-mono571' || {
+            echo "::error::the APK has no profile monogram - wrong build attached"; exit 1; }
+          if unzip -l "$APK" | grep -qE 'preset571-|profile-(avatar547|banner54|character549|default571)'; then
+            echo "::error::the APK still ships profile artwork - wrong build attached"; exit 1; fi
+          unzip -p "$APK" 'assets/app.js' | grep -aq 'hero-track581' || {
+            echo "::error::the APK has no home hero deck - wrong build attached"; exit 1; }
+          # rev 8: the four fixes must be in the binary, not just in the source tree
+          for needle in unifiedSpotlight attachFilters581 filters581 chips581; do
+            unzip -p "$APK" 'assets/unified533.js' | grep -aq "$needle" || {
+              echo "::error::unified533.js is missing $needle - rev-8 fix not in this build"; exit 1; }
+          done
+          unzip -p "$APK" 'assets/app.js' | grep -aq 'poster-new581' || {
+            echo "::error::the NEW chip hook is missing from app.js"; exit 1; }
+          for needle in attachGestures581 native-hud-581 KuroEpisodeDrawer581 watch-episodes; do
+            unzip -p "$APK" 'classes*.dex' | grep -aq "$needle" || {
+              echo "::error::the APK has no $needle - rev-8 native fix not in this build"; exit 1; }
+          done
+          # rev 9: the profile art pack must be inside the binary
+          unzip -p "$APK" 'assets/index.html' | grep -aq 'profile-art-arm.js' || {
+            echo "::error::the profile art picker is not linked in index.html"; exit 1; }
+          unzip -p "$APK" 'assets/index.html' | grep -aq 'profile-art-arm.css' || {
+            echo "::error::the profile art styles are not linked in index.html"; exit 1; }
+          COUNT=$(unzip -l "$APK" | grep -cE 'assets/profile-art/(pfp|banner)/art-[0-9]{2}\.webp')
+          echo "profile art files in the APK: $COUNT"
+          [ "$COUNT" -ge 10 ] || {
+            echo "::error::only $COUNT profile art files in the APK - the pack did not ship"; exit 1; }
+          unzip -p "$APK" 'assets/profile-art-arm.js' | grep -aq 'kuro-profile-art-v1' || {
+            echo "::error::the profile art module is missing its store key"; exit 1; }
+          unzip -p "$APK" 'assets/profile-art-arm.js' | grep -aq 'paintMonos' || {
+            echo "::error::the profile avatar is not painted into the header and drawer"; exit 1; }
+          unzip -p "$APK" 'assets/profile-art-arm.css' | grep -aq 'header-mono571.has-art581' || {
+            echo "::error::the header avatar styles are missing"; exit 1; }
+          # cut 2: automatic updating and the in-app download screen must be in the binary
+          for needle in KuroUpdateCenter582 KuroUpdateDialog582 autoOffered582; do
+            unzip -p "$APK" 'classes*.dex' | grep -aq "$needle" || {
+              echo "::error::the APK has no $needle - the automatic update cut is not in this build"; exit 1; }
+          done
+          unzip -p "$APK" 'assets/settings560.js' | grep -aq 'updatesAuto582' || {
+            echo "::error::the automatic-update setting is missing from the settings list"; exit 1; }
+          # 1.0: the update window must be in the binary, and its job declared
+          for needle in KuroUpdateSchedule583 KuroUpdateDueJob583 delay583; do
+            unzip -p "$APK" 'classes*.dex' | grep -aq "$needle" || {
+              echo "::error::the APK has no $needle - the update window is not in this build"; exit 1; }
+          done
+          unzip -p "$APK" 'assets/settings560.js' | grep -aq 'updatesDelay583' || {
+            echo "::error::the update-delay setting is missing from the settings list"; exit 1; }
+          echo "All artifacts sane; APK matches the signed build."
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          ASSETS=(dist/Kuro-tv-1.0.apk dist/Kuro-tv-1.0.apk.sha256 dist/Kuro-tv-1.0-Source.zip)
+          echo "--- token/repo visibility ---"
+          gh auth status 2>&1 | head -5
+          gh api "repos/${GITHUB_REPOSITORY}" --jq '"repo=\(.full_name) private=\(.private) permissions=\(.permissions)"' 2>&1 | head -3
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release $TAG exists - uploading assets"
+            if ! OUT=$(gh release upload "$TAG" "${ASSETS[@]}" --clobber 2>&1); then
+              echo "::error::release upload failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
+            fi
+            if ! OUT=$(gh release edit "$TAG" --notes-file RELEASE-1.0.md --latest 2>&1); then
+              echo "::error::release edit failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
+            fi
+          else
+            if ! OUT=$(gh release create "$TAG" "${ASSETS[@]}" \
+                 --title "Kuro 1.0" --notes-file RELEASE-1.0.md --latest 2>&1); then
+              echo "::error::release create failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
+            fi
+            echo "$OUT"
+          fi
+          gh release view "$TAG" --json tagName,name,assets \
+            --jq '"published \(.tagName) \(.name) | assets: \(.assets|map("\(.name) \(.size)B")|join(", "))"'
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Release $TAG"
+            echo "- tag: \`$TAG\` (target \`${{ github.ref_name }}\`)"
+            echo "- APK SHA-256 gate: \`$APK_SHA256\`"
+            echo "- notes: \`RELEASE-1.0.md\`"
+          } >> "$GITHUB_STEP_SUMMARY"

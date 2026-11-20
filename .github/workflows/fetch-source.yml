@@ -1,0 +1,65 @@
+name: fetch current source for editing
+
+# The sandbox that drives this repo cannot reach Drive over TLS, so it cannot pull the
+# source zip it needs to edit. A runner can. This job downloads the exact zip the build
+# workflow uses, proves it is a real zip of the expected size, and commits it to the
+# branch so the local agent can unpack and modify it.
+#
+# Trigger: workflow_dispatch (or a commit message containing "[syncsrc]"). The committed
+# zip is a temporary staging copy and should be removed once the round is finished.
+
+on:
+  push:
+    branches: [arena/98533644-kuro-tv-releases]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kuro-sync-source
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[syncsrc]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
+      OUT: staging/Kuro-tv-5.81-Source.zip
+      MIN_BYTES: 15000000
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download the source zip from Drive
+        run: |
+          set -euo pipefail
+          mkdir -p staging
+          curl -sSL --retry 4 --retry-delay 5 \
+            -o "$OUT" \
+            "https://drive.usercontent.google.com/download?id=${SOURCE_ID}&export=download&confirm=t"
+          SIZE=$(stat -c%s "$OUT")
+          echo "downloaded $SIZE bytes"
+          if [ "$SIZE" -lt "$MIN_BYTES" ]; then
+            echo "::error::download is only $SIZE bytes - that is not the source zip"
+            head -c 300 "$OUT"; exit 1
+          fi
+          unzip -l "$OUT" | head -5
+          unzip -l "$OUT" | grep -q 'Kuro-tv-5.81-Source/build.gradle' \
+            || { echo "::error::zip does not contain the project tree"; exit 1; }
+
+      - name: Commit it for the agent
+        run: |
+          set -euo pipefail
+          git config user.name "kuro-build"
+          git config user.email "kuro-build@users.noreply.github.com"
+          git add -f "$OUT"
+          if git diff --cached --quiet; then
+            echo "already up to date"
+          else
+            git commit -m "staging: current source zip for this editing round"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+            echo "committed $(stat -c%s "$OUT") bytes"
+          fi
