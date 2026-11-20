@@ -11,7 +11,7 @@ name: publish Kuro 5.81 release
 
 on:
   push:
-    branches: [arena/35efde43-kuro-tv-releases]
+    branches: [arena/15c12177-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
@@ -110,6 +110,10 @@ jobs:
             echo "::error::only $COUNT profile art files in the APK - the pack did not ship"; exit 1; }
           unzip -p "$APK" 'assets/profile-art-arm.js' | grep -aq 'kuro-profile-art-v1' || {
             echo "::error::the profile art module is missing its store key"; exit 1; }
+          unzip -p "$APK" 'assets/profile-art-arm.js' | grep -aq 'paintMonos' || {
+            echo "::error::the profile avatar is not painted into the header and drawer"; exit 1; }
+          unzip -p "$APK" 'assets/profile-art-arm.css' | grep -aq 'header-mono571.has-art581' || {
+            echo "::error::the header avatar styles are missing"; exit 1; }
           echo "All artifacts sane; APK matches the signed build."
 
       - name: Publish the release

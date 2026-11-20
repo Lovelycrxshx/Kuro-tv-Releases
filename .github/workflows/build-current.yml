@@ -18,7 +18,7 @@ name: build Kuro (current version)
 
 on:
   push:
-    branches: [arena/35efde43-kuro-tv-releases]
+    branches: [arena/15c12177-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
@@ -30,7 +30,7 @@ concurrency:
 
 env:
   APK_NAME: Kuro-tv-5.81
-  SOURCE_ID: 19mIs0kzSaVjceQAfzTClOUYgUe4GO4Cl
+  SOURCE_ID: 1nJHRkb5xXTJRN_ixVJXO2OYO7TiR2YV9
   EXPECT_VERSION_NAME: "5.81"
   EXPECT_VERSION_CODE: "84"
 
