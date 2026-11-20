@@ -2,8 +2,9 @@ name: keep the README badge on the latest release
 
 # shields.io caches its dynamic github/v/release badge: it was still drawing "v1.2"
 # hours after 1.5 was published, so the number in the README is written from the
-# release event instead. The badge is a static shields image whose text is rewritten
-# here; a published release can never leave the README claiming an older version.
+# release event instead. The badge is a static shields image (underscore is a space
+# in shields' static encoding) whose text is rewritten here, so a published release
+# can never leave the README claiming an older version.
 
 on:
   release:
@@ -42,10 +43,10 @@ jobs:
           echo "badge version: $VER"
           printf '%s' "$VER" | grep -qE '^[0-9]+(\.[0-9]+)*$' \
             || { echo "::error::'$TAG' is not a plain version tag"; exit 1; }
-          OLD=$(grep -oE 'badge/Latest%20Version-[^-)]*-blue' README.md | head -1 || true)
+          OLD=$(grep -oE 'badge/Latest_Version-[^-)]*-blue' README.md | head -1 || true)
           echo "current badge: ${OLD:-none}"
-          sed -i -E "s#(badge/Latest%20Version-)[^-)]*(-blue)#\1${VER}\2#" README.md
-          NEW=$(grep -oE 'badge/Latest%20Version-[^-)]*-blue' README.md | head -1 || true)
+          sed -i -E "s#(badge/Latest_Version-)[^-)]*(-blue)#\1${VER}\2#" README.md
+          NEW=$(grep -oE 'badge/Latest_Version-[^-)]*-blue' README.md | head -1 || true)
           echo "new badge: $NEW"
           [ -n "$NEW" ] || { echo "::error::the README has no release badge to rewrite"; exit 1; }
           if git diff --quiet -- README.md; then
