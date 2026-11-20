@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APK_SHA256: PLACEHOLDER_HASH
+      APK_SHA256: 81f8b66ea6651b28cffdeca4f313f7e6e8e802a61f88ff91597e29b790ecb435
       TAG: v5.82
     steps:
       - uses: actions/checkout@v4
@@ -44,8 +44,8 @@ jobs:
               "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t"
             printf '  %s  %s bytes\n' "$name" "$(stat -c%s "dist/$name")"
           }
-          dl PLACEHOLDER_APK Kuro-tv-5.82.apk
-          dl PLACEHOLDER_SHA Kuro-tv-5.82.apk.sha256
+          dl 1SBl9Iv_S3C_jCAfXPjcRt5MdHxgxkIf9 Kuro-tv-5.82.apk
+          dl 14tmFQXcMkMgVirFKB3uQFtbKYkrSCodk Kuro-tv-5.82.apk.sha256
           dl 1ygvb4HDRZXicUvueHqGYdSRt8utim8T0 Kuro-tv-5.82-Source.zip
           file dist/* | sed 's/^/  /'
 
