@@ -6,17 +6,42 @@ Signed with the original Kuro release key (`CN=Kuro Anime`), so this installs st
 5.72 – 5.80. **Do not uninstall or clear data.**
 
 ```
-SHA-256  d5815edb1cf469bc14a0343c71f4bb21ff05528a5bb5fb425abf39cc8e443240
-Size     45,905,627 bytes
+SHA-256  95ad74ec96ca3656a1f57f32cdaaf21f51818c3038c74ca889e25dd511e8e1ca
+Size     43,947,232 bytes
 ```
 
-> **This is the third cut of 5.81, same versionCode 84.** Because the version code did not
+> **This is the fourth cut of 5.81, same versionCode 84.** Because the version code did not
 > change, the in-app updater will not offer it (it only offers strictly higher builds). Install
-> this one manually — over the top, no uninstall — to get the anime profile art picker, on top of
-> the hero deck, the search filter chips, the player gestures, the episode drawer, the casting
-> screen and the motion layer.
+> this one manually — over the top, no uninstall — to get the Cast screen removed, a quieter
+> Discord presence loop, the browsing card that says what it is, the profile art on the player
+> chip and per-episode resume labels in the episode drawer.
 
 ## What's new
+
+**Rev 11 removes Cast and quiets the Discord presence.** The "Cast" button in the player is gone,
+along with the cast screen, its theme, its intent hand-back and the Google Cast SDK dependency —
+about 2 MB less to install and nothing that sends a stream URL to a TV.
+
+- **Presence: less noise on the main thread.** The SDK pump used to wake every 100 ms no matter
+  what; it now polls at 150 ms only while an update is actually moving, 500 ms while something is
+  playing, and 1.5 s while the app is idle.
+- **Presence: an honest browsing card.** With nothing playing it says "Looking for an anime to
+  watch" over "Kuro.tv" instead of the old "Browsing Kuro / In the app" — and if you hide titles,
+  it stays neutral ("In the app").
+- **Presence: long episode names no longer end in a dangling quote.** Names are clipped to the
+  120-byte line with an ellipsis, inside the quotes.
+- **Presence: diagnosability.** The status card shows "Last accepted update" as *2 min ago* instead
+  of a wall-clock stamp, counts down the retry while an update keeps failing, and history entries
+  carry the SDK result code.
+- **Presence: background window.** New setting — stop shortly after you leave Kuro (the old
+  12-second behaviour, still the default), keep for 1 or 5 minutes, or keep updating while audio
+  plays in the background.
+- **Presence: "Rewatching"** appears when you open an episode that already had saved progress.
+- **Profile art reaches the player chip.** The signed-in chip in the watch header shows your
+  chosen avatar instead of initials, and falls back to initials when you pick none.
+- **Backup covers the art choice.** "Profile art" is now part of a settings backup and restore.
+- **Episode drawer shows per-episode progress.** Episodes you have started carry a "Resume 12:34"
+  label, so you can tell where you left off without opening each one.
 
 **Rev 9 brings back profile art — as a curated anime pack.** Five avatars and five matching
 banners, drawn for Kuro in the app's palette: a flat-vector chibi bust on a solid colour tile for
@@ -139,7 +164,7 @@ adb install -r Kuro-tv-5.81.apk
 
 ```bash
 sha256sum Kuro-tv-5.81.apk
-# d5815edb1cf469bc14a0343c71f4bb21ff05528a5bb5fb425abf39cc8e443240
+# 95ad74ec96ca3656a1f57f32cdaaf21f51818c3038c74ca889e25dd511e8e1ca
 
 apksigner verify --print-certs Kuro-tv-5.81.apk
 # CN=Kuro Anime

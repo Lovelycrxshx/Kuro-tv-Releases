@@ -11,7 +11,7 @@ name: publish Kuro 5.81 release
 
 on:
   push:
-    branches: [arena/15c12177-kuro-tv-releases]
+    branches: [arena/1345b858-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APK_SHA256: d5815edb1cf469bc14a0343c71f4bb21ff05528a5bb5fb425abf39cc8e443240
+      APK_SHA256: 95ad74ec96ca3656a1f57f32cdaaf21f51818c3038c74ca889e25dd511e8e1ca
       TAG: v5.81
     steps:
       - uses: actions/checkout@v4
@@ -44,9 +44,9 @@ jobs:
               "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t"
             printf '  %s  %s bytes\n' "$name" "$(stat -c%s "dist/$name")"
           }
-          dl 130M_aSgLGQiM-3WdJ3Xq5UuUf47Nk82g Kuro-tv-5.81.apk
-          dl 18lJzH23ijPSPaxbvXo0DSgrphZS1khdW Kuro-tv-5.81.apk.sha256
-          dl 1nJHRkb5xXTJRN_ixVJXO2OYO7TiR2YV9 Kuro-tv-5.81-Source.zip
+          dl 1i2-w42W8Q3Qsc0YtQ0P8EJH07yvK9s0u Kuro-tv-5.81.apk
+          dl 13mRFmZVOlwg3QHbtuYg4xyQ4URDNvCKt Kuro-tv-5.81.apk.sha256
+          dl 1Bakj61sITw6n1UK63vTCLhvM5GvVGD71 Kuro-tv-5.81-Source.zip
           file dist/* | sed 's/^/  /'
 
       - name: Gate on the exact build that was signed
@@ -76,8 +76,10 @@ jobs:
           # this cut must actually contain the cast screen and the motion layer
           unzip -l "$APK" | grep -q 'assets/smooth-ui.js' || {
             echo "::error::the APK is missing assets/smooth-ui.js - wrong build attached"; exit 1; }
-          unzip -p "$APK" 'classes*.dex' | grep -aq 'castStart561' || {
-            echo "::error::the APK has no cast hand-back code - wrong build attached"; exit 1; }
+          ! unzip -p "$APK" 'classes*.dex' | grep -aq 'KuroCastActivity561' || {
+            echo "::error::the APK still ships the Cast screen - wrong build attached"; exit 1; }
+          unzip -p "$APK" 'classes*.dex' | grep -aq 'profileArt581' || {
+            echo "::error::the APK has no player-chip profile art bridge - wrong build attached"; exit 1; }
           unzip -p "$APK" 'assets/accounts542.js' | grep -aq 'profile-stats571' || {
             echo "::error::the APK has no account activity strip - wrong build attached"; exit 1; }
           unzip -p "$APK" 'assets/accounts542.js' | grep -aq 'profile-continue571' || {

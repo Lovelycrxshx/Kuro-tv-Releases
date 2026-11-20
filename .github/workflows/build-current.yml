@@ -18,7 +18,7 @@ name: build Kuro (current version)
 
 on:
   push:
-    branches: [arena/15c12177-kuro-tv-releases]
+    branches: [arena/1345b858-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
@@ -30,7 +30,7 @@ concurrency:
 
 env:
   APK_NAME: Kuro-tv-5.81
-  SOURCE_ID: 1nJHRkb5xXTJRN_ixVJXO2OYO7TiR2YV9
+  SOURCE_ID: 1Bakj61sITw6n1UK63vTCLhvM5GvVGD71
   EXPECT_VERSION_NAME: "5.81"
   EXPECT_VERSION_CODE: "84"
 
@@ -98,14 +98,24 @@ jobs:
           set -euo pipefail
           test -f "$PROJECT/src/app/lovelycrxshx/kuro/KuroDialogs581.java" \
             || { echo "::error::KuroDialogs581.java missing from the source zip."; exit 1; }
-          grep -q 'EXTRA_CAST_POSITION' "$PROJECT/src/app/lovelycrxshx/kuro/KuroCastActivity561.java" \
-            || { echo "::error::Cast position hand-back missing from KuroCastActivity561."; exit 1; }
+          # rev 11 removed the Cast feature outright.
+          for gone in KuroCastActivity561 KuroCastOptions561; do
+            test ! -f "$PROJECT/src/app/lovelycrxshx/kuro/$gone.java" \
+              || { echo "::error::$gone.java is still in the source zip."; exit 1; }
+          done
+          ! grep -q 'CastActivity561\|CAST_REQUEST561\|castStart561' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" \
+            || { echo "::error::Cast code is still referenced from MainActivity."; exit 1; }
+          ! grep -q 'play-services-cast' "$PROJECT/build.gradle" \
+            || { echo "::error::the Cast SDK dependency is still declared."; exit 1; }
           grep -q 'seekTo582' "$PROJECT/src/app/lovelycrxshx/kuro/KuroNativePlayer561.java" \
             || { echo "::error::seekTo582 missing from the native player."; exit 1; }
-          grep -q 'returnFromCast582' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" \
-            || { echo "::error::returnFromCast582 missing from MainActivity."; exit 1; }
-          grep -q 'castStart561=0' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" \
-            || { echo "::error::the castStart561 field is missing from MainActivity."; exit 1; }
+          # rev 11 presence + profile work
+          grep -q 'setProfile(boolean signedIn,String mono,String artId)' "$PROJECT/src/app/lovelycrxshx/kuro/WatchHeader.java" \
+            || { echo "::error::the player chip has no profile art path."; exit 1; }
+          grep -q 'Looking for an anime to watch' "$PROJECT/src/app/lovelycrxshx/kuro/KuroPresence564.java" \
+            || { echo "::error::the browsing presence card was not updated."; exit 1; }
+          grep -q 'kuro-profile-art-v1' "$PROJECT/assets/backup560.js" \
+            || { echo "::error::backup560.js does not export the profile art key."; exit 1; }
           test -f "$PROJECT/assets/smooth-ui.css" && test -f "$PROJECT/assets/smooth-ui.js" \
             || { echo "::error::smooth-ui layer missing from assets."; exit 1; }
           grep -q 'smooth-ui.css' "$PROJECT/assets/index.html" \
@@ -153,8 +163,10 @@ jobs:
           grep -q 'name="KuroDialogTheme"' "$PROJECT/res/values/styles.xml" \
             || { echo "::error::KuroDialogTheme missing from styles.xml."; exit 1; }
           themed=$(grep -c 'KuroDialogs581.themed' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java")
-          echo "Themed alert dialogs: $themed"
-          [ "$themed" -ge 15 ] || { echo "::error::Expected the settings dialogs to use the themed context."; exit 1; }
+          plain=$(grep -cE 'new AlertDialog\.Builder\([^K]' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" || true)
+          echo "Themed alert dialogs: $themed (plain builders: $plain)"
+          [ "$themed" -ge 14 ] || { echo "::error::Expected the settings dialogs to use the themed context."; exit 1; }
+          [ "$plain" -le 0 ] || { echo "::error::An alert dialog in MainActivity bypasses KuroDialogs581.themed."; exit 1; }
           grep -q "versionCode ${EXPECT_VERSION_CODE}" "$PROJECT/build.gradle" \
             || { echo "::error::build.gradle versionCode is not ${EXPECT_VERSION_CODE}."; exit 1; }
           grep -q "versionName '${EXPECT_VERSION_NAME}'" "$PROJECT/build.gradle" \
