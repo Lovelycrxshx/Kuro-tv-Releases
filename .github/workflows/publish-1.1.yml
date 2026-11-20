@@ -79,8 +79,12 @@ jobs:
           [ "$UNSIGNED" = "$UNSIGNED_SHA256" ] || { echo "::error::the unsigned build in dist is not the one that was signed"; exit 1; }
 
           # Independent signature check with the real apksigner (no JDK elsewhere).
-          java -jar dist/toolchain/apksigner.jar verify --print-certs --verbose "$APK" 2>&1 | tee /tmp/verify.txt
-          grep -qi "Verified using v2 scheme (APK Signature Scheme v2): true" /tmp/verify.txt \
+          # The APK declares minSdkVersion 26, and v2 is the only scheme this signer
+          # emits, so tell apksigner the range instead of letting it fall back to v1.
+          java -jar dist/toolchain/apksigner.jar verify \
+            --min-sdk-version 26 --max-sdk-version 35 \
+            --print-certs --verbose "$APK" 2>&1 | tee /tmp/verify.txt
+          grep -qiE "Verified using v2 scheme .*: true" /tmp/verify.txt \
             || { echo "::error::apksigner did not accept a v2 signature"; exit 1; }
           tr -d ':' < /tmp/verify.txt | tr 'A-F' 'a-f' | grep -q "$SIGNER_SHA256" \
             || { echo "::error::the APK is not signed by the pinned Kuro Anime certificate"; exit 1; }
