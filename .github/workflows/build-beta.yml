@@ -32,7 +32,7 @@ concurrency:
 env:
   APK_NAME: Kuro-tv-beta-1.5
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
-  EXPECT_VERSION_NAME: "1.5-beta"
+  EXPECT_VERSION_NAME: "1.5"
   EXPECT_VERSION_CODE: "92"
 
 jobs:
@@ -128,7 +128,7 @@ jobs:
 
           # The version bump lives here until the Drive source itself is regenerated.
           sed -i -E "s/versionCode +[0-9]+/versionCode 92/" "$PROJECT/build.gradle"
-          sed -i -E "s/versionName +'[^']*'/versionName '1.5-beta'/" "$PROJECT/build.gradle"
+          sed -i -E "s/versionName +'[^']*'/versionName '1.5'/" "$PROJECT/build.gradle"
           grep -nE "versionName|versionCode" "$PROJECT/build.gradle"
 
           grep -qF 'theme-teal-1.1.css' "$PROJECT/assets/index.html" \
