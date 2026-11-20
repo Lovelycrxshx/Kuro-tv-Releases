@@ -1,32 +1,36 @@
-/* Kuro 1.5-beta - motion layer, take 3.
+/* Kuro 1.5-beta - motion layer, take 5.
  *
- * Two things changed after take 2:
+ * Where this ended up, after five cuts: one short launch film, and then a
+ * single quiet motion system for the whole app.  Two things are gone on
+ * purpose - the tap ripple (it read as water droplets on the glass) and the
+ * browser-chrome decoration on the hero banner (it read as a rendering
+ * fault).  Effects that draw attention to themselves are not polish.
  *
- * 1. The "banners keep loading" glitch is fixed at the root.  Take 2 armed
- *    .hero-slide and .news-poster for an IntersectionObserver reveal, which
- *    meant a real banner could sit at opacity 0 until the observer fired - and
- *    when the hero carousel re-rendered the slide, the new node was armed
- *    again and went blank again.  Now: banners, hero slides and news posters
- *    are never touched, there is no observer at all, and grid cards animate
- *    exactly once, at insertion, only if their poster has already decoded.
- *    The hidden state lives inside the keyframe, so nothing can be stranded.
+ * The rules this file follows:
  *
- * 2. The launch film is louder and shorter (2.3 s): oversized cropped type as a
- *    background layer, the wordmark over the cards, a card that sweeps across
- *    the type, a bigger ticker, specks, iris.
+ *  - Nothing real is ever held invisible.  Banners, hero slides and news
+ *    posters are never touched.  Grid cards animate once, at insertion, and
+ *    only if their poster has already decoded; the hidden state lives inside
+ *    the keyframe, so nothing can be stranded by a slow network.
+ *  - One easing family (the theme's own --ku-ease-out), short durations,
+ *    small distances.  Motion should be felt as the app responding, not as
+ *    an effect playing on top of it.
+ *  - Everything is class-driven, because the app's CSP forbids inline style
+ *    attributes, and everything re-tints from the accent the user picked.
+ *  - prefers-reduced-motion removes all of it: no film, no springs.
  *
- * Timeline:
- *   0.00 dot grid          0.20 browser frame springs up
- *   0.14 pill rail         0.26 ticker band drops in
- *   0.44 cards (one sweeps across the type)
- *   0.50 "KURO" letter by letter, 0.74 tracked-out "TV"
- *   1.78 iris closes       2.30 overlay gone, cards spring in behind it
+ * Timeline of the film (~2 s, skippable, once per app session):
+ *   0.00 dot grid          0.16 browser frame springs up
+ *   0.12 pill rail         0.22 ticker band drops in
+ *   0.38 cards (one sweeps across the type)
+ *   0.42 "KURO" letter by letter, 0.62 tracked-out "TV"
+ *   1.46 iris closes       2.01 overlay gone, cards spring in behind it
  */
 (function () {
  'use strict';
 
  var SEEN = 'kuro-intro-15';
- var INTRO_HOLD = 2320;
+ var INTRO_HOLD = 2010;
  var CARD = '.card, .history-card';
  var SETTLE = 360;          /* a card whose poster has not decoded by now is left alone */
 
@@ -179,65 +183,7 @@ function armAll() {
  }
 
  
-/* ---------------------------------------------------- tap ripple (every tap)
- * The reel's expanding circle, small and fast, fired from the point the user
- * actually touched.  Position is set through CSSOM (element.style), which CSP
- * permits - a style attribute in markup would not be.
- */
-function rippleAt(x, y) {
-  if (reduced || !started) return;
-  var dot = document.createElement('span');
-  dot.className = 'km-ripple';
-  dot.setAttribute('aria-hidden', 'true');
-  dot.style.left = x + 'px';
-  dot.style.top = y + 'px';
-  body().appendChild(dot);
-  setTimeout(function () { if (dot.parentNode) dot.parentNode.removeChild(dot); }, 540);
-}
-
-function tapTarget(node) {
-  if (!node || !node.closest) return null;
-  return node.closest('button, a, .card, .chip, [role="button"], .kuro-dock button, .preset-choice571, .profile-card547');
-}
-
-function bindTaps() {
-  document.addEventListener('pointerdown', function (ev) {
-   if (!started || ev.button) return;
-   if (!tapTarget(ev.target)) return;
-   var x = ev.clientX, y = ev.clientY;
-   if (!x && !y) {
-    var r = ev.target.getBoundingClientRect();
-    x = r.left + r.width / 2;
-    y = r.top + r.height / 2;
-   }
-   rippleAt(x, y);
-  }, true);
-
-  /* keyboard activation has no pointer: fire from the control's centre */
-  document.addEventListener('click', function (ev) {
-   if (!started || ev.detail) return;
-   var t = tapTarget(ev.target);
-   if (!t) return;
-   var r = t.getBoundingClientRect();
-   rippleAt(r.left + r.width / 2, r.top + r.height / 2);
-  }, true);
-}
-
-/* ------------------------------------------ browser chrome on the banner */
- function decorate() {
-  var spots;
-  try { spots = document.querySelectorAll('.hero-slide'); } catch (e) { return; }
-  for (var i = 0; i < spots.length; i++) {
-   if (spots[i].querySelector('.km-spot-chrome')) continue;
-   var bar = document.createElement('div');
-   bar.className = 'km-spot-chrome';
-   bar.setAttribute('aria-hidden', 'true');
-   bar.innerHTML = '<i></i><i></i><i></i><b></b>';
-   spots[i].insertBefore(bar, spots[i].firstChild);
-  }
- }
-
- /* ------------------------------------------------- the reel, and its card */
+/* ------------------------------------------------- the reel, and its card */
  function closeReel() {
   var open = document.getElementById('km-reel-15');
   if (!open) return;
@@ -296,8 +242,7 @@ function bindTaps() {
  function finish() {
   if (started) return;
   started = true;
-  bindTaps();
-  decorate();
+  
   armAll();
   if (introEl && introEl.parentNode) {
    introEl.classList.add('km-gone');
@@ -314,7 +259,6 @@ function bindTaps() {
     setTimeout(function () {
      queued = false;
      armAll();
-     decorate();
      betaCard();
     }, 110);
    }).observe(document.body, { childList: true, subtree: true });
