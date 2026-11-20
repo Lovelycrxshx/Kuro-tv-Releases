@@ -37,7 +37,7 @@ stay exactly where they are.
 
 ```
 sha256sum Kuro-tv-1.0.apk
-# SHA_PLACEHOLDER
+# 5f590b0e621ec65e548f2fb8ea641bd8229e8b02c90c0623b0e15aee271df565
 
 apksigner verify --print-certs Kuro-tv-1.0.apk
 # CN=Kuro Anime
@@ -46,6 +46,7 @@ apksigner verify --print-certs Kuro-tv-1.0.apk
 
 ## Notes
 
+- APK 44,008,672 bytes · source archive 7,256,556 bytes.
 - The next release is 1.1 with `versionCode` 88; then 1.2 / 89, and so on. The code always
   moves forward by one, the name by whatever the release is.
 - Android decides when background work runs, so a window that ends at 3 a.m. may install at
