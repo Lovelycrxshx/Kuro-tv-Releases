@@ -79,8 +79,7 @@ jobs:
           [ "$UNSIGNED" = "$UNSIGNED_SHA256" ] || { echo "::error::the unsigned build in dist is not the one that was signed"; exit 1; }
 
           # Independent signature check with the real apksigner (no JDK elsewhere).
-          java -cp dist/toolchain/apksigner.jar com.android.apksig.ApkSignerTool verify \
-            --print-certs --verbose "$APK" | tee /tmp/verify.txt
+          java -jar dist/toolchain/apksigner.jar verify --print-certs --verbose "$APK" 2>&1 | tee /tmp/verify.txt
           grep -qi "Verified using v2 scheme (APK Signature Scheme v2): true" /tmp/verify.txt \
             || { echo "::error::apksigner did not accept a v2 signature"; exit 1; }
           tr -d ':' < /tmp/verify.txt | tr 'A-F' 'a-f' | grep -q "$SIGNER_SHA256" \
@@ -158,6 +157,20 @@ jobs:
           fi
           gh release view "$TAG" --json tagName,name,assets \
             --jq '"published \(.tagName) \(.name) | assets: \(.assets|map("\(.name) \(.size)B")|join(", "))"'
+
+      - name: Keep the apksigner output on the branch (failures only)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          [ -s /tmp/verify.txt ] || java -jar dist/toolchain/apksigner.jar verify --print-certs --verbose "dist/$APK_NAME.apk" > /tmp/verify.txt 2>&1
+          cp /tmp/verify.txt dist/apksigner-verify.txt
+          git config user.name "Siva"
+          git config user.email "sivaabhishek4@gmail.com"
+          git add -f dist/apksigner-verify.txt
+          git commit -m "publish: apksigner output from the failed run"
+          git push origin "HEAD:${GITHUB_REF_NAME}" || echo "::warning::could not push the diagnostics"
 
       - name: Summary
         if: always()
