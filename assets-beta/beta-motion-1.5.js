@@ -355,6 +355,21 @@ function updateCard() {
  page.insertBefore(card, page.firstChild);
 }
 
+/* --------------------------------------------- removed Account cards ---
+ * 1.5-beta drops the "Private profile / LOCAL" card from Account: it restated
+ * what the page already says under the avatar, and it was the one card the user
+ * asked to lose. The CSS hides it before first paint; this also takes it out of
+ * the DOM so nothing can tab to it.
+ */
+function dropPrivateCard() {
+ var main = document.getElementById('main');
+ if (!main) return;
+ var cards = main.querySelectorAll('.profile-private547');
+ for (var i = 0; i < cards.length; i++) {
+  if (cards[i].parentNode) cards[i].parentNode.removeChild(cards[i]);
+ }
+}
+
 /* --------------------------------------------------------------- boot */
  function finish() {
   if (started) return;
@@ -377,6 +392,7 @@ function updateCard() {
     setTimeout(function () {
      queued = false;
      armAll();
+     dropPrivateCard();
      updateButton();
      updateCard();
      collectPar();
@@ -393,6 +409,7 @@ function updateCard() {
     }).observe(mainEl, { childList: true });
    }
   }
+  dropPrivateCard();
   updateButton();
   updateCard();
   /* cards that were on screen behind the film get their spring now */

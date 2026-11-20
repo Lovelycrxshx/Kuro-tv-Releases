@@ -227,6 +227,11 @@
  56%{transform:scaleX(1);transform-origin:right}
  100%{transform:scaleX(0);transform-origin:right}}
 
+/* --------------------- Account: the LOCAL card is gone ------------------ */
+/* 1.5-beta removes the "Private profile / LOCAL" card. Hidden here so it never
+   paints for a frame; beta-motion-1.5.js also drops it from the DOM. */
+.profile-private547{display:none!important}
+
 /* ------------------------- update button (header + Account) ------------ */
 .km-update-btn{position:relative;color:var(--ku-accent,#3be3d2)}
 .km-update-btn svg{stroke-width:2}

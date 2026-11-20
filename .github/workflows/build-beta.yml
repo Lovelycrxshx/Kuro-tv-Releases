@@ -135,9 +135,9 @@ jobs:
             || { echo "::error::the accent stylesheet is not linked."; exit 1; }
           grep -qF 'theme-accent-1.1.js' "$PROJECT/assets/index.html" \
             || { echo "::error::the accent picker script is not linked."; exit 1; }
-          test "$(ls "$PROJECT/assets"/theme-*-1.1.css | wc -l)" -ge 14 \
-            || { echo "::error::expected at least 14 accent stylesheets."; exit 1; }
-          for accent in royal lime citron rose; do
+          test "$(ls "$PROJECT/assets"/theme-*-1.1.css | wc -l)" -ge 20 \
+            || { echo "::error::expected at least 20 accent stylesheets."; exit 1; }
+          for accent in royal lime citron rose plum ice sapphire mint gold coral; do
             test -s "$PROJECT/assets/theme-$accent-1.1.css" \
               || { echo "::error::the $accent accent stylesheet is missing."; exit 1; }
             grep -qF "'$accent'" "$PROJECT/assets/theme-accent-1.1.js" \
@@ -198,7 +198,7 @@ jobs:
           done
           COUNT=$(ls "$GITHUB_WORKSPACE/out/assets-1.1/"theme-*-1.1.css | wc -l)
           echo "accent stylesheets served: $COUNT"
-          [ "$COUNT" -ge 14 ] || { echo "::error::expected at least ten accent stylesheets, found $COUNT."; exit 1; }
+          [ "$COUNT" -ge 20 ] || { echo "::error::expected at least twenty accent stylesheets, found $COUNT."; exit 1; }
           grep -q 'sunset' "$PROJECT/assets/theme-accent-1.1.js" \
             || { echo "::error::the picker does not list the new accents."; exit 1; }
           grep -q 'accent-preview111' "$PROJECT/assets/theme-picker-1.1.css" \

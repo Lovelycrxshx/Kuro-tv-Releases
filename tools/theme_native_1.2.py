@@ -39,11 +39,11 @@ ACCENT_ORDER = list(ACCENTS)         # picker order: signature, cool, warm
 # The picker's swatch values.  An accent added to theme_gen.ACCENTS without an
 # entry here still works: accent_hexes() falls back to its deployed stylesheet.
 ACCENT_HEX = {
-    "teal": "27d7c5", "violet": "a65be4", "graphite": "989898",
-    "sky": "2e92d9", "royal": "805be7", "indigo": "3f54dd",
-    "emerald": "2ed984", "lime": "8fe444", "citron": "e2e756",
-    "amber": "dc9b3b", "sunset": "de7548", "rose": "e968a9",
-    "crimson": "de4866", "magenta": "e050c3",
+    "teal": "27d7c5", "violet": "a65be4", "plum": "d252e6", "graphite": "989898",
+    "sky": "2e92d9", "ice": "25b4e0", "royal": "805be7", "sapphire": "4f7ce8",
+    "indigo": "3f54dd", "emerald": "2ed984", "mint": "32e2ad", "lime": "8fe444",
+    "citron": "e2e756", "gold": "e9c25a", "amber": "dc9b3b", "sunset": "de7548",
+    "coral": "ed9183", "rose": "e968a9", "crimson": "de4866", "magenta": "e050c3",
 }
 
 
