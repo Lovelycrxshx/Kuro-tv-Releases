@@ -29,10 +29,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  APK_NAME: Kuro-tv-5.82
-  SOURCE_ID: 1R0yJ82KJFr4I1ZBbFLKHcyvVYbBZ3x2I
-  EXPECT_VERSION_NAME: "5.82"
-  EXPECT_VERSION_CODE: "85"
+  APK_NAME: Kuro-tv-5.83
+  SOURCE_ID: 1oTF0Il3vazhE2V8ghLxVDtW4lojsRWFj
+  EXPECT_VERSION_NAME: "5.83"
+  EXPECT_VERSION_CODE: "86"
 
 jobs:
   apk:
@@ -175,6 +175,12 @@ jobs:
           echo "Themed alert dialogs: $themed (plain builders: $plain)"
           [ "$themed" -ge 14 ] || { echo "::error::Expected the settings dialogs to use the themed context."; exit 1; }
           [ "$plain" -le 0 ] || { echo "::error::An alert dialog in MainActivity bypasses KuroDialogs581.themed."; exit 1; }
+          grep -q 'KuroUpdateSchedule583' "$PROJECT/src/app/lovelycrxshx/kuro/KuroUpdateCenter582.java" \
+            || { echo "::error::the update window is not wired into the automatic path."; exit 1; }
+          grep -q 'KuroUpdateDueJob583' "$PROJECT/AndroidManifest.xml" \
+            || { echo "::error::the end-of-window job is not declared in the manifest."; exit 1; }
+          grep -q "delay583" "$PROJECT/src/app/lovelycrxshx/kuro/KuroUpdateSchedule583.java" \
+            || { echo "::error::the update delay setting is missing."; exit 1; }
           grep -q "versionCode ${EXPECT_VERSION_CODE}" "$PROJECT/build.gradle" \
             || { echo "::error::build.gradle versionCode is not ${EXPECT_VERSION_CODE}."; exit 1; }
           grep -q "versionName '${EXPECT_VERSION_NAME}'" "$PROJECT/build.gradle" \
