@@ -6,17 +6,24 @@ Signed with the original Kuro release key (`CN=Kuro Anime`), so this installs st
 5.72 – 5.80. **Do not uninstall or clear data.**
 
 ```
-SHA-256  95ad74ec96ca3656a1f57f32cdaaf21f51818c3038c74ca889e25dd511e8e1ca
-Size     43,947,232 bytes
+SHA-256  76eb0595ea88c064ed824fa98c8409ba05e3fe7f88f4e79b47a17d8bbd06613d
+Size     43,963,616 bytes
 ```
 
-> **This is the fourth cut of 5.81, same versionCode 84.** Because the version code did not
+> **This is the fifth cut of 5.81, same versionCode 84 — it fixes the launch crash in the
+> fourth cut.** Because the version code did not
 > change, the in-app updater will not offer it (it only offers strictly higher builds). Install
 > this one manually — over the top, no uninstall — to get the Cast screen removed, a quieter
 > Discord presence loop, the browsing card that says what it is, the profile art on the player
 > chip and per-episode resume labels in the episode drawer.
 
 ## What's new
+
+**Rev 11.1 fixes the launch crash.** The fourth cut closed immediately on open: the new profile-art
+preference was read from a field initialiser, which runs while the Activity is still being built,
+before Android has given it a context — so `getSharedPreferences` threw and the process died. The
+value is now read in `onCreate`, and the build workflow refuses to ship a build whose Activity
+reaches for a context before `onCreate`.
 
 **Rev 11 removes Cast and quiets the Discord presence.** The "Cast" button in the player is gone,
 along with the cast screen, its theme, its intent hand-back and the Google Cast SDK dependency —
@@ -164,7 +171,7 @@ adb install -r Kuro-tv-5.81.apk
 
 ```bash
 sha256sum Kuro-tv-5.81.apk
-# 95ad74ec96ca3656a1f57f32cdaaf21f51818c3038c74ca889e25dd511e8e1ca
+# 76eb0595ea88c064ed824fa98c8409ba05e3fe7f88f4e79b47a17d8bbd06613d
 
 apksigner verify --print-certs Kuro-tv-5.81.apk
 # CN=Kuro Anime

@@ -11,7 +11,7 @@ name: publish Kuro 5.81 release
 
 on:
   push:
-    branches: [arena/1345b858-kuro-tv-releases]
+    branches: [arena/51f1f502-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APK_SHA256: 95ad74ec96ca3656a1f57f32cdaaf21f51818c3038c74ca889e25dd511e8e1ca
+      APK_SHA256: 76eb0595ea88c064ed824fa98c8409ba05e3fe7f88f4e79b47a17d8bbd06613d
       TAG: v5.81
     steps:
       - uses: actions/checkout@v4
@@ -44,9 +44,9 @@ jobs:
               "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t"
             printf '  %s  %s bytes\n' "$name" "$(stat -c%s "dist/$name")"
           }
-          dl 1i2-w42W8Q3Qsc0YtQ0P8EJH07yvK9s0u Kuro-tv-5.81.apk
-          dl 13mRFmZVOlwg3QHbtuYg4xyQ4URDNvCKt Kuro-tv-5.81.apk.sha256
-          dl 1Bakj61sITw6n1UK63vTCLhvM5GvVGD71 Kuro-tv-5.81-Source.zip
+          dl 1TKs9OGXzTD6uFrNWaw89szVyxri-Hvk5 Kuro-tv-5.81.apk
+          dl 1NTD9N8uy9Z2xzA5aoQacnrwooWOG4kzC Kuro-tv-5.81.apk.sha256
+          dl 1tpaYXf8DfxF_Kv9JYgwVxxoyJeZLaxPL Kuro-tv-5.81-Source.zip
           file dist/* | sed 's/^/  /'
 
       - name: Gate on the exact build that was signed
