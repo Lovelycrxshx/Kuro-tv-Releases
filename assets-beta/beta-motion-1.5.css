@@ -1,71 +1,249 @@
-/* Kuro 1.5-beta - motion layer.
+/* Kuro 1.5-beta - motion layer, take 2.
  *
- * Re-created from the animation.mp4 reel: a title sequence with a sweeping
- * accent ring and three cards flying in, staggered card reveals on scroll, and
- * a spring on press. Everything is class-driven because the app's CSP forbids
- * inline style attributes; the initial hidden state only applies once the
- * script has armed the page (body.km-armed), so a script failure leaves the app
- * exactly as it was.
+ * Take 1 was a set of rings and fading cards: motion, but not *that* motion.
+ * This file re-creates the actual vocabulary of animation.mp4:
+ *
+ *   - a dot-grid canvas
+ *   - a rounded browser frame with traffic lights and a URL pill
+ *   - poster cards that spring in around it and lap over its edge
+ *   - the thin pill rail from the reel's first second
+ *   - a drawn accent connector curve
+ *   - stacked, over-tracked kinetic type ("KURO" / "TV")
+ *   - a slanted accent ticker band running under it
+ *   - a few drifting specks
+ *   - an iris wipe out, so the app opens *through* the circle
+ *
+ * Everything is class-driven (the app's CSP forbids inline style attributes);
+ * colours come from the theme's own tokens, so the whole thing re-tints with
+ * the accent the user picked.  Nothing is hidden until the script arms the
+ * page (body.km-armed), so a script failure leaves the app exactly as it was.
  */
 
-/* ---------- title sequence ---------- */
-#km-intro-15{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--pv-panel,#0c1817);animation:km-fade-out .42s ease-in 2.05s forwards}
-#km-intro-15.km-gone{display:none}
-#km-intro-15 .km-ring{position:absolute;width:min(74vmin,420px);aspect-ratio:1;border-radius:50%;border:2px solid var(--pv-accent,#27d7c5);opacity:0;transform:scale(.55);animation:km-ring-in 1.5s cubic-bezier(.16,.84,.24,1) .05s forwards}
-#km-intro-15 .km-ring.km-r2{border-style:dashed;opacity:0;animation:km-ring-in 1.9s cubic-bezier(.16,.84,.24,1) .18s forwards;transform:scale(.35)}
-#km-intro-15 .km-word{position:relative;display:flex;gap:.02em;font-weight:900;letter-spacing:.22em;font-size:clamp(22px,6.4vmin,40px);color:var(--pv-ink,#f1f4f3);z-index:2}
-#km-intro-15 .km-word span{display:inline-block;opacity:0;transform:translateY(18px) rotate(6deg);animation:km-letter .62s cubic-bezier(.16,.84,.24,1) forwards}
-#km-intro-15 .km-word span:nth-child(1){animation-delay:.14s}
-#km-intro-15 .km-word span:nth-child(2){animation-delay:.20s}
-#km-intro-15 .km-word span:nth-child(3){animation-delay:.26s}
-#km-intro-15 .km-word span:nth-child(4){animation-delay:.32s}
-#km-intro-15 .km-word span:nth-child(5){animation-delay:.38s}
-#km-intro-15 .km-word span:nth-child(6){animation-delay:.44s}
-#km-intro-15 .km-word span:nth-child(7){animation-delay:.50s}
-#km-intro-15 .km-word span:nth-child(8){animation-delay:.56s}
-#km-intro-15 .km-ghost{position:absolute;width:26vmin;aspect-ratio:2/3;border-radius:14px;background:var(--pv-card,#122927);border:1px solid var(--pv-muted,#a6adc5);opacity:0;box-shadow:0 18px 40px #00000059}
-#km-intro-15 .km-ghost.km-g1{left:12%;top:24%;transform:translate(-60px,40px) rotate(-14deg);animation:km-ghost-in .8s cubic-bezier(.16,.84,.24,1) .35s forwards}
-#km-intro-15 .km-ghost.km-g2{right:12%;top:20%;transform:translate(60px,30px) rotate(12deg);animation:km-ghost-in .8s cubic-bezier(.16,.84,.24,1) .45s forwards}
-#km-intro-15 .km-ghost.km-g3{left:50%;bottom:10%;margin-left:-13vmin;transform:translateY(60px) rotate(4deg);animation:km-ghost-in .8s cubic-bezier(.16,.84,.24,1) .55s forwards}
-#km-intro-15 .km-skip{position:absolute;bottom:18px;right:18px;font-size:11px;letter-spacing:.14em;color:var(--pv-muted,#a6adc5);opacity:.75}
+/* ---------------------------------------------------------------- tokens */
+#km-intro-15{
+ --km-accent:var(--ku-accent,#3be3d2);
+ --km-ink:var(--ink,#f1f4f3);
+ --km-bg:var(--bg,#081615);
+ --km-ease-out:var(--ku-ease-out,cubic-bezier(.16,1,.3,1));
+ --km-ease:var(--ku-ease,cubic-bezier(.32,.72,0,1));
+ --km-hair:var(--ku-hair,#ffffff12);
+ --km-hair-strong:var(--ku-hair-strong,#ffffff1f);
+ --km-shadow:var(--ku-shadow-2,0 2px 6px #0006,0 12px 28px #0007);
+ --km-r-lg:var(--ku-r-lg,20px);
+ --km-r-md:var(--ku-r-md,14px);
+}
 
-@keyframes km-ring-in{from{opacity:0;transform:scale(.35) rotate(-40deg)}to{opacity:.85;transform:scale(1) rotate(0)}}
-@keyframes km-letter{from{opacity:0;transform:translateY(18px) rotate(6deg)}to{opacity:1;transform:translateY(0) rotate(0)}}
-@keyframes km-ghost-in{from{opacity:0}to{opacity:1;transform:translate(0,0) rotate(var(--km-rot,0deg))}}
-@keyframes km-fade-out{to{opacity:0;visibility:hidden}}
+/* --------------------------------------------------------------- overlay */
+#km-intro-15{position:fixed;inset:0;z-index:9999;overflow:hidden;background:var(--km-bg);isolation:isolate;transition:opacity .16s linear}
+#km-intro-15.km-gone{opacity:0;pointer-events:none}
 
-/* ---------- scroll reveals ---------- */
-body.km-armed .km-reveal{opacity:0;transform:translateY(16px) scale(.985)}
-body.km-armed .km-reveal.km-in{opacity:1;transform:none;transition:opacity .42s ease,transform .52s cubic-bezier(.16,.84,.24,1)}
-body.km-armed .km-reveal.km-d1.km-in{transition-delay:.04s}
-body.km-armed .km-reveal.km-d2.km-in{transition-delay:.08s}
-body.km-armed .km-reveal.km-d3.km-in{transition-delay:.12s}
-body.km-armed .km-reveal.km-d4.km-in{transition-delay:.16s}
-body.km-armed .km-reveal.km-d5.km-in{transition-delay:.20s}
-body.km-armed .km-reveal.km-d6.km-in{transition-delay:.24s}
-body.km-armed .km-reveal.km-d7.km-in{transition-delay:.28s}
-body.km-armed .km-reveal.km-d8.km-in{transition-delay:.32s}
+/* dot-grid canvas, drifting */
+#km-intro-15 .km-dots{position:absolute;inset:-24px 0 0;z-index:0;color:var(--km-ink);opacity:0;
+ background-image:radial-gradient(currentColor 1px,transparent 1px);background-size:19px 19px;
+ animation:km-dots-in .5s linear both,km-dots-drift 7s linear .5s infinite}
+@keyframes km-dots-in{from{opacity:0}to{opacity:.075}}
+@keyframes km-dots-drift{from{transform:translateY(0)}to{transform:translateY(-19px)}}
 
-/* press spring on cards */
-.poster,.hero-slide,.card,.history-card{transition:transform .18s cubic-bezier(.16,.84,.24,1)}
-.poster:active,.card:active,.history-card:active{transform:scale(.965)}
-.hero-slide:active{transform:scale(.99)}
+/* -------- browser frame with chrome, springing up from the bottom -------- */
+#km-intro-15 .km-frame{position:absolute;left:50%;top:47%;z-index:2;width:min(84vw,420px);aspect-ratio:16/10;
+ transform:translate(-50%,-50%);border-radius:var(--km-r-lg);overflow:hidden;
+ background:#0c1918;border:1.5px solid var(--km-hair-strong);box-shadow:var(--km-shadow);
+ opacity:0;animation:km-frame-in .8s cubic-bezier(.2,1.12,.34,1) .18s both}
+@keyframes km-frame-in{
+ 0%{opacity:0;transform:translate(-50%,-50%) translateY(48px) scale(.9) rotate(-2deg)}
+ 60%{opacity:1}
+ 100%{opacity:1;transform:translate(-50%,-50%)}
+}
+#km-intro-15 .km-chrome{position:relative;z-index:2;height:23px;display:flex;align-items:center;gap:6px;padding:0 9px;
+ background:#00000038;border-bottom:1px solid var(--km-hair)}
+#km-intro-15 .km-lights{display:flex;gap:5px;align-items:center}
+#km-intro-15 .km-lights i{display:block;width:5px;height:5px;border-radius:50%;background:var(--km-ink);
+ transform:scale(.2);animation:km-light .42s cubic-bezier(.2,1.5,.4,1) both}
+#km-intro-15 .km-lights i:nth-child(1){animation-delay:.4s}
+#km-intro-15 .km-lights i:nth-child(2){animation-delay:.45s}
+#km-intro-15 .km-lights i:nth-child(3){animation-delay:.5s;background:var(--km-accent)}
+@keyframes km-light{0%{transform:scale(.2)}100%{transform:scale(1)}}
+#km-intro-15 .km-url{margin-left:auto;display:block;width:42%;height:9px;border-radius:5px;background:var(--km-ink);opacity:0;
+ transform:scaleX(.4);transform-origin:right;animation:km-url-in .5s var(--km-ease-out) .52s both}
+@keyframes km-url-in{to{opacity:.15;transform:scaleX(1)}}
+#km-intro-15 .km-art{position:absolute;inset:23px 0 0;z-index:1;overflow:hidden;background:#0a1413}
+#km-intro-15 .km-art img{width:100%;height:100%;object-fit:cover;object-position:center 26%;
+ transform:scale(1.1);animation:km-ken 6.5s var(--km-ease) both;opacity:.92}
+#km-intro-15 .km-art.km-empty{background:
+ radial-gradient(circle at 22% 18%,var(--km-accent) 0,transparent 46%),
+ linear-gradient(135deg,#123 0,#0a1413 62%)}
+#km-intro-15 .km-art.km-empty:after{content:'';position:absolute;inset:0;background:
+ repeating-linear-gradient(115deg,transparent 0 26px,#ffffff0a 26px 27px)}
+@keyframes km-ken{from{transform:scale(1.16)}to{transform:scale(1.02)}}
 
-/* ---------- reel player + beta card ---------- */
+/* ------- poster cards that spring in and lap over the frame's edge ------- */
+#km-intro-15 .km-stack{position:absolute;inset:0;z-index:3;pointer-events:none}
+#km-intro-15 .km-card{position:absolute;left:50%;top:50%;width:min(28vw,112px);aspect-ratio:2/3;
+ border-radius:12px;overflow:hidden;background:#0d1a19;border:1.5px solid var(--km-hair-strong);
+ box-shadow:var(--km-shadow);opacity:0;
+ transform:translate(-50%,-50%) var(--km-to);
+ animation:km-card-stack .85s cubic-bezier(.2,1.28,.36,1) var(--km-at,0s) both}
+#km-intro-15 .km-card img{width:100%;height:100%;object-fit:cover;display:block}
+#km-intro-15 .km-card.km-empty{background:
+ radial-gradient(circle at 30% 20%,var(--km-accent) 0,transparent 55%),
+ linear-gradient(150deg,#16333a,#0b1514)}
+#km-intro-15 .km-c1{--km-to:translate(4%,78%) rotate(-8deg);--km-from:translate(4%,140%) rotate(14deg);--km-at:.34s;z-index:3}
+#km-intro-15 .km-c2{--km-to:translate(-124%,72%) rotate(-16deg);--km-from:translate(-70%,140%) rotate(-30deg);--km-at:.44s;z-index:2}
+#km-intro-15 .km-c3{--km-to:translate(126%,70%) rotate(13deg);--km-from:translate(70%,140%) rotate(28deg);--km-at:.54s;z-index:2}
+@keyframes km-card-stack{
+ 0%{opacity:0;transform:translate(-50%,-50%) var(--km-from) scale(.6)}
+ 55%{opacity:1}
+ 100%{opacity:1;transform:translate(-50%,-50%) var(--km-to) scale(1)}
+}
+
+/* --------------------- the thin pill rail from second one --------------------- */
+#km-intro-15 .km-rail{position:absolute;left:max(12px,2.6vw);top:50%;z-index:1;
+ transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:9px}
+#km-intro-15 .km-pill{display:block;width:16px;height:56px;border-radius:9px;
+ border:1.5px solid var(--km-ink);opacity:0;animation:km-rail-in .6s var(--km-ease-out) both}
+#km-intro-15 .km-pill:nth-child(1){animation-delay:.16s;opacity:.3}
+#km-intro-15 .km-pill:nth-child(2){animation-delay:.22s;opacity:.22;height:66px}
+#km-intro-15 .km-pill:nth-child(3){animation-delay:.28s;opacity:.16}
+#km-intro-15 .km-railbtn{display:block;width:16px;height:16px;border-radius:50%;
+ border:1.5px solid var(--km-ink);opacity:0;animation:km-rail-in .6s var(--km-ease-out) both}
+#km-intro-15 .km-railbtn:nth-child(4){animation-delay:.34s;opacity:.26}
+#km-intro-15 .km-railbtn:nth-child(5){animation-delay:.4s;opacity:.18}
+#km-intro-15 .km-railbtn:nth-child(6){animation-delay:.46s;opacity:.26;border-color:var(--km-accent)}
+@keyframes km-rail-in{0%{opacity:0;transform:translateX(-14px)}100%{transform:translateX(0)}}
+
+/* ------------------------ drawn accent connector curve ------------------------ */
+#km-intro-15 .km-curve{position:absolute;left:7%;top:20%;width:42%;height:46%;z-index:3;opacity:0;
+ animation:km-appear .3s linear .42s both}
+#km-intro-15 .km-curve path{fill:none;stroke:var(--km-accent);stroke-width:1.4;stroke-linecap:round;
+ vector-effect:non-scaling-stroke;stroke-dasharray:220;stroke-dashoffset:220;
+ animation:km-draw .9s var(--km-ease-out) .44s both}
+@keyframes km-draw{to{stroke-dashoffset:0}}
+@keyframes km-appear{from{opacity:0}to{opacity:.75}}
+
+/* --------------------------- kinetic stacked type --------------------------- */
+#km-intro-15 .km-type{position:absolute;left:0;right:0;bottom:19%;z-index:5;text-align:center;pointer-events:none}
+#km-intro-15 .km-t1{display:block;font-weight:900;font-stretch:condensed;letter-spacing:-.055em;line-height:.82;
+ font-size:clamp(46px,17vw,104px);color:var(--km-ink);transform:scaleX(.9);text-shadow:0 6px 26px #00000059}
+#km-intro-15 .km-t1 span{display:inline-block;opacity:0;transform:translateY(.55em) rotate(3deg);
+ animation:km-letter .58s cubic-bezier(.2,1.2,.35,1) both}
+#km-intro-15 .km-t1 span:nth-child(1){animation-delay:.5s}
+#km-intro-15 .km-t1 span:nth-child(2){animation-delay:.55s}
+#km-intro-15 .km-t1 span:nth-child(3){animation-delay:.6s}
+#km-intro-15 .km-t1 span:nth-child(4){animation-delay:.65s}
+#km-intro-15 .km-t2{display:inline-flex;align-items:center;gap:9px;margin-top:9px;font-size:clamp(11px,3vw,15px);
+ font-weight:800;letter-spacing:.5em;text-transform:uppercase;color:var(--km-accent);
+ opacity:0;animation:km-fade-up .5s var(--km-ease-out) .82s both}
+#km-intro-15 .km-t2:before{content:'';display:block;width:26px;height:2px;background:var(--km-accent)}
+@keyframes km-letter{0%{opacity:0;transform:translateY(.55em) rotate(3deg)}100%{opacity:1;transform:none}}
+@keyframes km-fade-up{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:none}}
+
+/* ----------------------------- slanted ticker ----------------------------- */
+#km-intro-15 .km-ticker{position:absolute;left:-8%;right:-8%;bottom:7%;z-index:6;height:26px;overflow:hidden;
+ background:var(--km-accent);color:#04100f;transform:rotate(-2deg) translateY(30px);opacity:0;
+ animation:km-band-in .5s cubic-bezier(.2,1.3,.4,1) .3s both}
+@keyframes km-band-in{to{opacity:1;transform:rotate(-2deg) translateY(0)}}
+#km-intro-15 .km-track{display:flex;align-items:center;height:100%;white-space:nowrap;will-change:transform;
+ animation:km-ticker 11s linear infinite}
+#km-intro-15 .km-track span{display:inline-block;font-size:11px;font-weight:900;letter-spacing:.24em;
+ text-transform:uppercase;padding-right:.9em}
+@keyframes km-ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* -------------------------------- specks -------------------------------- */
+#km-intro-15 .km-specks{position:absolute;inset:0;z-index:4;pointer-events:none}
+#km-intro-15 .km-specks i{position:absolute;display:block;width:5px;height:5px;border-radius:50%;
+ background:var(--km-accent);opacity:0;animation:km-speck 3.6s cubic-bezier(.4,0,.6,1) infinite}
+#km-intro-15 .km-specks i:nth-child(1){left:18%;top:32%;animation-delay:.2s}
+#km-intro-15 .km-specks i:nth-child(2){left:74%;top:24%;width:3px;height:3px;animation-delay:.9s}
+#km-intro-15 .km-specks i:nth-child(3){left:38%;top:74%;width:4px;height:4px;animation-delay:1.6s;background:var(--km-ink)}
+#km-intro-15 .km-specks i:nth-child(4){left:86%;top:58%;width:3px;height:3px;animation-delay:.55s}
+#km-intro-15 .km-specks i:nth-child(5){left:56%;top:18%;width:3px;height:3px;animation-delay:2.2s;background:var(--km-ink)}
+#km-intro-15 .km-specks i:nth-child(6){left:28%;top:58%;width:4px;height:4px;animation-delay:1.2s}
+@keyframes km-speck{
+ 0%{opacity:0;transform:translateY(14px) scale(.6)}
+ 25%{opacity:.55}
+ 70%{opacity:.3}
+ 100%{opacity:0;transform:translateY(-26px) scale(1)}
+}
+
+/* ------------------------------- iris wipe ------------------------------- */
+#km-intro-15 .km-iris{position:absolute;left:50%;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;
+ z-index:9;background:var(--km-bg);transform:scale(0);animation:km-iris .64s cubic-bezier(.62,.02,.9,.4) 2.14s forwards}
+@keyframes km-iris{from{transform:scale(0)}to{transform:scale(420)}}
+
+#km-intro-15 .km-skip{position:absolute;right:16px;bottom:12px;z-index:10;font-size:10px;font-weight:700;
+ letter-spacing:.2em;text-transform:uppercase;color:var(--km-ink);opacity:0;
+ animation:km-skip-in .4s linear .9s both}
+@keyframes km-skip-in{to{opacity:.42}}
+
+/* --------------------------- scroll-in card spring --------------------------- */
+body.km-armed .km-reveal{opacity:0}
+body.km-armed .km-reveal.km-in{animation:km-card-in .64s var(--ku-ease-out,cubic-bezier(.16,1,.3,1)) both}
+body.km-armed .km-reveal.km-in.km-d1{animation-delay:.045s}
+body.km-armed .km-reveal.km-in.km-d2{animation-delay:.09s}
+body.km-armed .km-reveal.km-in.km-d3{animation-delay:.135s}
+body.km-armed .km-reveal.km-in.km-d4{animation-delay:.18s}
+body.km-armed .km-reveal.km-in.km-d5{animation-delay:.225s}
+body.km-armed .km-reveal.km-in.km-d6{animation-delay:.27s}
+body.km-armed .km-reveal.km-in.km-d7{animation-delay:.315s}
+body.km-armed .km-reveal.km-in.km-d8{animation-delay:.36s}
+body.km-armed .km-reveal.km-in.km-d2,body.km-armed .km-reveal.km-in.km-d6{--km-rot:-1deg}
+@keyframes km-card-in{
+ 0%{opacity:0;transform:translateY(22px) scale(.9) rotate(var(--km-rot,.9deg))}
+ 62%{opacity:1;transform:translateY(-4px) scale(1.018) rotate(0)}
+ 100%{opacity:1;transform:none}
+}
+
+/* ------------------------------- press spring ------------------------------- */
+.card,.history-card,.hero-slide,.shelf .grid>*,.info .poster{
+ transition:transform 250ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1))}
+.card:active,.history-card:active,.shelf .grid>*:active{transform:scale(.955)}
+.hero-slide:active,.info .poster:active{transform:scale(.985)}
+
+/* -------------------------- browser chrome on the hero -------------------------- */
+.hero-slide .km-spot-chrome{position:absolute;inset:0 0 auto;z-index:2;height:23px;display:flex;align-items:center;
+ gap:5px;padding:0 9px;background:linear-gradient(180deg,#000000a8,#00000000)}
+.hero-slide .km-spot-chrome i{display:block;width:5px;height:5px;border-radius:50%;background:#fff;opacity:.45}
+.hero-slide .km-spot-chrome i:nth-child(3){background:var(--ku-accent,#3be3d2);opacity:.95}
+.hero-slide .km-spot-chrome b{margin-left:auto;display:block;width:36%;max-width:140px;height:9px;border-radius:5px;
+ background:#fff;opacity:.16}
+
+/* --------------------------- route-change sweep --------------------------- */
+#km-sweep-15{position:fixed;left:0;right:0;top:0;height:2px;z-index:9997;pointer-events:none;
+ background:linear-gradient(90deg,transparent,var(--ku-accent,#3be3d2),transparent);
+ transform:scaleX(0);transform-origin:left;opacity:.9}
+#km-sweep-15.km-run{animation:km-sweep .55s var(--ku-ease-out,cubic-bezier(.16,1,.3,1)) both}
+@keyframes km-sweep{0%{transform:scaleX(0);transform-origin:left}55%{transform:scaleX(1);transform-origin:left}
+ 56%{transform:scaleX(1);transform-origin:right}100%{transform:scaleX(0);transform-origin:right}}
+
+/* --------------------------- reel player + beta card --------------------------- */
 .km-beta-card{margin-top:18px}
+.km-beta-head{display:flex;align-items:center;gap:9px}
+.km-beta-head .km-beta-dots{display:flex;gap:4px;align-items:center}
+.km-beta-head .km-beta-dots i{display:block;width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.4}
+.km-beta-head .km-beta-dots i:last-child{background:var(--ku-accent,#3be3d2);opacity:1}
 .km-beta-row{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
-.km-beta-play{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:14px;border:2px solid var(--pv-accent,#27d7c5);background:var(--pv-accent,#27d7c5);color:#0b0710;font-size:13px;font-weight:800;cursor:pointer}
-.km-beta-play:active{transform:scale(.96)}
-.km-beta-play:focus-visible{outline:2px solid var(--pv-ink,#f1f4f3);outline-offset:2px}
-.km-beta-note{margin:10px 0 0;font-size:12px;line-height:1.55;color:var(--pv-muted,#a6adc5)}
+.km-beta-play{display:inline-flex;align-items:center;gap:8px;padding:11px 17px;border-radius:var(--ku-r-md,14px);
+ border:0;background:var(--ku-accent,#3be3d2);color:#04100f;font-size:13px;font-weight:900;letter-spacing:.01em;
+ cursor:pointer;box-shadow:var(--ku-shadow-1,0 2px 8px #0005);transition:transform 240ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1))}
+.km-beta-play:active{transform:scale(.95)}
+.km-beta-play:focus-visible{outline:2px solid var(--ink,#f1f4f3);outline-offset:3px}
+.km-beta-note{margin:11px 0 0;font-size:12px;line-height:1.55;color:var(--muted,#a6adc5)}
 
-#km-reel-15{position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;background:#000000f2;padding:16px}
-#km-reel-15 video{width:100%;max-width:960px;border-radius:14px;background:#000}
-#km-reel-15 .km-reel-close{position:absolute;top:14px;right:14px;padding:10px 16px;border-radius:12px;border:1px solid var(--pv-muted,#a6adc5);background:#000000a6;color:var(--pv-ink,#f1f4f3);font-size:13px;font-weight:800;cursor:pointer}
-#km-reel-15 .km-reel-close:focus-visible{outline:2px solid var(--pv-accent,#27d7c5);outline-offset:2px}
+#km-reel-15{position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;
+ background:#000000f2;padding:14px;animation:km-reel-in .22s linear both}
+@keyframes km-reel-in{from{opacity:0}to{opacity:1}}
+#km-reel-15 video{width:100%;max-width:980px;border-radius:12px;background:#000;box-shadow:0 20px 60px #000c}
+#km-reel-15 .km-reel-close{position:absolute;top:12px;right:12px;padding:10px 16px;border-radius:10px;
+ border:1px solid #ffffff38;background:#000000a6;color:#f1f4f3;font-size:13px;font-weight:800;cursor:pointer}
+#km-reel-15 .km-reel-close:focus-visible{outline:2px solid var(--ku-accent,#3be3d2);outline-offset:2px}
 
+/* ------------------------------- reduced motion ------------------------------- */
 @media (prefers-reduced-motion:reduce){
- #km-intro-15 .km-ring,#km-intro-15 .km-ghost,#km-intro-15 .km-word span{animation:none;opacity:1;transform:none}
- body.km-armed .km-reveal{opacity:1;transform:none}
- .poster,.hero-slide,.card,.history-card{transition:none}
+ #km-intro-15{display:none}
+ body.km-armed .km-reveal{opacity:1}
+ body.km-armed .km-reveal.km-in{animation:none}
+ .card,.history-card,.hero-slide,.shelf .grid>*,.info .poster{transition:none}
+ #km-sweep-15{display:none}
+ .hero-slide .km-spot-chrome{display:none}
+ #km-intro-15 .km-art img{animation:none;transform:none}
 }
