@@ -226,3 +226,24 @@ both pass; all four touched Java files parse; the build guards were extended and
   page re-render, cleared back to initials, all ten WebPs valid RIFF containers. "problems none".
 - Pairs 06–20 are still queued in `profile-art/MANIFEST.md`; the same pipeline adds them (convert →
   drop in `assets/profile-art/`, extend the `IDS` array, re-zip, rebuild).
+
+### Rev 10 — one avatar everywhere, and the SDK stops expiring (2026-11-20)
+
+- Bug: the chosen art only painted the profile hero. `accounts542.js` builds the header badge
+  (`refreshHeader560` → `#header-login > .header-mono571`) and the drawer identity
+  (`.profile-drawer560 .profile-identity560 .profile-mono571`) itself, so both kept the monogram.
+- Fix: `paintMonos()` wears the avatar as a `background-image` on `.profile-mono571.has-art581`
+  (text made transparent, `background-size:cover`), and the module now observes the whole body
+  (debounced through `setTimeout 0`) instead of only `#main`, so a rebuilt badge or a drawer that
+  is created later is painted too. Clearing removes it from all three surfaces.
+- Build `44671708973`; signed APK **45,905,627 B**, sha256
+  **`d5815edb1cf469bc14a0343c71f4bb21ff05528a5bb5fb425abf39cc8e443240`**; publish run
+  `44672314373` refreshed `v5.81`. Drive: source `1nJHRkb5xXTJRN_ixVJXO2OYO7TiR2YV9`,
+  APK `130M_aSgLGQiM-3WdJ3Xq5UuUf47Nk82g`, sha `18lJzH23ijPSPaxbvXo0DSgrphZS1khdW`.
+- **SDK caching:** the runner now looks for the zip on a `sdk-cache` release before asking for a
+  signed URL, and parks it there when it does download one (asset `discord-sdk.zip`, 788 MB).
+  `build-current.yml` no longer has the hard "extract sdk= from the message" step. Verified with
+  build `44672439457`, triggered by `[build]` with **no** `sdk=` in the message — it reused the
+  cached copy and built clean, so signed URLs are only needed when the SDK version changes.
+- Test: `tests/smoke-profile-art581.cjs` extended to the badge, a late-created drawer, a rebuilt
+  badge, and clearing — "problems none".

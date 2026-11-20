@@ -18,7 +18,7 @@ name: build Kuro (current version)
 
 on:
   push:
-    branches: [arena/35efde43-kuro-tv-releases]
+    branches: [arena/15c12177-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
@@ -30,7 +30,7 @@ concurrency:
 
 env:
   APK_NAME: Kuro-tv-5.81
-  SOURCE_ID: 19mIs0kzSaVjceQAfzTClOUYgUe4GO4Cl
+  SOURCE_ID: 1nJHRkb5xXTJRN_ixVJXO2OYO7TiR2YV9
   EXPECT_VERSION_NAME: "5.81"
   EXPECT_VERSION_CODE: "84"
 
@@ -160,27 +160,47 @@ jobs:
           grep -q "versionName '${EXPECT_VERSION_NAME}'" "$PROJECT/build.gradle" \
             || { echo "::error::build.gradle versionName is not ${EXPECT_VERSION_NAME}."; exit 1; }
 
-      - name: Extract the Discord SDK URL from the commit message
+      - name: Fetch the Discord Social SDK (cached copy first)
         env:
+          GH_TOKEN: ${{ github.token }}
           MSG: ${{ github.event.head_commit.message }}
         run: |
-          set -euo pipefail
-          URL=$(printf '%s\n' "$MSG" | tr -d '\r' | grep -oE 'sdk=[^ ]+' | head -1 | cut -d= -f2-)
-          if [ -z "${URL:-}" ]; then
-            echo "::error::No sdk=<url> in the commit message. Push '[build] sdk=<signed url>'."
-            exit 1
+          set -uo pipefail
+          ZIP="$RUNNER_TEMP/discord-sdk.zip"
+          mkdir -p "$RUNNER_TEMP/cache"
+          # 1. a permanent copy parked on this repo's sdk-cache release - no expiring URL needed
+          if gh release download sdk-cache -R "$GITHUB_REPOSITORY" -p '*.zip' -D "$RUNNER_TEMP/cache" --clobber 2>/dev/null; then
+            CACHED=$(find "$RUNNER_TEMP/cache" -name '*.zip' | head -1)
+            if [ -n "$CACHED" ] && [ "$(stat -c%s "$CACHED")" -gt 1000000 ]; then
+              cp "$CACHED" "$ZIP"
+              echo "using the cached SDK copy: $(stat -c%s "$ZIP") bytes"
+            fi
           fi
-          echo "Discord SDK host: $(printf '%s' "$URL" | cut -d/ -f3)"
-          echo "SDK_URL=$URL" >> "$GITHUB_ENV"
-
-      - name: Fetch the Discord Social SDK
-        run: |
-          code=$(curl -sSL --retry 2 --retry-delay 3 -o "$RUNNER_TEMP/discord-sdk.zip" -w '%{http_code}' "$SDK_URL")
-          if [ "$code" != "200" ]; then
-            echo "::error::Discord SDK download failed with HTTP $code - signed URLs expire after about an hour."
-            exit 1
+          # 2. otherwise take the signed URL out of the commit message
+          if [ ! -s "$ZIP" ]; then
+            URL=$(printf '%s\n' "$MSG" | tr -d '\r' | grep -oE 'sdk=[^ ]+' | head -1 | cut -d= -f2-)
+            if [ -z "${URL:-}" ]; then
+              echo "::error::No cached SDK and no sdk=<url> in the commit message. Push '[build] sdk=<signed url>' once."
+              exit 1
+            fi
+            echo "Discord SDK host: $(printf '%s' "$URL" | cut -d/ -f3)"
+            code=$(curl -sSL --retry 2 --retry-delay 3 -o "$ZIP" -w '%{http_code}' "$URL")
+            if [ "$code" != "200" ]; then
+              echo "::error::Discord SDK download failed with HTTP $code - signed URLs expire after about an hour."
+              exit 1
+            fi
+            # 3. park it so future builds never need a signed URL again
+            gh release view sdk-cache -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+              || gh release create sdk-cache -R "$GITHUB_REPOSITORY" --title "Discord Social SDK cache" \
+                   --notes "Downloaded once from a signed URL and reused by build-current.yml. Not a product release." \
+              || true
+            if gh release upload sdk-cache "$ZIP" -R "$GITHUB_REPOSITORY" --clobber; then
+              echo "SDK parked in the sdk-cache release for future builds"
+            else
+              echo "::warning::could not cache the SDK; the next build will need a signed URL again"
+            fi
           fi
-          unzip -l "$RUNNER_TEMP/discord-sdk.zip" | head -20
+          unzip -l "$ZIP" | head -20
 
       - name: Locate the Discord AAR
         run: |

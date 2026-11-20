@@ -6,7 +6,7 @@ Signed with the original Kuro release key (`CN=Kuro Anime`), so this installs st
 5.72 – 5.80. **Do not uninstall or clear data.**
 
 ```
-SHA-256  f7b069d220c7805913df1885e67a148c6cba321a3dedc17238ec5038020e8965
+SHA-256  d5815edb1cf469bc14a0343c71f4bb21ff05528a5bb5fb425abf39cc8e443240
 Size     45,905,627 bytes
 ```
 
@@ -30,6 +30,9 @@ looks like a set.
   is stored locally; nothing is uploaded and nothing is fetched.
 - **It survives re-renders** — the picker paints itself onto the profile page every time the page
   is drawn, including after the edit toggle, so your art cannot be lost by navigating.
+- **One avatar everywhere** — the choice is not confined to the profile hero: the same art fills the
+  header chip in the top bar and the round avatar in the account drawer, and it comes back after
+  either of them is rebuilt.
 - **Still no uploads** — there is no picture picker, no text field for a URL and no banner
   cropping UI. It is pick-from-the-pack only.
 
@@ -136,7 +139,7 @@ adb install -r Kuro-tv-5.81.apk
 
 ```bash
 sha256sum Kuro-tv-5.81.apk
-# f7b069d220c7805913df1885e67a148c6cba321a3dedc17238ec5038020e8965
+# d5815edb1cf469bc14a0343c71f4bb21ff05528a5bb5fb425abf39cc8e443240
 
 apksigner verify --print-certs Kuro-tv-5.81.apk
 # CN=Kuro Anime
