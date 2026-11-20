@@ -1,0 +1,71 @@
+/* Kuro 1.5-beta - motion layer.
+ *
+ * Re-created from the animation.mp4 reel: a title sequence with a sweeping
+ * accent ring and three cards flying in, staggered card reveals on scroll, and
+ * a spring on press. Everything is class-driven because the app's CSP forbids
+ * inline style attributes; the initial hidden state only applies once the
+ * script has armed the page (body.km-armed), so a script failure leaves the app
+ * exactly as it was.
+ */
+
+/* ---------- title sequence ---------- */
+#km-intro-15{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--pv-panel,#0c1817);animation:km-fade-out .42s ease-in 2.05s forwards}
+#km-intro-15.km-gone{display:none}
+#km-intro-15 .km-ring{position:absolute;width:min(74vmin,420px);aspect-ratio:1;border-radius:50%;border:2px solid var(--pv-accent,#27d7c5);opacity:0;transform:scale(.55);animation:km-ring-in 1.5s cubic-bezier(.16,.84,.24,1) .05s forwards}
+#km-intro-15 .km-ring.km-r2{border-style:dashed;opacity:0;animation:km-ring-in 1.9s cubic-bezier(.16,.84,.24,1) .18s forwards;transform:scale(.35)}
+#km-intro-15 .km-word{position:relative;display:flex;gap:.02em;font-weight:900;letter-spacing:.22em;font-size:clamp(22px,6.4vmin,40px);color:var(--pv-ink,#f1f4f3);z-index:2}
+#km-intro-15 .km-word span{display:inline-block;opacity:0;transform:translateY(18px) rotate(6deg);animation:km-letter .62s cubic-bezier(.16,.84,.24,1) forwards}
+#km-intro-15 .km-word span:nth-child(1){animation-delay:.14s}
+#km-intro-15 .km-word span:nth-child(2){animation-delay:.20s}
+#km-intro-15 .km-word span:nth-child(3){animation-delay:.26s}
+#km-intro-15 .km-word span:nth-child(4){animation-delay:.32s}
+#km-intro-15 .km-word span:nth-child(5){animation-delay:.38s}
+#km-intro-15 .km-word span:nth-child(6){animation-delay:.44s}
+#km-intro-15 .km-word span:nth-child(7){animation-delay:.50s}
+#km-intro-15 .km-word span:nth-child(8){animation-delay:.56s}
+#km-intro-15 .km-ghost{position:absolute;width:26vmin;aspect-ratio:2/3;border-radius:14px;background:var(--pv-card,#122927);border:1px solid var(--pv-muted,#a6adc5);opacity:0;box-shadow:0 18px 40px #00000059}
+#km-intro-15 .km-ghost.km-g1{left:12%;top:24%;transform:translate(-60px,40px) rotate(-14deg);animation:km-ghost-in .8s cubic-bezier(.16,.84,.24,1) .35s forwards}
+#km-intro-15 .km-ghost.km-g2{right:12%;top:20%;transform:translate(60px,30px) rotate(12deg);animation:km-ghost-in .8s cubic-bezier(.16,.84,.24,1) .45s forwards}
+#km-intro-15 .km-ghost.km-g3{left:50%;bottom:10%;margin-left:-13vmin;transform:translateY(60px) rotate(4deg);animation:km-ghost-in .8s cubic-bezier(.16,.84,.24,1) .55s forwards}
+#km-intro-15 .km-skip{position:absolute;bottom:18px;right:18px;font-size:11px;letter-spacing:.14em;color:var(--pv-muted,#a6adc5);opacity:.75}
+
+@keyframes km-ring-in{from{opacity:0;transform:scale(.35) rotate(-40deg)}to{opacity:.85;transform:scale(1) rotate(0)}}
+@keyframes km-letter{from{opacity:0;transform:translateY(18px) rotate(6deg)}to{opacity:1;transform:translateY(0) rotate(0)}}
+@keyframes km-ghost-in{from{opacity:0}to{opacity:1;transform:translate(0,0) rotate(var(--km-rot,0deg))}}
+@keyframes km-fade-out{to{opacity:0;visibility:hidden}}
+
+/* ---------- scroll reveals ---------- */
+body.km-armed .km-reveal{opacity:0;transform:translateY(16px) scale(.985)}
+body.km-armed .km-reveal.km-in{opacity:1;transform:none;transition:opacity .42s ease,transform .52s cubic-bezier(.16,.84,.24,1)}
+body.km-armed .km-reveal.km-d1.km-in{transition-delay:.04s}
+body.km-armed .km-reveal.km-d2.km-in{transition-delay:.08s}
+body.km-armed .km-reveal.km-d3.km-in{transition-delay:.12s}
+body.km-armed .km-reveal.km-d4.km-in{transition-delay:.16s}
+body.km-armed .km-reveal.km-d5.km-in{transition-delay:.20s}
+body.km-armed .km-reveal.km-d6.km-in{transition-delay:.24s}
+body.km-armed .km-reveal.km-d7.km-in{transition-delay:.28s}
+body.km-armed .km-reveal.km-d8.km-in{transition-delay:.32s}
+
+/* press spring on cards */
+.poster,.hero-slide,.card,.history-card{transition:transform .18s cubic-bezier(.16,.84,.24,1)}
+.poster:active,.card:active,.history-card:active{transform:scale(.965)}
+.hero-slide:active{transform:scale(.99)}
+
+/* ---------- reel player + beta card ---------- */
+.km-beta-card{margin-top:18px}
+.km-beta-row{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.km-beta-play{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:14px;border:2px solid var(--pv-accent,#27d7c5);background:var(--pv-accent,#27d7c5);color:#0b0710;font-size:13px;font-weight:800;cursor:pointer}
+.km-beta-play:active{transform:scale(.96)}
+.km-beta-play:focus-visible{outline:2px solid var(--pv-ink,#f1f4f3);outline-offset:2px}
+.km-beta-note{margin:10px 0 0;font-size:12px;line-height:1.55;color:var(--pv-muted,#a6adc5)}
+
+#km-reel-15{position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;background:#000000f2;padding:16px}
+#km-reel-15 video{width:100%;max-width:960px;border-radius:14px;background:#000}
+#km-reel-15 .km-reel-close{position:absolute;top:14px;right:14px;padding:10px 16px;border-radius:12px;border:1px solid var(--pv-muted,#a6adc5);background:#000000a6;color:var(--pv-ink,#f1f4f3);font-size:13px;font-weight:800;cursor:pointer}
+#km-reel-15 .km-reel-close:focus-visible{outline:2px solid var(--pv-accent,#27d7c5);outline-offset:2px}
+
+@media (prefers-reduced-motion:reduce){
+ #km-intro-15 .km-ring,#km-intro-15 .km-ghost,#km-intro-15 .km-word span{animation:none;opacity:1;transform:none}
+ body.km-armed .km-reveal{opacity:1;transform:none}
+ .poster,.hero-slide,.card,.history-card{transition:none}
+}

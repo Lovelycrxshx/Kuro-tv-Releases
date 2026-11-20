@@ -1,0 +1,504 @@
+name: build Kuro 1.5 beta
+
+# Builds the CURRENT Kuro version from the source zip stored in Drive, commits the
+# *aligned but unsigned* APK back to this branch, and never sees the signing key — the
+# owner signs afterwards with the existing release key (CN=Kuro Anime), so no repository
+# secrets are involved.
+#
+# The source lives at Drive file 1dpF_sn1TrL2gqFTW5fp9yA09QDhMGbj5 and must be readable
+# by "anyone with the link" while the job runs (it is a GPL-3.0 source tree that is
+# published as a release asset anyway).
+#
+# The Discord Social SDK URL is a short-lived signed URL and must not be stored, so it
+# travels in the commit message:
+#
+#     git commit --allow-empty -m "[beta] sdk=<signed sdk zip url>"
+#
+# Only commits whose message contains "[beta]" run the job. This is the beta
+# channel: the APK never becomes a GitHub release, it is handed to Drive.
+
+on:
+  push:
+    branches: [main, 'arena/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kuro-beta
+  cancel-in-progress: false
+
+env:
+  APK_NAME: Kuro-tv-beta-1.5
+  SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
+  EXPECT_VERSION_NAME: "1.5-beta"
+  EXPECT_VERSION_CODE: "92"
+
+jobs:
+  apk:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[beta]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out this branch (receives the artifacts)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          path: out
+          fetch-depth: 1
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configure Android SDK
+        run: |
+          if [ -z "${ANDROID_HOME:-}" ] || [ ! -d "${ANDROID_HOME:-/nonexistent}" ]; then
+            export ANDROID_HOME=/usr/local/lib/android/sdk
+          fi
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          ls "$ANDROID_HOME" | head
+
+      - name: Install platform 35, build-tools 35.0.1 and NDK r27c
+        run: |
+          SDKMANAGER=$(command -v sdkmanager || true)
+          [ -n "$SDKMANAGER" ] || SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || { echo "::error::sdkmanager not found"; exit 1; }
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-35" \
+            "build-tools;35.0.1" "ndk;27.2.12479018"
+          test -d "$ANDROID_HOME/platforms/android-35"
+          test -f "$ANDROID_HOME/build-tools/35.0.1/lib/apksigner.jar"
+          test -x "$ANDROID_HOME/build-tools/35.0.1/zipalign"
+          echo "SDK pieces verified."
+
+      - name: Download the current source zip from Drive
+        run: |
+          set -euo pipefail
+          URL="https://drive.usercontent.google.com/download?id=${SOURCE_ID}&export=download&confirm=t"
+          code=$(curl -sSL --retry 2 --retry-delay 3 -o "$RUNNER_TEMP/src.zip" -w '%{http_code}' "$URL")
+          bytes=$(stat -c%s "$RUNNER_TEMP/src.zip" 2>/dev/null || echo 0)
+          echo "HTTP $code, $bytes bytes"
+          if [ "$code" != "200" ] || [ "$bytes" -lt 1000000 ]; then
+            echo "::error::Source download failed (HTTP $code, $bytes bytes). Is the Drive file still shared with anyone-with-the-link?"
+            exit 1
+          fi
+          mkdir -p src
+          unzip -q "$RUNNER_TEMP/src.zip" -d src
+          PROJECT=$(dirname "$(find src -maxdepth 3 -name settings.gradle -print -quit)")
+          [ -n "$PROJECT" ] || { echo "::error::No settings.gradle in the source zip."; exit 1; }
+          echo "Project root: $PROJECT"
+          echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
+          grep -o 'android:versionCode="[0-9]*" android:versionName="[^"]*"' "$PROJECT/AndroidManifest.xml"
+
+      - name: Apply the 1.1 asset overlay (theme accents + profile art)
+        run: |
+          set -euo pipefail
+          # The Drive zip is still the 1.0 tree. 1.1 is a web-layer cut, so the branch
+          # carries the changed assets in assets-1.1/ and this step lays them over the
+          # source before it is compiled. Everything else in that zip is untouched.
+          OVERLAY="$GITHUB_WORKSPACE/out/assets-1.1"
+          [ -d "$OVERLAY" ] || { echo "::error::assets-1.1 is missing from this branch."; exit 1; }
+
+          # Refuse to overlay a tree the patch was not built against.
+          for anchor in '<link rel="stylesheet" href="profile-art-arm.css">' '<script src="profile-art-arm.js"></script>'; do
+            grep -qF "$anchor" "$PROJECT/assets/index.html" \
+              || { echo "::error::assets/index.html in the source zip has drifted from the 1.0 layout (missing: $anchor). Regenerate assets-1.1/index.html from the new source before building."; exit 1; }
+            grep -qF "$anchor" "$OVERLAY/index.html" \
+              || { echo "::error::assets-1.1/index.html lost its 1.0 anchors."; exit 1; }
+          done
+          # Index.html drift guard: with the three 1.1 additions stripped, the overlay's
+          # copy must be byte-for-byte the source's copy, otherwise the overlay would
+          # silently revert a newer change made in the source tree.
+          strip() {
+            sed -E -e 's#<link id="kuro-accent-css"[^>]*>##g' \
+                   -e 's#<link rel="stylesheet" href="theme-picker-1\.1\.css">##g' \
+                   -e 's#<script src="theme-accent-1\.1\.js"></script>##g' "$1" | tr -d '[:space:]'
+          }
+          [ "$(strip "$PROJECT/assets/index.html")" = "$(strip "$OVERLAY/index.html")" ] \
+            || { echo "::error::assets/index.html in the source zip differs from the one the 1.1 overlay was cut from. Regenerate assets-1.1/index.html first."; exit 1; }
+
+          ( cd "$OVERLAY" && find . -type f -print0 ) | while IFS= read -r -d '' f; do
+            mkdir -p "$PROJECT/assets/$(dirname "$f")"
+            cp -f "$OVERLAY/$f" "$PROJECT/assets/$f"
+          done
+
+          # The version bump lives here until the Drive source itself is regenerated.
+          sed -i -E "s/versionCode +[0-9]+/versionCode 92/" "$PROJECT/build.gradle"
+          sed -i -E "s/versionName +'[^']*'/versionName '1.5-beta'/" "$PROJECT/build.gradle"
+          grep -nE "versionName|versionCode" "$PROJECT/build.gradle"
+
+          grep -qF 'theme-teal-1.1.css' "$PROJECT/assets/index.html" \
+            || { echo "::error::the accent stylesheet is not linked."; exit 1; }
+          grep -qF 'theme-accent-1.1.js' "$PROJECT/assets/index.html" \
+            || { echo "::error::the accent picker script is not linked."; exit 1; }
+          grep -qF "'art-10'" "$PROJECT/assets/profile-art-arm.js" \
+            || { echo "::error::the profile art registry does not list art-10."; exit 1; }
+          for n in 06 07 08 09 10; do
+            test -s "$PROJECT/assets/profile-art/pfp/art-$n.webp"    || { echo "::error::pfp art-$n.webp missing."; exit 1; }
+            test -s "$PROJECT/assets/profile-art/banner/art-$n.webp" || { echo "::error::banner art-$n.webp missing."; exit 1; }
+          done
+          ls -l "$PROJECT/assets/profile-art/pfp" "$PROJECT/assets/profile-art/banner"
+
+      - name: Apply the 1.5 beta motion overlay
+        run: |
+          set -euo pipefail
+          # Beta only: the motion layer re-created from animation.mp4, plus the reel
+          # itself so it can be compared side by side in Account.
+          OVERLAY="$GITHUB_WORKSPACE/out/assets-beta"
+          [ -d "$OVERLAY" ] || { echo "::error::assets-beta is missing from this branch."; exit 1; }
+          ( cd "$OVERLAY" && find . -type f -print0 ) | while IFS= read -r -d '' f; do
+            mkdir -p "$PROJECT/assets/$(dirname "$f")"
+            cp -f "$OVERLAY/$f" "$PROJECT/assets/$f"
+          done
+          test -s "$PROJECT/assets/intro/animation.mp4" \
+            || { echo "::error::the reference clip is missing from the beta build."; exit 1; }
+          grep -q "media-src 'self'" "$PROJECT/assets/index.html" \
+            || { echo "::error::the CSP would block the local clip."; exit 1; }
+          grep -qF 'beta-motion-1.5.js' "$PROJECT/assets/index.html" \
+            || { echo "::error::the motion script is not linked."; exit 1; }
+          grep -qF 'beta-motion-1.5.css' "$PROJECT/assets/index.html" \
+            || { echo "::error::the motion stylesheet is not linked."; exit 1; }
+          grep -q 'km-intro-15' "$PROJECT/assets/beta-motion-1.5.js" \
+            || { echo "::error::the title sequence is missing from the motion script."; exit 1; }
+          ls -l "$PROJECT/assets/intro" "$PROJECT/assets/beta-motion-1.5."*
+
+      - name: Make the WebView serve the overlay assets
+        run: |
+          set -euo pipefail
+          # 1.1 copied the theme stylesheets, the picker and its script into assets/ and
+          # linked them from index.html, but MainActivity's intercept list never learned
+          # their paths, so the WebView dropped them: the app stayed violet and the picker
+          # never appeared. The list is now generated from the overlay itself.
+          python3 "$GITHUB_WORKSPACE/out/tools/webview_assets_1.3.py" \
+            "$PROJECT" "$GITHUB_WORKSPACE/out/assets-1.1" "$GITHUB_WORKSPACE/out/assets-beta"
+
+          PKG="$PROJECT/src/app/lovelycrxshx/kuro"
+          test -f "$PKG/KuroWebAssets13.java" \
+            || { echo "::error::KuroWebAssets13.java was not generated."; exit 1; }
+          # Derive the list from the overlay, so a new accent cannot ship unserved.
+          for f in "$GITHUB_WORKSPACE/out/assets-1.1/"theme-*.css \
+                   "$GITHUB_WORKSPACE/out/assets-1.1/"theme-accent-1.1.js; do
+            name=$(basename "$f")
+            grep -qF "/$name" "$PKG/KuroWebAssets13.java" \
+              || { echo "::error::$name is in assets/ but the WebView would drop it."; exit 1; }
+          done
+          COUNT=$(ls "$GITHUB_WORKSPACE/out/assets-1.1/"theme-*-1.1.css | wc -l)
+          echo "accent stylesheets served: $COUNT"
+          [ "$COUNT" -ge 10 ] || { echo "::error::expected at least ten accent stylesheets, found $COUNT."; exit 1; }
+          grep -q 'sunset' "$PROJECT/assets/theme-accent-1.1.js" \
+            || { echo "::error::the picker does not list the new accents."; exit 1; }
+          grep -q 'accent-preview111' "$PROJECT/assets/theme-picker-1.1.css" \
+            || { echo "::error::the richer picker styles are missing."; exit 1; }
+          for f in beta-motion-1.5.css beta-motion-1.5.js intro/animation.mp4; do
+            grep -qF "/$f" "$PKG/KuroWebAssets13.java" \
+              || { echo "::error::$f is in assets/ but the WebView would drop it."; exit 1; }
+          done
+          grep -q 'KuroWebAssets13.served(u)' "$PKG/MainActivity.java" \
+            || { echo "::error::shouldInterceptRequest does not consult the overlay list."; exit 1; }
+
+      - name: Apply the 1.2 native theme (accent-aware Java palette)
+        run: |
+          set -euo pipefail
+          # 1.1 re-hued the stylesheets only, so the status bar, stock dialogs, player
+          # options, watch header, episode drawer, download bar and update dialog kept
+          # the 1.0 violet. This rewrites that half of the palette with the same HLS
+          # transform tools/theme_gen.py uses for the CSS, and adds KuroTheme12, the
+          # table plus the runtime switch the Account picker already calls.
+          python3 "$GITHUB_WORKSPACE/out/tools/theme_native_1.2.py" "$PROJECT"
+
+          PKG="$PROJECT/src/app/lovelycrxshx/kuro"
+          test -f "$PKG/KuroTheme12.java" || { echo "::error::KuroTheme12.java was not generated."; exit 1; }
+          grep -q 'R.style.KuroDialogTeal' "$PKG/KuroTheme12.java" \
+            || { echo "::error::the dialog theme table is missing."; exit 1; }
+          grep -q 'themeAccent111' "$PKG/MainActivity.java" \
+            || { echo "::error::the picker cannot reach the native layer - themeAccent111 is missing."; exit 1; }
+          grep -q 'KuroTheme12.init(this)' "$PKG/MainActivity.java" \
+            || { echo "::error::KuroTheme12 is never initialised."; exit 1; }
+          grep -q 'KuroTheme12.dialogTheme()' "$PKG/KuroDialogs581.java" \
+            || { echo "::error::the stock alerts still use the fixed violet theme."; exit 1; }
+          grep -q 'KuroDialogCrimson' "$PROJECT/res/values/styles.xml" \
+            || { echo "::error::the per-accent dialog styles are missing."; exit 1; }
+          # Nothing violet may survive unwrapped in the native UI.
+          for f in MainActivity.java KuroDialogs581.java KuroEpisodeDrawer581.java \
+                   PlayerOptionsDialog.java WatchHeader.java PlaybackPanel.java \
+                   KuroUpdateDialog582.java KuroNativePlayer561.java KuroOfflineActivity561.java; do
+            bare=$(grep -oE '0x[0-9a-fA-F]{8}' "$PKG/$f" | wc -l)
+            wrapped=$(grep -oE 'KuroTheme12\.col\(0x[0-9a-fA-F]{8}\)' "$PKG/$f" | wc -l)
+            if [ "$bare" -ne "$wrapped" ]; then
+              echo "::error::$f still has palette literals outside KuroTheme12.col ($bare literals, $wrapped wrapped)."
+              exit 1
+            fi
+            echo "$f: $wrapped palette literals, all accent-aware"
+          done
+          # The status and navigation bars must come from the palette, not a literal.
+          ! grep -q 'setStatusBarColor(Color\.rgb' "$PKG/MainActivity.java" \
+            || { echo "::error::the status bar still uses a literal colour."; exit 1; }
+
+      - name: Verify the expected changes are in this source
+        run: |
+          set -euo pipefail
+          test -f "$PROJECT/src/app/lovelycrxshx/kuro/KuroDialogs581.java" \
+            || { echo "::error::KuroDialogs581.java missing from the source zip."; exit 1; }
+          # rev 11 removed the Cast feature outright.
+          for gone in KuroCastActivity561 KuroCastOptions561; do
+            test ! -f "$PROJECT/src/app/lovelycrxshx/kuro/$gone.java" \
+              || { echo "::error::$gone.java is still in the source zip."; exit 1; }
+          done
+          ! grep -q 'CastActivity561\|CAST_REQUEST561\|castStart561' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" \
+            || { echo "::error::Cast code is still referenced from MainActivity."; exit 1; }
+          ! grep -q 'play-services-cast' "$PROJECT/build.gradle" \
+            || { echo "::error::the Cast SDK dependency is still declared."; exit 1; }
+          grep -q 'seekTo582' "$PROJECT/src/app/lovelycrxshx/kuro/KuroNativePlayer561.java" \
+            || { echo "::error::seekTo582 missing from the native player."; exit 1; }
+          # rev 11 presence + profile work
+          grep -q 'setProfile(boolean signedIn,String mono,String artId)' "$PROJECT/src/app/lovelycrxshx/kuro/WatchHeader.java" \
+            || { echo "::error::the player chip has no profile art path."; exit 1; }
+          grep -q 'Looking for an anime to watch' "$PROJECT/src/app/lovelycrxshx/kuro/KuroPresence564.java" \
+            || { echo "::error::the browsing presence card was not updated."; exit 1; }
+          # The Discord Social SDK has to see the Discord app to connect (Android 11+).
+          grep -q '<package android:name="com.discord"/>' "$PROJECT/AndroidManifest.xml" \
+            || { echo "::error::the manifest no longer declares com.discord package visibility."; exit 1; }
+          grep -q 'kuro-profile-art-v1' "$PROJECT/assets/backup560.js" \
+            || { echo "::error::backup560.js does not export the profile art key."; exit 1; }
+          test -f "$PROJECT/assets/smooth-ui.css" && test -f "$PROJECT/assets/smooth-ui.js" \
+            || { echo "::error::smooth-ui layer missing from assets."; exit 1; }
+          grep -q 'smooth-ui.css' "$PROJECT/assets/index.html" \
+            || { echo "::error::smooth-ui.css is not linked in index.html."; exit 1; }
+          grep -q 'smooth-ui.js' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" \
+            || { echo "::error::smooth-ui assets are not whitelisted in the WebView."; exit 1; }
+          grep -q 'profile-stats571' "$PROJECT/assets/accounts542.js" \
+            || { echo "::error::the account activity strip is missing."; exit 1; }
+          grep -q 'profile-stats571' "$PROJECT/assets/accounts542.css" \
+            || { echo "::error::the account activity strip has no styles."; exit 1; }
+          grep -q 'profile-mono571' "$PROJECT/assets/accounts542.js" \
+            || { echo "::error::the profile monogram is missing."; exit 1; }
+          test -f "$PROJECT/src/app/lovelycrxshx/kuro/KuroEpisodeDrawer581.java" \
+            || { echo "::error::the episode drawer class is missing."; exit 1; }
+          grep -q 'openEpisodeDrawer581' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" \
+            || { echo "::error::the episode drawer is not wired into the watch screen."; exit 1; }
+          grep -q 'attachGestures581' "$PROJECT/src/app/lovelycrxshx/kuro/KuroNativePlayer561.java" \
+            || { echo "::error::player gestures are missing from the native player."; exit 1; }
+          grep -q 'attachFilters581' "$PROJECT/assets/unified533.js" \
+            || { echo "::error::the browse filter chips are missing."; exit 1; }
+          grep -q 'unifiedSpotlight' "$PROJECT/assets/unified533.js" \
+            || { echo "::error::the home hero deck is not wired into the unified home."; exit 1; }
+          grep -q 'profile-mono571' "$PROJECT/assets/accounts542.css" \
+            || { echo "::error::the profile monogram has no styles."; exit 1; }
+          if grep -qE 'profile-(avatar547|banner547|character549|banner549|default571)|preset571-|preset-manifest571|profile-presets571' \
+            "$PROJECT/assets/accounts542.js" "$PROJECT/assets/index.html" "$PROJECT/assets/backup560.js"; then
+            echo "::error::Profile pictures or banners are still referenced in the web layer."; exit 1
+          fi
+          if grep -qE 'profile-avatar547|profile-default571|preset571' "$PROJECT/src/app/lovelycrxshx/kuro/WatchHeader.java"; then
+            echo "::error::WatchHeader still loads profile pictures."; exit 1
+          fi
+          if ls "$PROJECT"/assets | grep -qE '^(preset571-|profile-(avatar547|banner54|character549|default571))'; then
+            echo "::error::Profile artwork files are still shipped in assets."; exit 1
+          fi
+          grep -q 'hero-deck581' "$PROJECT/assets/app.js" \
+            || { echo "::error::the home hero deck is missing."; exit 1; }
+          grep -q 'hero-track581' "$PROJECT/assets/style.css" \
+            || { echo "::error::the home hero deck has no styles."; exit 1; }
+          grep -q 'poster-new581' "$PROJECT/assets/app.js" \
+            || { echo "::error::the NEW shelf chip is missing."; exit 1; }
+          grep -q 'profile-continue571' "$PROJECT/assets/accounts542.js" \
+            || { echo "::error::the continue-watching row is missing."; exit 1; }
+          grep -q 'profile-streak571' "$PROJECT/assets/accounts542.css" \
+            || { echo "::error::the streak line has no styles."; exit 1; }
+          grep -q 'name="KuroDialogTheme"' "$PROJECT/res/values/styles.xml" \
+            || { echo "::error::KuroDialogTheme missing from styles.xml."; exit 1; }
+          # A field initialiser runs in the Activity constructor, before attach() supplies a
+          # base context - touching SharedPreferences/resources there is an instant launch
+          # crash, so nothing before onCreate may reach for a context.
+          early=$(awk '/onCreate\(Bundle state\)/{exit} {print}' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" | grep -cE 'getSharedPreferences|getResources|getSystemService' || true)
+          [ "${early:-0}" -eq 0 ] || { echo "::error::MainActivity touches Android context before onCreate; that is a launch crash."; exit 1; }
+          themed=$(grep -c 'KuroDialogs581.themed' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java")
+          plain=$(grep -cE 'new AlertDialog\.Builder\([^K]' "$PROJECT/src/app/lovelycrxshx/kuro/MainActivity.java" || true)
+          echo "Themed alert dialogs: $themed (plain builders: $plain)"
+          [ "$themed" -ge 14 ] || { echo "::error::Expected the settings dialogs to use the themed context."; exit 1; }
+          [ "$plain" -le 0 ] || { echo "::error::An alert dialog in MainActivity bypasses KuroDialogs581.themed."; exit 1; }
+          grep -q 'KuroUpdateSchedule583' "$PROJECT/src/app/lovelycrxshx/kuro/KuroUpdateCenter582.java" \
+            || { echo "::error::the update window is not wired into the automatic path."; exit 1; }
+          grep -q 'KuroUpdateDueJob583' "$PROJECT/AndroidManifest.xml" \
+            || { echo "::error::the end-of-window job is not declared in the manifest."; exit 1; }
+          grep -qF 'if (a[0] == 1 && b[0] >= 5) return true;' "$PROJECT/src/app/lovelycrxshx/kuro/KuroUpdater572.java" \
+            || { echo "::error::the 5.x -> 1.x rule is missing; installed 5.x builds would refuse 1.0."; exit 1; }
+          grep -q "delay583" "$PROJECT/src/app/lovelycrxshx/kuro/KuroUpdateSchedule583.java" \
+            || { echo "::error::the update delay setting is missing."; exit 1; }
+          grep -q "versionCode ${EXPECT_VERSION_CODE}" "$PROJECT/build.gradle" \
+            || { echo "::error::build.gradle versionCode is not ${EXPECT_VERSION_CODE}."; exit 1; }
+          grep -q "versionName '${EXPECT_VERSION_NAME}'" "$PROJECT/build.gradle" \
+            || { echo "::error::build.gradle versionName is not ${EXPECT_VERSION_NAME}."; exit 1; }
+
+      - name: Fetch the Discord Social SDK (cached copy first)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MSG: ${{ github.event.head_commit.message }}
+        run: |
+          set -uo pipefail
+          ZIP="$RUNNER_TEMP/discord-sdk.zip"
+          mkdir -p "$RUNNER_TEMP/cache"
+          # 1. a permanent copy parked on this repo's sdk-cache release - no expiring URL needed
+          if gh release download sdk-cache -R "$GITHUB_REPOSITORY" -p '*.zip' -D "$RUNNER_TEMP/cache" --clobber 2>/dev/null; then
+            CACHED=$(find "$RUNNER_TEMP/cache" -name '*.zip' | head -1)
+            if [ -n "$CACHED" ] && [ "$(stat -c%s "$CACHED")" -gt 1000000 ]; then
+              cp "$CACHED" "$ZIP"
+              echo "using the cached SDK copy: $(stat -c%s "$ZIP") bytes"
+            fi
+          fi
+          # 2. otherwise take the signed URL out of the commit message
+          if [ ! -s "$ZIP" ]; then
+            URL=$(printf '%s\n' "$MSG" | tr -d '\r' | grep -oE 'sdk=[^ ]+' | head -1 | cut -d= -f2-)
+            if [ -z "${URL:-}" ]; then
+              echo "::error::No cached SDK and no sdk=<url> in the commit message. Push '[build] sdk=<signed url>' once."
+              exit 1
+            fi
+            echo "Discord SDK host: $(printf '%s' "$URL" | cut -d/ -f3)"
+            code=$(curl -sSL --retry 2 --retry-delay 3 -o "$ZIP" -w '%{http_code}' "$URL")
+            if [ "$code" != "200" ]; then
+              echo "::error::Discord SDK download failed with HTTP $code - signed URLs expire after about an hour."
+              exit 1
+            fi
+            # 3. park it so future builds never need a signed URL again
+            gh release view sdk-cache -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+              || gh release create sdk-cache -R "$GITHUB_REPOSITORY" --title "Discord Social SDK cache" \
+                   --notes "Downloaded once from a signed URL and reused by build-current.yml. Not a product release." \
+              || true
+            if gh release upload sdk-cache "$ZIP" -R "$GITHUB_REPOSITORY" --clobber; then
+              echo "SDK parked in the sdk-cache release for future builds"
+            else
+              echo "::warning::could not cache the SDK; the next build will need a signed URL again"
+            fi
+          fi
+          unzip -l "$ZIP" | head -20
+
+      - name: Locate the Discord AAR
+        run: |
+          set -uo pipefail
+          mkdir -p "$RUNNER_TEMP/sdk"
+          unzip -q -o "$RUNNER_TEMP/discord-sdk.zip" -d "$RUNNER_TEMP/sdk"
+          mapfile -t AARS < <(find "$RUNNER_TEMP/sdk" -name '*.aar' | sort)
+          echo "AAR candidates: ${#AARS[@]}"
+          for aar in "${AARS[@]}"; do echo "candidate: $aar"; done
+          # The SDK ships release/debug and krisp voice variants; only the plain release
+          # partner AAR carries com.discord.socialsdk, so never take the first match.
+          PICK=$(printf '%s\n' "${AARS[@]:-}" | grep -E '/lib/release/discord_partner_sdk\.aar$' | head -1)
+          [ -n "$PICK" ] || PICK=$(printf '%s\n' "${AARS[@]:-}" | grep -v krisp | grep -i '/release/' | head -1)
+          [ -n "$PICK" ] || PICK=$(printf '%s\n' "${AARS[@]:-}" | grep -v krisp | head -1)
+          [ -n "$PICK" ] || PICK="${AARS[0]:-}"
+          if [ -z "$PICK" ] || [ ! -f "$PICK" ]; then
+            echo "::error::No usable AAR inside the SDK zip."
+            exit 1
+          fi
+          echo "Chosen AAR: $PICK"
+          echo "::warning::chosen AAR: $PICK"
+          unzip -l "$PICK" | head -12 | while IFS= read -r line; do echo "::warning::aar: $line"; done
+          if unzip -p "$PICK" classes.jar > "$RUNNER_TEMP/probe.jar" 2>/dev/null; then
+            echo "::warning::classes.jar entries: $(unzip -l "$RUNNER_TEMP/probe.jar" | wc -l), socialsdk mentions: $(unzip -l "$RUNNER_TEMP/probe.jar" | grep -c 'com/discord/socialsdk' || true)"
+          else
+            echo "::warning::this AAR has no readable classes.jar"
+          fi
+          echo "KURO_DISCORD_SDK_AAR=$PICK" >> "$GITHUB_ENV"
+
+      - name: Build the JNI bridge and the unsigned APK
+        id: build
+        continue-on-error: true
+        run: |
+          LOG="$RUNNER_TEMP/build.log"
+          rc=0
+          {
+            echo "=== env ==="
+            echo "PROJECT=$PROJECT"
+            echo "ANDROID_HOME=$ANDROID_HOME"
+            echo "KURO_DISCORD_SDK_AAR=$KURO_DISCORD_SDK_AAR"
+            cd "$PROJECT" || exit 1
+            pwd
+            export ANDROID_NDK_HOME="${ANDROID_HOME}/ndk/27.2.12479018"
+            chmod +x scripts/build-discord-jni.sh gradlew build.sh 2>/dev/null || true
+            echo "=== native bridge ==="
+            ./scripts/build-discord-jni.sh
+            echo "=== gradle assembleRelease ==="
+            ./gradlew --no-daemon --stacktrace --max-workers=2 \
+              -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" \
+              assembleRelease
+            echo "=== outputs ==="
+            ls -lR build/outputs
+          } > "$LOG" 2>&1 || rc=$?
+          [ "$(grep -cE 'FAILURE: Build failed|Execution failed for task' "$LOG" || true)" -gt 0 ] && rc=1
+          cp -f "$LOG" "$GITHUB_WORKSPACE/out/dist/build-current.log" 2>/dev/null || cp -f "$LOG" "$GITHUB_WORKSPACE/build.log" 2>/dev/null || true
+          echo "::warning::build exit=$rc, $(wc -l < "$LOG") log lines"
+          grep -nE 'error:|error;|FAILURE|Execution failed|cannot find symbol|Caused by:|^\s*\^|What went wrong' "$LOG" \
+            | tail -40 | while IFS= read -r line; do echo "::error::$(printf '%s' "$line" | cut -c1-380)"; done
+          tail -20 "$LOG" | while IFS= read -r line; do echo "::warning::tail: $(printf '%s' "$line" | cut -c1-380)"; done
+          exit "$rc"
+
+      - name: Align the APK (signing happens later, off this runner)
+        if: steps.build.outcome == 'success'
+        run: |
+          set -euo pipefail
+          cd "$PROJECT"
+          IN=build/outputs/apk/release/Kuro-tv-release-unsigned.apk
+          [ -f "$IN" ] || { echo "::error::unsigned APK missing"; ls -R build/outputs | head -30; exit 1; }
+          "$ANDROID_HOME/build-tools/35.0.1/zipalign" -f -P 16 4 "$IN" "$RUNNER_TEMP/$APK_NAME-aligned.apk"
+          "$ANDROID_HOME/build-tools/35.0.1/zipalign" -c -P 16 4 "$RUNNER_TEMP/$APK_NAME-aligned.apk"
+          ls -lh "$RUNNER_TEMP/$APK_NAME-aligned.apk"
+          "$ANDROID_HOME/build-tools/35.0.1/aapt2" dump badging "$RUNNER_TEMP/$APK_NAME-aligned.apk" \
+            | head -1 | while IFS= read -r line; do echo "::warning::badging: $line"; done
+          "$ANDROID_HOME/build-tools/35.0.1/aapt2" dump badging "$RUNNER_TEMP/$APK_NAME-aligned.apk" \
+            | grep -q "versionCode='${EXPECT_VERSION_CODE}'" \
+            || { echo "::error::the built APK is not versionCode ${EXPECT_VERSION_CODE}"; exit 1; }
+          sha256sum "$RUNNER_TEMP/$APK_NAME-aligned.apk"
+
+      - name: Collect the log and the aligned APK
+        if: always()
+        run: |
+          set +e
+          mkdir -p out/dist out/dist/toolchain
+          for candidate in "$RUNNER_TEMP/build.log" out/dist/build-current.log "$GITHUB_WORKSPACE/build.log"; do
+            if [ -s "$candidate" ]; then cp -f "$candidate" out/dist/build-current.log; break; fi
+          done
+          if [ -s out/dist/build-current.log ]; then
+            echo "::warning::build log has $(wc -l < out/dist/build-current.log) lines"
+            grep -nE 'error:|Execution failed|FAILURE' out/dist/build-current.log | tail -20 \
+              | while IFS= read -r line; do echo "::warning::${line}"; done
+          else
+            echo "::warning::no build log produced"
+          fi
+          cp "$ANDROID_HOME/build-tools/35.0.1/lib/apksigner.jar" out/dist/toolchain/apksigner.jar 2>/dev/null
+          cp "$ANDROID_HOME/build-tools/35.0.1/zipalign" out/dist/toolchain/zipalign 2>/dev/null
+          chmod +x out/dist/toolchain/zipalign 2>/dev/null
+
+          if [ -s "$RUNNER_TEMP/$APK_NAME-aligned.apk" ]; then
+            cp -f "$RUNNER_TEMP/$APK_NAME-aligned.apk" "out/dist/$APK_NAME-aligned.apk"
+            ( cd out/dist && sha256sum "$APK_NAME-aligned.apk" > "$APK_NAME-aligned.apk.sha256" && cat "$APK_NAME-aligned.apk.sha256" )
+            {
+              echo "### Built \`$APK_NAME-aligned.apk\` (unsigned, zipaligned -P 16)"
+              echo '```'
+              cat "out/dist/$APK_NAME-aligned.apk.sha256"
+              echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::no aligned APK to collect"
+          fi
+
+          cd out
+          git config user.name  "Siva"
+          git config user.email "sivaabhishek4@gmail.com"
+          # -f: dist/*.apk is ignored in the repo, but the build artifact must travel back
+          git add -f -A dist 2>/dev/null
+          git commit -m "beta: runner log + aligned APK (unsigned)" 2>/dev/null
+          if ! OUT_ERR=$(git push origin "HEAD:${GITHUB_REF_NAME}" 2>&1); then
+            echo "::warning::push failed: $(printf '%s' "$OUT_ERR" | tr '\n' ' ' | cut -c1-400)"
+          else
+            echo "pushed artifacts to ${GITHUB_REF_NAME}"
+          fi
+          exit 0
+
+      - name: Fail the run if the build failed
+        if: always() && steps.build.outcome != 'success'
+        run: |
+          echo "::error::compile failed - see dist/build-current.log on ${GITHUB_REF_NAME}"
+          exit 1
