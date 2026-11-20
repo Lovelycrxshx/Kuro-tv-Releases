@@ -2,12 +2,12 @@
 
 **versionCode 91 · 2026-11-20**
 
-1.4 is the colour cut: **ten accents instead of four**, and an Account card that shows
+1.4 is the colour cut: **ten accents instead of five**, and an Account card that shows
 what you are choosing before you choose it. Teal is still the default.
 
 ## What changed
 
-- **Six more accents.** Beyond Teal, Crimson, Indigo, Amber and Violet there are now
+- **Five more accents.** Beyond Teal, Crimson, Indigo, Amber and Violet there are now
   **Sky** (cool blue), **Emerald** (green), **Sunset** (orange-red), **Magenta** (hot
   pink) and **Graphite** — a neutral that keeps the app's depth with no hue at all.
   Every one is generated from the same 1.0 palette by the same HLS transform, so contrast,
