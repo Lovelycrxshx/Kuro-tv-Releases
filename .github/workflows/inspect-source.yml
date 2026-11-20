@@ -51,11 +51,13 @@ jobs:
           echo "$PROJECT" > "$RUNNER_TEMP/project.txt"
           DEST=design/native-src
           rm -rf "$DEST"; mkdir -p "$DEST"
-          find "$PROJECT" -type f -size -1M \
+          find "$PROJECT" -type f \
               \( -name '*.java' -o -name '*.kt' -o -name '*.gradle' \
                  -o -name '*.properties' -o -name '*.pro' -o -name '*.xml' \) \
               -not -path '*/assets/*' -not -path '*/build/*' -print0 |
             while IFS= read -r -d '' f; do
+              # find -size rounds up, so filter the real size here
+              [ "$(stat -c%s "$f")" -lt 1048576 ] || continue
               rel=${f#"$PROJECT"/}
               mkdir -p "$DEST/$(dirname "$rel")"
               cp "$f" "$DEST/$rel"
