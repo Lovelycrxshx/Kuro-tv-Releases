@@ -35,20 +35,33 @@ PKG = os.path.join("src", "app", "lovelycrxshx", "kuro")
 # Keep this order in step with theme_gen.ACCENTS: the generated Java table and
 # the picker both address accents by index, and the dialog styles are named after
 # the id.
-ACCENT_ORDER = ["teal", "violet", "graphite", "sky", "indigo",
-                "emerald", "amber", "sunset", "crimson", "magenta"]
-ACCENT_HEX = {                       # the picker's swatches, same values as the CSS
-    "teal": "27d7c5",
-    "violet": "a65be4",
-    "graphite": "989898",
-    "sky": "2e92d9",
-    "indigo": "3f54dd",
-    "emerald": "2ed984",
-    "amber": "dc9b3b",
-    "sunset": "de7548",
-    "crimson": "de4866",
-    "magenta": "e050c3",
+ACCENT_ORDER = list(ACCENTS)         # picker order: signature, cool, warm
+# The picker's swatch values.  An accent added to theme_gen.ACCENTS without an
+# entry here still works: accent_hexes() falls back to its deployed stylesheet.
+ACCENT_HEX = {
+    "teal": "27d7c5", "violet": "a65be4", "graphite": "989898",
+    "sky": "2e92d9", "royal": "805be7", "indigo": "3f54dd",
+    "emerald": "2ed984", "lime": "8fe444", "citron": "e2e756",
+    "amber": "dc9b3b", "sunset": "de7548", "rose": "e968a9",
+    "crimson": "de4866", "magenta": "e050c3",
 }
+
+
+def accent_hexes(project):
+    """Accent id -> its swatch hex, straight out of the deployed stylesheet."""
+    hexes = dict(ACCENT_HEX)
+    for name in ACCENT_ORDER:
+        if name in hexes:                  # the table wins: shipped look stays put
+            continue
+        path = os.path.join(project, "assets", "theme-%s-1.1.css" % name)
+        try:
+            with open(path, encoding="utf-8") as fh:
+                m = re.search(r"--ku-accent:\s*#([0-9a-fA-F]{6})\s*;", fh.read())
+        except OSError:
+            m = None
+        if m:
+            hexes[name] = m.group(1).lower()
+    return hexes
 
 # Files whose `static final int` constants are the palette. Each entry lists the
 # exact declaration line and the constant names in source order.
@@ -518,8 +531,9 @@ def patch_styles(project):
         return
     if "#FFA65BE4" not in text:
         die("res/values/styles.xml: the violet accent is gone, refusing to guess")
+    hexes = accent_hexes(project)
     styles = "".join(
-        STYLE_ITEM % {"NAME": name.capitalize(), "ACCENT": ACCENT_HEX[name].upper(),
+        STYLE_ITEM % {"NAME": name.capitalize(), "ACCENT": hexes[name].upper(),
                       "ACCENTNAME": name}
         for name in ACCENT_ORDER)
     drawables = os.path.join(project, "res", "drawable")

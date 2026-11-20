@@ -282,67 +282,85 @@ function bindScroll() {
   queuePar();
 }
 
-/* ------------------------------------------------- the reel, and its card */
- function closeReel() {
-  var open = document.getElementById('km-reel-15');
-  if (!open) return;
-  var video = open.querySelector('video');
-  if (video) { try { video.pause(); } catch (e) {} }
-  if (open.parentNode) open.parentNode.removeChild(open);
- }
+/* ------------------------------------------------------- update button ---
+ * In-app, on every screen: the header icon, and a card at the top of Account.
+ * Both run the shell's real updater - check now, download in the background,
+ * then Android's installer. The shell owns all of that; this only asks.
+ */
+function updateBridge() {
+ try {
+  if (window.KuroNative && typeof window.KuroNative.updateButton15 === 'function') {
+   window.KuroNative.updateButton15();
+   return true;
+  }
+  /* older shell without the shortcut: open the update screen instead */
+  if (window.KuroNative && typeof window.KuroNative.settingsAction560 === 'function') {
+   window.KuroNative.settingsAction560('updates572');
+   return true;
+  }
+ } catch (e) {}
+ return false;
+}
 
- function playReel() {
-  if (document.getElementById('km-reel-15')) return;
-  var el = document.createElement('div');
-  el.id = 'km-reel-15';
-  el.innerHTML =
-   '<video src="intro/animation.mp4" controls autoplay playsinline></video>' +
-   '<button type="button" class="km-reel-close">Close</button>';
-  el.addEventListener('click', function (ev) {
-   if (ev.target === el || ev.target.className === 'km-reel-close') closeReel();
-  });
-  body().appendChild(el);
-  var video = el.querySelector('video');
-  if (video) { try { video.play(); } catch (e) {} }
-  try {
-   window.addEventListener('keydown', function onEsc(ev) {
-    if (ev.key !== 'Escape') return;
-    window.removeEventListener('keydown', onEsc);
-    closeReel();
-   });
-  } catch (e) {}
- }
+function openUpdateSettings() {
+ try {
+  if (window.KuroNative && typeof window.KuroNative.settingsAction560 === 'function') {
+   window.KuroNative.settingsAction560('updates572');
+  }
+ } catch (e) {}
+}
 
- function betaCard() {
-  var page = document.querySelector('.profile-page547');
-  if (!page || page.querySelector('#km-beta-15')) return;
-  var card = document.createElement('div');
-  card.className = 'account-section km-beta-card';
-  card.id = 'km-beta-15';
-  card.innerHTML =
-   '<div class="account-section-head"><div>' +
-     '<div class="overline km-beta-head"><span class="km-beta-dots"><i></i><i></i><i></i></span>' +
-     'Motion \u00b7 beta</div>' +
-     '<h2>The reel, and the motion cut from it</h2>' +
-     '<p>Cropped type, the browser frame, the poster stack and the ticker \u2014 ' +
-     'that is the launch film in this build, and the spring every card uses.</p>' +
-   '</div></div>' +
-   '<div class="km-beta-row"><button type="button" class="km-beta-play">\u25b6 Play the reel</button></div>' +
-   '<p class="km-beta-note">The clip is the reference; the film above is Kuro\u2019s own, ' +
-   'built from classes so it works under the app\u2019s CSP and re-tints with your accent. ' +
-   'Beta build only.</p>';
-  card.querySelector('.km-beta-play').addEventListener('click', playReel);
-  var art = page.querySelector('#profile-art581');
-  if (art && art.parentNode === page) page.insertBefore(card, art);
-  else page.appendChild(card);
- }
+function updateButton() {
+ var actions = document.querySelector('.header-actions');
+ if (!actions || actions.querySelector('#km-update-15')) return;
+ var b = document.createElement('button');
+ b.type = 'button';
+ b.id = 'km-update-15';
+ b.className = 'header-icon km-update-btn';
+ b.setAttribute('aria-label', 'Check for updates');
+ b.title = 'Check for updates';
+ b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+  '<path d="M12 4v9m0 0 3.4-3.4M12 13 8.6 9.6M5 16.5h14M5 19.8h14"/></svg>';
+ b.addEventListener('click', function () {
+  if (updateBridge()) return;
+  b.classList.add('km-update-off');
+  setTimeout(function () { b.classList.remove('km-update-off'); }, 600);
+ });
+ var login = actions.querySelector('#header-login');
+ if (login && login.parentNode === actions) actions.insertBefore(b, login);
+ else actions.appendChild(b);
+}
 
- /* --------------------------------------------------------------- boot */
+function updateCard() {
+ var page = document.querySelector('.profile-page547');
+ if (!page || page.querySelector('#km-update-card')) return;
+ var card = document.createElement('div');
+ card.className = 'account-section km-update-card';
+ card.id = 'km-update-card';
+ card.innerHTML =
+  '<div class="account-section-head"><div>' +
+   '<div class="overline km-update-overline">Kuro updates</div>' +
+   '<h2>Keep Kuro current</h2>' +
+   '<p>Checks the public release page now, downloads in the background and hands ' +
+   'the file to Android\u2019s installer.</p>' +
+  '</div></div>' +
+  '<div class="km-update-row">' +
+   '<button type="button" class="km-update-go">Check for updates</button>' +
+   '<button type="button" class="km-update-more">Update settings</button>' +
+  '</div>' +
+  '<p class="km-update-note">Android always asks before installing. Automatic checks ' +
+  'and downloads follow the Kuro updates settings.</p>';
+ card.querySelector('.km-update-go').addEventListener('click', function () { updateBridge(); });
+ card.querySelector('.km-update-more').addEventListener('click', openUpdateSettings);
+ page.insertBefore(card, page.firstChild);
+}
+
+/* --------------------------------------------------------------- boot */
  function finish() {
   if (started) return;
   started = true;
   bindScroll();
-  
+  updateButton();
   armAll();
   if (introEl && introEl.parentNode) {
    introEl.classList.add('km-gone');
@@ -359,7 +377,8 @@ function bindScroll() {
     setTimeout(function () {
      queued = false;
      armAll();
-     betaCard();
+     updateButton();
+     updateCard();
      collectPar();
      queuePar();
     }, 110);
@@ -374,7 +393,8 @@ function bindScroll() {
     }).observe(mainEl, { childList: true });
    }
   }
-  betaCard();
+  updateButton();
+  updateCard();
   /* cards that were on screen behind the film get their spring now */
   setTimeout(armAll, 60);
 }

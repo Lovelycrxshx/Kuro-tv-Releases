@@ -31,11 +31,15 @@ ACCENTS = {
     "graphite": (272, 0.60, 0.0),   # neutral: no hue, same depth
     # cool
     "sky":      (205, 0.52, 1.0),
+    "royal":    (256, 0.57, 1.0),   # 1.5: blue-violet, between indigo and violet
     "indigo":   (232, 0.56, 1.0),
     "emerald":  (150, 0.52, 1.0),
+    "lime":     (92, 0.52, 1.0),    # 1.5: fresh yellow-green
     # warm
+    "citron":   (62, 0.56, 1.0),    # 1.5: yellow
     "amber":    (36, 0.55, 1.0),
     "sunset":   (18, 0.58, 1.0),
+    "rose":     (330, 0.60, 1.0),   # 1.5: pink-red
     "crimson":  (348, 0.58, 1.0),
     "magenta":  (312, 0.60, 1.0),
 }

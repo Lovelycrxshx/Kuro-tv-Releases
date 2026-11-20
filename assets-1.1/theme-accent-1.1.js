@@ -1,4 +1,4 @@
-/* Kuro 1.4 theme accents.
+/* Kuro 1.5 theme accents.
    The shipped palette is one fluorescent purple family baked into hundreds of
    literal hex values; tools/theme_gen.py re-hues that family into one flat
    stylesheet per accent (theme-<accent>-1.1.css).  This module only decides
@@ -20,10 +20,14 @@
   { id: 'violet',   label: 'Violet',   group: 'Signature', swatch: '#a65be4' },
   { id: 'graphite', label: 'Graphite', group: 'Signature', swatch: '#989898' },
   { id: 'sky',      label: 'Sky',      group: 'Cool',      swatch: '#2e92d9' },
+  { id: 'royal',    label: 'Royal',    group: 'Cool',      swatch: '#805be7' },
   { id: 'indigo',   label: 'Indigo',   group: 'Cool',      swatch: '#3f54dd' },
   { id: 'emerald',  label: 'Emerald',  group: 'Cool',      swatch: '#2ed984' },
+  { id: 'lime',     label: 'Lime',     group: 'Cool',      swatch: '#8fe444' },
+  { id: 'citron',   label: 'Citron',   group: 'Warm',      swatch: '#e2e756' },
   { id: 'amber',    label: 'Amber',    group: 'Warm',      swatch: '#dc9b3b' },
   { id: 'sunset',   label: 'Sunset',   group: 'Warm',      swatch: '#de7548' },
+  { id: 'rose',     label: 'Rose',     group: 'Warm',      swatch: '#e968a9' },
   { id: 'crimson',  label: 'Crimson',  group: 'Warm',      swatch: '#de4866' },
   { id: 'magenta',  label: 'Magenta',  group: 'Warm',      swatch: '#e050c3' }
  ];
