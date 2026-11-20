@@ -183,6 +183,105 @@ function armAll() {
  }
 
  
+
+/* ------------------------------------------------------- scroll-linked motion
+ * One rAF loop, driven by the scroll position.  Cards sit slightly small at
+ * the edges of the screen and come up to full size in the middle; banner art
+ * drifts inside its frame; headings travel at their own rate; a hairline under
+ * the header shows how far down you are; the header condenses once you move.
+ *
+ * Only transform is written, nothing is hidden, and elements far off screen
+ * are skipped entirely, so this stays cheap on a TV box.
+ */
+var parEls = null;
+var parFrame = 0;
+var barEl = null;
+var scrolled = false;
+
+function collectPar() {
+  if (reduced) return;
+  var out = [];
+  try {
+   var sel = '.shelf .poster, .grid .poster, .spotlight > img, .hero-slide img, ' +
+             '.home-rail-heading, .heading, .discover-head';
+   var list = document.querySelectorAll(sel);
+   for (var i = 0; i < list.length && out.length < 90; i++) out.push(list[i]);
+  } catch (e) {}
+  parEls = out;
+}
+
+function paintPar() {
+  parFrame = 0;
+  if (reduced) return;
+  var vh = window.innerHeight || 640;
+  var se = document.scrollingElement || document.documentElement;
+  var y = window.pageYOffset || se.scrollTop || 0;
+
+  if (barEl) {
+   var max = (se.scrollHeight || 0) - vh;
+   var p = max > 8 ? Math.min(1, y / max) : 0;
+   barEl.style.transform = 'scaleX(' + p.toFixed(4) + ')';
+   if (p > 0.004) barEl.classList.remove('km-idle');
+   else { barEl.classList.add('km-idle'); barEl.style.transform = 'scaleX(0)'; }
+  }
+
+  var nowScrolled = y > 18;
+  if (nowScrolled !== scrolled) {
+   scrolled = nowScrolled;
+   if (document.body) document.body.classList.toggle('km-scrolled', scrolled);
+  }
+
+  if (!parEls) return;
+  for (var i = 0; i < parEls.length; i++) {
+   var el = parEls[i], r;
+   try { r = el.getBoundingClientRect(); } catch (e) { continue; }
+   if (!r.height) continue;
+   if (r.bottom < -140 || r.top > vh + 140) continue;
+   var d = ((r.top + r.height / 2) - vh / 2) / (vh / 2);
+   if (d < -1) d = -1;
+   if (d > 1) d = 1;
+   if (el.tagName === 'IMG') {
+    el.style.transform = 'translate3d(0,' + (d * 11).toFixed(2) + 'px,0) scale(1.07)';
+   } else if (el.classList && el.classList.contains('poster')) {
+    /* rails get the reel's focus-scale; grid posters only drift, because a
+     * scaled poster next to an unscaled one reads as a broken grid */
+    var inRail = el.parentNode && el.parentNode.parentNode &&
+      el.parentNode.parentNode.parentNode &&
+      el.parentNode.parentNode.parentNode.closest &&
+      el.parentNode.parentNode.parentNode.closest('.shelf');
+    if (inRail) {
+     el.style.transform = 'translate3d(0,' + (d * 4).toFixed(2) + 'px,0) scale(' +
+       (1 - Math.abs(d) * 0.05).toFixed(3) + ')';
+    } else {
+     el.style.transform = 'translate3d(0,' + (d * 3).toFixed(2) + 'px,0)';
+    }
+   } else {
+    el.style.transform = 'translate3d(0,' + (d * -13).toFixed(2) + 'px,0)';
+   }
+  }
+}
+
+function queuePar() {
+  if (parFrame) return;
+  parFrame = window.requestAnimationFrame ? window.requestAnimationFrame(paintPar)
+                                          : setTimeout(paintPar, 16);
+}
+
+function bindScroll() {
+  if (reduced) return;
+  if (!barEl && document.body) {
+   barEl = document.createElement('div');
+   barEl.id = 'km-scrollbar-15';
+   barEl.className = 'km-idle';
+   barEl.setAttribute('aria-hidden', 'true');
+   document.body.appendChild(barEl);
+  }
+  collectPar();
+  window.addEventListener('scroll', queuePar, { passive: true });
+  window.addEventListener('resize', function () { collectPar(); queuePar(); });
+  queuePar();
+}
+
 /* ------------------------------------------------- the reel, and its card */
  function closeReel() {
   var open = document.getElementById('km-reel-15');
@@ -242,6 +341,7 @@ function armAll() {
  function finish() {
   if (started) return;
   started = true;
+  bindScroll();
   
   armAll();
   if (introEl && introEl.parentNode) {
@@ -260,6 +360,8 @@ function armAll() {
      queued = false;
      armAll();
      betaCard();
+     collectPar();
+     queuePar();
     }, 110);
    }).observe(document.body, { childList: true, subtree: true });
 

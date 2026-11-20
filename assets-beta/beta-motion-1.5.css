@@ -306,11 +306,41 @@ main > *:nth-child(n+6){animation-delay:.08s}
 .unified-banner{display:none!important}
 
 /* --------------------------------------------------------------------- */
+
+/* ======================================================================
+ * SCROLL-LINKED MOTION
+ *
+ * The reel's motion is not "things fade in once" - it is continuous: cards
+ * sit smaller at the edges and come up to full size as they reach the middle
+ * of the screen, banners drift inside their frame, headings travel at their
+ * own rate.  That is what this block does, driven from the scroll position by
+ * one rAF loop in the script.
+ *
+ * Nothing here hides content: every value is a continuous function of where
+ * the element sits on screen, and it is all transform only.
+ * ====================================================================== */
+.poster,.hero-slide img,.shelf .poster{
+ transform-origin:50% 60%;backface-visibility:hidden}
+
+/* header condenses once the page is scrolled (transform only - no reflow) */
+header{transition:box-shadow 260ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1)),background-color 260ms linear}
+body.km-scrolled header{box-shadow:0 10px 30px -12px #000000cc}
+body.km-scrolled header .brand-logo{transform:scale(.9);transform-origin:left center;
+ transition:transform 260ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1))}
+
+/* scroll position, as a hairline under the header */
+#km-scrollbar-15{position:fixed;left:0;right:0;top:0;height:2px;z-index:9997;pointer-events:none;
+ background:var(--ku-accent,#3be3d2);opacity:.55;transform:scaleX(0);transform-origin:left}
+#km-scrollbar-15.km-idle{opacity:0;transition:opacity .3s linear}
+
 /* ------------------------------------------------- reduced motion ----- */
 @media (prefers-reduced-motion:reduce){
  #km-intro-15{display:none}
  .km-reveal{animation:none}
  .card,.history-card,.hero-slide,.shelf .grid>*,.info .poster{transition:none}
+ .poster,.hero-slide img{transform:none!important}
+ #km-scrollbar-15{display:none}
+ body.km-scrolled header .brand-logo{transform:none}
  #km-sweep-15{display:none}
  main > *,.episode-row,.episodeList>button,.popup-result,.air-source-line,.home-rail-heading,
  .anime-facts div,.detail-badges span{animation:none}
