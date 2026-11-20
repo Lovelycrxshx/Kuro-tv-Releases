@@ -11,9 +11,15 @@ Branch: `arena/98533644-kuro-tv-releases` · first cut: versionCode **87**, vers
 | releases | v5.72 … v5.83 deleted; `sdk-cache` kept (build infrastructure, not a product release) |
 
 The one code change is in `KuroUpdater572.isNewer`: `if (a[0] == 1 && b[0] >= 5) return true;`
-— a 1.x release is newer than an installed 5.x build. Without it every installed copy would
-read 1.0 as a downgrade and refuse it forever. It only fires for a device still on 5.x, so
-1.0 → 1.1 compares with the ordinary numeric rule. Covered by `tests/test-version-reset-10.py`.
+— a 1.x release is newer than an installed 5.x build, so 1.1 and later arrive normally.
+
+**This rule cannot bootstrap itself.** The comparison runs in the build that is already
+installed, and 5.83 does not have the rule — it reads `1.0` as below `5.83` and will not
+offer v1.0. So the one-time cost of the reset is a single manual install of 1.0 for anyone
+on 5.x. If that is unacceptable, the alternative is a bridge release labelled `5.84`
+(versionCode 87) that carries the rule: 5.x devices update to it automatically, and it then
+sees 1.0. That needs v1.0 rebuilt at versionCode 88 and a promotion step once devices have
+migrated. Covered by `tests/test-version-reset-10.py`.
 
 Everything else is the 5.83 feature set, untouched.
 

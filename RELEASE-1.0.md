@@ -11,11 +11,12 @@ to next.
 - **The number.** `versionName` goes 5.83 → **1.0**. `versionCode` goes 86 → **87**, because
   Android — and the in-app updater — still need it to climb: 87 is newer than 86, whatever the
   name says.
-- **One rule, so nobody is stranded.** Version names cannot express "1.0 comes after 5.83",
-  so the updater says it once: a 1.x release is newer than any installed 5.x build. Every
-  install on 5.80, 5.81, 5.82 or 5.83 will update to 1.0 the normal way — found, downloaded,
-  verified, installed on the 24-hour window — with no sideloading. From 1.0 onward the
-  comparison is the plain numeric one again: 1.1 over 1.0, 1.10 over 1.9, and so on.
+- **One manual install, then automatic again.** 1.0 carries a rule that a 1.x release is
+  newer than any installed 5.x build, so from here on nothing is ambiguous. It cannot help
+  the build you already have, though: 5.83 and older compare version names, and by that
+  arithmetic `1.0` sits *below* `5.83`, so they will not offer this release themselves.
+  **Install 1.0 by hand once** — same signing key, over the top, nothing lost — and every
+  update after it is automatic again: 1.1 over 1.0, 1.10 over 1.9, and so on.
 - **Older releases removed.** v5.72 through v5.83 are deleted from this repo so the releases
   page has one build on it. (The `sdk-cache` release is infrastructure for the build runner,
   not a product release, and stays.)

@@ -143,8 +143,9 @@
       Already on an older Kuro? Install straight over it — <strong>do not uninstall first</strong>.
       Same package, same signing key, so your profiles, watch list, history and logins stay put.
       Kuro starts again at <strong>1.0</strong>. Same app, new numbering: the 5.x line ended at 5.83 and
-      this is the release that follows it. If you are on any 5.x build, the in-app updater will bring you
-      here on its own — no sideloading.
+      this is the release that follows it. Already on 5.83 or older? Install this one by hand once &mdash;
+      the old builds only know how to compare 5.x names, so they cannot see a lower number as an update.
+      After 1.0, updates are automatic again.
     </p>
   </section>
 
@@ -173,11 +174,13 @@
       <li><strong>The number.</strong> The version name goes 5.83 &rarr; <strong>1.0</strong>. The version
         code goes 86 &rarr; <strong>87</strong>, because Android and the updater need it to keep climbing:
         87 is newer than 86 whatever the name says.</li>
-      <li><strong>One rule, so nobody is stranded.</strong> Version names cannot express &ldquo;1.0 comes
-        after 5.83&rdquo;, so the updater states it once: a 1.x release is newer than any installed 5.x
-        build. Every copy on 5.80, 5.81, 5.82 or 5.83 updates to 1.0 the normal way &mdash; found,
-        downloaded, verified, installed on the update window &mdash; with no sideloading. From here the
-        comparison is plain numbers again: 1.1 over 1.0, 1.10 over 1.9, and so on.</li>
+      <li><strong>One manual install, then automatic again.</strong> 1.0 carries a rule that a 1.x release
+        is newer than any installed 5.x build, so from here nothing is ambiguous. It cannot help a build
+        that is already installed, though: 5.83 and older compare version names, and by that arithmetic
+        <span class="mono">1.0</span> sits <em>below</em> <span class="mono">5.83</span>, so they will not
+        offer this release by themselves. Install 1.0 by hand once &mdash; same signing key, over the top,
+        nothing lost &mdash; and every update after it is automatic: 1.1 over 1.0, 1.10 over 1.9, and so
+        on.</li>
       <li><strong>The 5.x releases are gone</strong> from the releases page, so there is one build to
         choose. Everything they contained is in 1.0.</li>
     </ul>
