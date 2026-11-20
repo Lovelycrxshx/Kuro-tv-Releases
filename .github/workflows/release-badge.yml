@@ -1,0 +1,59 @@
+name: keep the README badge on the latest release
+
+# shields.io caches its dynamic github/v/release badge: it was still drawing "v1.2"
+# hours after 1.5 was published, so the number in the README is written from the
+# release event instead. The badge is a static shields image whose text is rewritten
+# here; a published release can never leave the README claiming an older version.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The version to show, e.g. v1.6'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-badge
+  cancel-in-progress: false
+
+jobs:
+  badge:
+    # a prerelease is not "the latest version"; leave the badge alone for betas
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Rewrite the badge from the tag
+        env:
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          set -euo pipefail
+          VER="${TAG#v}"
+          echo "badge version: $VER"
+          printf '%s' "$VER" | grep -qE '^[0-9]+(\.[0-9]+)*$' \
+            || { echo "::error::'$TAG' is not a plain version tag"; exit 1; }
+          OLD=$(grep -oE 'badge/Latest%20Version-[^-)]*-blue' README.md | head -1 || true)
+          echo "current badge: ${OLD:-none}"
+          sed -i -E "s#(badge/Latest%20Version-)[^-)]*(-blue)#\1${VER}\2#" README.md
+          NEW=$(grep -oE 'badge/Latest%20Version-[^-)]*-blue' README.md | head -1 || true)
+          echo "new badge: $NEW"
+          [ -n "$NEW" ] || { echo "::error::the README has no release badge to rewrite"; exit 1; }
+          if git diff --quiet -- README.md; then
+            echo "already on $VER - nothing to commit"
+            exit 0
+          fi
+          git config user.name "Siva"
+          git config user.email "sivaabhishek4@gmail.com"
+          git add README.md
+          git commit -m "readme: latest release badge on $VER"
+          git push origin HEAD:main
