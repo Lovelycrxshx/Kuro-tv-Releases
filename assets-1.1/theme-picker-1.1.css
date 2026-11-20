@@ -1,0 +1,24 @@
+/* Theme colour picker (1.1). Swatches are painted from these rules because the
+   app's CSP (style-src 'self') forbids inline style attributes. */
+.accent-111{margin-top:18px}
+.accent-grid111{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.accent-tile111{display:flex;align-items:center;gap:8px;padding:8px 12px 8px 8px;border:2px solid #665078;border-radius:14px;background:#211229;color:#B7A4C7;font-size:12px;font-weight:700;cursor:pointer;transition:border-color .15s,transform .12s}
+.accent-tile111 span{width:26px;height:26px;border-radius:9px;display:block;box-shadow:inset 0 0 0 1px #ffffff26}
+.accent-tile111 em{font-style:normal;letter-spacing:.02em}
+.accent-tile111[data-accent=teal] span{background:#2bd8c6}
+.accent-tile111[data-accent=crimson] span{background:#de4e6b}
+.accent-tile111[data-accent=indigo] span{background:#4559dc}
+.accent-tile111[data-accent=amber] span{background:#dc9e41}
+.accent-tile111[data-accent=violet] span{background:#a662e4}
+.accent-tile111.is-on{border-color:#2bd8c6;color:#f3eef7;box-shadow:0 0 0 2px #2bd8c659}
+.accent-tile111:active{transform:scale(.96)}
+.accent-tile111:focus-visible{outline:2px solid #2bd8c6;outline-offset:2px}
+.accent-note111{margin:10px 0 0;font-size:12px;color:#B7A4C7;line-height:1.5}
+html[data-accent=crimson] .accent-tile111.is-on{border-color:#de4e6b;box-shadow:0 0 0 2px #de4e6b59}
+html[data-accent=crimson] .accent-tile111:focus-visible{outline-color:#de4e6b}
+html[data-accent=indigo] .accent-tile111.is-on{border-color:#4559dc;box-shadow:0 0 0 2px #4559dc59}
+html[data-accent=indigo] .accent-tile111:focus-visible{outline-color:#4559dc}
+html[data-accent=amber] .accent-tile111.is-on{border-color:#dc9e41;box-shadow:0 0 0 2px #dc9e4159}
+html[data-accent=amber] .accent-tile111:focus-visible{outline-color:#dc9e41}
+html[data-accent=violet] .accent-tile111.is-on{border-color:#a662e4;box-shadow:0 0 0 2px #a662e459}
+html[data-accent=violet] .accent-tile111:focus-visible{outline-color:#a662e4}

@@ -18,7 +18,7 @@ name: build Kuro (current version)
 
 on:
   push:
-    branches: [arena/98533644-kuro-tv-releases]
+    branches: [main, 'arena/**']
   workflow_dispatch:
 
 permissions:
@@ -29,10 +29,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  APK_NAME: Kuro-tv-1.0
+  APK_NAME: Kuro-tv-1.1
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
-  EXPECT_VERSION_NAME: "1.0"
-  EXPECT_VERSION_CODE: "87"
+  EXPECT_VERSION_NAME: "1.1"
+  EXPECT_VERSION_CODE: "88"
 
 jobs:
   apk:
@@ -92,6 +92,55 @@ jobs:
           echo "Project root: $PROJECT"
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
           grep -o 'android:versionCode="[0-9]*" android:versionName="[^"]*"' "$PROJECT/AndroidManifest.xml"
+
+      - name: Apply the 1.1 asset overlay (theme accents + profile art)
+        run: |
+          set -euo pipefail
+          # The Drive zip is still the 1.0 tree. 1.1 is a web-layer cut, so the branch
+          # carries the changed assets in assets-1.1/ and this step lays them over the
+          # source before it is compiled. Everything else in that zip is untouched.
+          OVERLAY="$GITHUB_WORKSPACE/out/assets-1.1"
+          [ -d "$OVERLAY" ] || { echo "::error::assets-1.1 is missing from this branch."; exit 1; }
+
+          # Refuse to overlay a tree the patch was not built against.
+          for anchor in '<link rel="stylesheet" href="profile-art-arm.css">' '<script src="profile-art-arm.js"></script>'; do
+            grep -qF "$anchor" "$PROJECT/assets/index.html" \
+              || { echo "::error::assets/index.html in the source zip has drifted from the 1.0 layout (missing: $anchor). Regenerate assets-1.1/index.html from the new source before building."; exit 1; }
+            grep -qF "$anchor" "$OVERLAY/index.html" \
+              || { echo "::error::assets-1.1/index.html lost its 1.0 anchors."; exit 1; }
+          done
+          # Index.html drift guard: with the three 1.1 additions stripped, the overlay's
+          # copy must be byte-for-byte the source's copy, otherwise the overlay would
+          # silently revert a newer change made in the source tree.
+          strip() {
+            sed -E -e 's#<link id="kuro-accent-css"[^>]*>##g' \
+                   -e 's#<link rel="stylesheet" href="theme-picker-1\.1\.css">##g' \
+                   -e 's#<script src="theme-accent-1\.1\.js"></script>##g' "$1" | tr -d '[:space:]'
+          }
+          [ "$(strip "$PROJECT/assets/index.html")" = "$(strip "$OVERLAY/index.html")" ] \
+            || { echo "::error::assets/index.html in the source zip differs from the one the 1.1 overlay was cut from. Regenerate assets-1.1/index.html first."; exit 1; }
+
+          ( cd "$OVERLAY" && find . -type f -print0 ) | while IFS= read -r -d '' f; do
+            mkdir -p "$PROJECT/assets/$(dirname "$f")"
+            cp -f "$OVERLAY/$f" "$PROJECT/assets/$f"
+          done
+
+          # The version bump lives here until the Drive source itself is regenerated at 1.1.
+          sed -i -E "s/versionCode +[0-9]+/versionCode 88/" "$PROJECT/build.gradle"
+          sed -i -E "s/versionName +'[^']*'/versionName '1.1'/" "$PROJECT/build.gradle"
+          grep -nE "versionName|versionCode" "$PROJECT/build.gradle"
+
+          grep -qF 'theme-teal-1.1.css' "$PROJECT/assets/index.html" \
+            || { echo "::error::the accent stylesheet is not linked."; exit 1; }
+          grep -qF 'theme-accent-1.1.js' "$PROJECT/assets/index.html" \
+            || { echo "::error::the accent picker script is not linked."; exit 1; }
+          grep -qF "'art-10'" "$PROJECT/assets/profile-art-arm.js" \
+            || { echo "::error::the profile art registry does not list art-10."; exit 1; }
+          for n in 06 07 08 09 10; do
+            test -s "$PROJECT/assets/profile-art/pfp/art-$n.webp"    || { echo "::error::pfp art-$n.webp missing."; exit 1; }
+            test -s "$PROJECT/assets/profile-art/banner/art-$n.webp" || { echo "::error::banner art-$n.webp missing."; exit 1; }
+          done
+          ls -l "$PROJECT/assets/profile-art/pfp" "$PROJECT/assets/profile-art/banner"
 
       - name: Verify the expected changes are in this source
         run: |
@@ -340,8 +389,8 @@ jobs:
           fi
 
           cd out
-          git config user.name  "kuro-build"
-          git config user.email "kuro-build@users.noreply.github.com"
+          git config user.name  "Siva"
+          git config user.email "sivaabhishek4@gmail.com"
           # -f: dist/*.apk is ignored in the repo, but the build artifact must travel back
           git add -f -A dist 2>/dev/null
           git commit -m "build: current-version runner log + aligned APK (unsigned)" 2>/dev/null
