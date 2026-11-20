@@ -11,7 +11,7 @@ name: publish Kuro 5.81 release
 
 on:
   push:
-    branches: [arena/1345b858-kuro-tv-releases]
+    branches: [arena/51f1f502-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:
@@ -46,7 +46,7 @@ jobs:
           }
           dl 1i2-w42W8Q3Qsc0YtQ0P8EJH07yvK9s0u Kuro-tv-5.81.apk
           dl 13mRFmZVOlwg3QHbtuYg4xyQ4URDNvCKt Kuro-tv-5.81.apk.sha256
-          dl 1Bakj61sITw6n1UK63vTCLhvM5GvVGD71 Kuro-tv-5.81-Source.zip
+          dl 1tpaYXf8DfxF_Kv9JYgwVxxoyJeZLaxPL Kuro-tv-5.81-Source.zip
           file dist/* | sed 's/^/  /'
 
       - name: Gate on the exact build that was signed
