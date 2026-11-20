@@ -238,6 +238,25 @@ jobs:
           ! grep -q 'setStatusBarColor(Color\.rgb' "$PKG/MainActivity.java" \
             || { echo "::error::the status bar still uses a literal colour."; exit 1; }
 
+      - name: Open the developer Discord profile inside Discord (1.5-beta)
+        run: |
+          set -euo pipefail
+          # The shell opened https://discord.com/users/<id>. Android's app-link
+          # filter hands that to the Discord client, which opens on Home and
+          # drops the /users/ path, so the profile never appeared. This rewrites
+          # the developer case to try Discord's own deep links first, then an
+          # explicit package intent, then the browser.
+          python3 "$GITHUB_WORKSPACE/out/tools/discord_link_1.5.py" "$PROJECT"
+
+          PKG="$PROJECT/src/app/lovelycrxshx/kuro"
+          grep -q 'openDiscordProfile569' "$PKG/MainActivity.java" \
+            || { echo "::error::the developer row still uses the bare https link."; exit 1; }
+          grep -q 'discord://-/users/' "$PKG/MainActivity.java" \
+            || { echo "::error::the Discord profile deep link is missing."; exit 1; }
+          ! grep -q 'case "developer":openUserLink560' "$PKG/MainActivity.java" \
+            || { echo "::error::the old developer case survived the patch."; exit 1; }
+          echo "developer row -> discord://-/users/<id>, explicit com.discord intent, then web"
+
       - name: Verify the expected changes are in this source
         run: |
           set -euo pipefail
