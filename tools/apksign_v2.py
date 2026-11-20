@@ -93,8 +93,9 @@ def build_signer(cert_der, spki_der, key, digest):
 
     signer = lp(signed_data) + signatures_field + lp(spki_der)
     v2_value = lp(lp(signer))
+    # AOSP: the pair's uint64 length covers the ID and the value, not itself.
     pair = u32(V2_BLOCK_ID) + v2_value
-    return u64(len(pair) + 8) + pair
+    return u64(len(pair)) + pair
 
 
 def sign(in_path, out_path, key, cert_der, spki_der):

@@ -54,12 +54,12 @@ def main(argv):
     o = 0
     v2 = None
     while o < len(pairs):
-        pair_size = u64(pairs, o)
+        pair_size = u64(pairs, o)   # excludes this field
         pid = u32(pairs, o + 8)
-        value = pairs[o + 12:o + pair_size]
+        value = pairs[o + 12:o + 8 + pair_size]
         if pid == 0x7109871A:
             v2 = value
-        o += pair_size
+        o += 8 + pair_size
     if v2 is None:
         raise SystemExit("no v2 signature block found")
 
