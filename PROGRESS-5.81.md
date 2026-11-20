@@ -371,3 +371,26 @@ both pass; all four touched Java files parse; the build guards were extended and
   Activity sharing on."
 - Static test asserts the new line so it cannot be dropped by a later refactor.
 - Shipped as the ninth 5.81 cut with the SDK event trace from 11.3.1.
+
+## Rev 11.4 — presence without a sign-in (the actual fix)
+
+- **Root cause found in Discord's own docs.** Rich Presence on Android has shipped since Social SDK
+  1.10 as an *unauthenticated* transport: `Client::SetApplicationId` + `Client::UpdateRichPresence`,
+  talking to the signed-in Discord app over its RPC service, with **no `Connect()` and no `Ready`**.
+  Kuro (and our SDK 1.11.24259 was new enough) was connecting first and gating every publish on
+  `Status::Ready`, which a token-less client never reaches — hence the permanent "connecting" and the
+  empty Activity tab.
+- `native/kuro_discord_rpc563.cpp`: `newDirect()` no longer calls `Connect()`; `publishDirect()`
+  publishes whenever there is an activity and records the `ClientResult`; a refusal rebuilds the
+  transport on a ten-second clock; the SDK log callback is captured into a six-line ring exposed as
+  `nativeLogs`.
+- `KuroDiscordRpc563.java`: card now reports `Presence transport: …`, an on-device probe
+  (`com.discord` version + whether the `com.discord.socialsdk.rpc.IDiscordRpcService` service
+  resolves), the SDK's own log lines, and the corrected SDK status names (the old trace labels were
+  off by one against the real enum: 0 Disconnected, 1 Connecting, 2 Connected, 3 Ready,
+  4 Reconnecting, 5 Disconnecting, 6 HttpWait).
+- Manifest: added an `<intent>` query for the RPC service action next to the `com.discord` package
+  query, so the service stays resolvable on Android 11+.
+- Tests: the fake SDK now mirrors the real `Status` ordering and can refuse updates; the native test
+  asserts the client never connects, that presence publishes while `Disconnected`, and that a refusal
+  rebuilds the transport; the static test pins all of it.

@@ -10,7 +10,7 @@ name: fetch current source for editing
 
 on:
   push:
-    branches: [arena/39c891e8-kuro-tv-releases]
+    branches: [arena/9e20587d-kuro-tv-releases]
   workflow_dispatch:
 
 permissions:

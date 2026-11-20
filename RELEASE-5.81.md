@@ -6,19 +6,31 @@ Signed with the original Kuro release key (`CN=Kuro Anime`), so this installs st
 5.72 – 5.80. **Do not uninstall or clear data.**
 
 ```
-SHA-256  78fb9bbf9a8b2ce8ed0465ebb2fac2da41182e40be76b1ee5f12c88c9f832176
-Size     44,004,576 bytes
+SHA-256  55a575595db414bfd435f580da25d7fcf7f66b52fc64f42372dd53b9b568e483
+Size     44,008,672 bytes
 ```
 
-> **This is the ninth cut of 5.81, same versionCode 84 — it instruments the Discord SDK handshake
-> and says plainly on the card when Discord stops answering it, on top of the app-visibility fix,
-> the presence connection and the launch-crash fix.** Because the version code did not
+> **This is the tenth cut of 5.81, same versionCode 84 — presence now goes through the Discord app's
+> own RPC service the way Discord documents it for Android, so nothing waits for a sign-in that never
+> comes.** Because the version code did not change, the in-app updater will not offer it; install it
+> over the top, no uninstall. Because the version code did not
 > change, the in-app updater will not offer it (it only offers strictly higher builds). Install
 > this one manually — over the top, no uninstall — to get the Cast screen removed, a quieter
 > Discord presence loop, the browsing card that says what it is, the profile art on the player
 > chip and per-episode resume labels in the episode drawer.
 
 ## What's new
+
+**Rev 11.4 is the fix, not another probe.** Discord's Social SDK has shipped Rich Presence for Android
+without authentication since 1.10: `SetApplicationId` + `UpdateRichPresence`, talking straight to the
+signed-in Discord app over its RPC service, with **no `Client::Connect()` and no `Ready` status**. Kuro
+was doing the opposite — connecting first and publishing only after the client reported `Ready` — and a
+token-less client never reaches `Ready`, which is exactly why the card sat on "connecting" forever while
+the profile stayed empty. The presence client now never connects, publishes as soon as there is
+something to publish, rebuilds its transport if the Discord app refuses an update (once every ten
+seconds, not once every frame), and reports on the card what actually happened: whether this phone's
+Discord build exposes the presence service at all, the SDK's own log lines, and the corrected SDK
+status names.
 
 **Rev 11.3.2 names the stuck connection.** Once the current-account client has been not-Ready for
 twenty seconds, the card stops leaving it at "connecting" and adds "The Discord app has not answered
@@ -199,7 +211,7 @@ adb install -r Kuro-tv-5.81.apk
 
 ```bash
 sha256sum Kuro-tv-5.81.apk
-# 78fb9bbf9a8b2ce8ed0465ebb2fac2da41182e40be76b1ee5f12c88c9f832176
+# 55a575595db414bfd435f580da25d7fcf7f66b52fc64f42372dd53b9b568e483
 
 apksigner verify --print-certs Kuro-tv-5.81.apk
 # CN=Kuro Anime
