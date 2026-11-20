@@ -12,3 +12,4 @@ dist/*.apk
 # temporary staging copies pulled by fetch-source.yml
 staging/*.zip
 dist/*.zip
+.venv-art/
