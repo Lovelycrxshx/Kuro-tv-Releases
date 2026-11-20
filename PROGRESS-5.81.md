@@ -362,3 +362,12 @@ both pass; all four touched Java files parse; the build guards were extended and
   published on the very next pump (50 ms while the direct client is not Ready) rather than up to 1.5 s later.
 - Static test extended: manifest `com.discord` query, `nativeDirectError`, the trace natives and the
   early `setEngineActivity` call are all asserted; native test covers the trace API.
+
+## Rev 11.3.2 — say it when Discord never answers
+
+- The presence loop tracks how long the current-account client has been not-Ready (`unreadySince`,
+  reset the moment the SDK reports Ready) and the card adds, after 20 s:
+  "The Discord app has not answered the handshake for N s; open Discord, keep it running and leave
+  Activity sharing on."
+- Static test asserts the new line so it cannot be dropped by a later refactor.
+- Shipped as the ninth 5.81 cut with the SDK event trace from 11.3.1.

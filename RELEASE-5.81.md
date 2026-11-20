@@ -6,12 +6,12 @@ Signed with the original Kuro release key (`CN=Kuro Anime`), so this installs st
 5.72 – 5.80. **Do not uninstall or clear data.**
 
 ```
-SHA-256  ced443076ad3e371703cd1e5c61840c73fa98328501bb29be546589acfde23f1
+SHA-256  78fb9bbf9a8b2ce8ed0465ebb2fac2da41182e40be76b1ee5f12c88c9f832176
 Size     44,004,576 bytes
 ```
 
-> **This is the eighth cut of 5.81, same versionCode 84 — it instruments the Discord SDK handshake
-> so a stuck connection can be diagnosed on the phone itself, on top of the app-visibility fix,
+> **This is the ninth cut of 5.81, same versionCode 84 — it instruments the Discord SDK handshake
+> and says plainly on the card when Discord stops answering it, on top of the app-visibility fix,
 > the presence connection and the launch-crash fix.** Because the version code did not
 > change, the in-app updater will not offer it (it only offers strictly higher builds). Install
 > this one manually — over the top, no uninstall — to get the Cast screen removed, a quieter
@@ -19,6 +19,11 @@ Size     44,004,576 bytes
 > chip and per-episode resume labels in the episode drawer.
 
 ## What's new
+
+**Rev 11.3.2 names the stuck connection.** Once the current-account client has been not-Ready for
+twenty seconds, the card stops leaving it at "connecting" and adds "The Discord app has not answered
+the handshake for N s; open Discord, keep it running and leave Activity sharing on." Together with the
+SDK event line this makes the failure readable instead of an endless spinner.
 
 **Rev 11.3.1 stops guessing about the handshake.** The Discord client was still sitting on
 "Connecting to the Discord app…" — the SDK reports no error and no terminal status, so nothing
@@ -194,7 +199,7 @@ adb install -r Kuro-tv-5.81.apk
 
 ```bash
 sha256sum Kuro-tv-5.81.apk
-# ced443076ad3e371703cd1e5c61840c73fa98328501bb29be546589acfde23f1
+# 78fb9bbf9a8b2ce8ed0465ebb2fac2da41182e40be76b1ee5f12c88c9f832176
 
 apksigner verify --print-certs Kuro-tv-5.81.apk
 # CN=Kuro Anime
