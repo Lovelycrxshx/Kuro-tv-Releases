@@ -170,7 +170,7 @@ jobs:
           ASSETS=(dist/$APK_NAME.apk dist/$APK_NAME.apk.sha256 dist/$APK_NAME-Source.zip dist/$APK_NAME-Source.zip.sha256)
           for f in "${ASSETS[@]}"; do [ -s "$f" ] || { echo "::error::$f missing"; exit 1; }; done
           SIZE=$(stat -c%s "dist/$APK_NAME.apk")
-          sed -e "s/{{APK_SHA256}}/$APK_SHA256/" -e "s/{{APK_BYTES}}/$SIZE/" RELEASE-1.4.md > /tmp/notes.md
+          sed -e "s/{{APK_SHA256}}/$APK_SHA256/" -e "s/{{APK_BYTES}}/$SIZE/" archive/1.x/RELEASE-1.4.md > /tmp/notes.md
           grep -q '{{' /tmp/notes.md && { echo "::error::release notes still contain placeholders"; exit 1; } || true
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "release $TAG exists - uploading assets"
@@ -211,5 +211,5 @@ jobs:
             echo "### Release $TAG"
             echo "- tag: \`$TAG\` (target \`${{ github.ref_name }}\`)"
             echo "- APK SHA-256 gate: \`$APK_SHA256\`"
-            echo "- notes: \`RELEASE-1.4.md\`"
+            echo "- notes: \`archive/1.x/RELEASE-1.4.md\`"
           } >> "$GITHUB_STEP_SUMMARY"
