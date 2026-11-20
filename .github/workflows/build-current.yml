@@ -29,10 +29,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  APK_NAME: Kuro-tv-1.2
+  APK_NAME: Kuro-tv-1.3
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
-  EXPECT_VERSION_NAME: "1.2"
-  EXPECT_VERSION_CODE: "89"
+  EXPECT_VERSION_NAME: "1.3"
+  EXPECT_VERSION_CODE: "90"
 
 jobs:
   apk:
@@ -126,8 +126,8 @@ jobs:
           done
 
           # The version bump lives here until the Drive source itself is regenerated.
-          sed -i -E "s/versionCode +[0-9]+/versionCode 89/" "$PROJECT/build.gradle"
-          sed -i -E "s/versionName +'[^']*'/versionName '1.2'/" "$PROJECT/build.gradle"
+          sed -i -E "s/versionCode +[0-9]+/versionCode 90/" "$PROJECT/build.gradle"
+          sed -i -E "s/versionName +'[^']*'/versionName '1.3'/" "$PROJECT/build.gradle"
           grep -nE "versionName|versionCode" "$PROJECT/build.gradle"
 
           grep -qF 'theme-teal-1.1.css' "$PROJECT/assets/index.html" \
@@ -141,6 +141,28 @@ jobs:
             test -s "$PROJECT/assets/profile-art/banner/art-$n.webp" || { echo "::error::banner art-$n.webp missing."; exit 1; }
           done
           ls -l "$PROJECT/assets/profile-art/pfp" "$PROJECT/assets/profile-art/banner"
+
+      - name: Make the WebView serve the overlay assets
+        run: |
+          set -euo pipefail
+          # 1.1 copied the theme stylesheets, the picker and its script into assets/ and
+          # linked them from index.html, but MainActivity's intercept list never learned
+          # their paths, so the WebView dropped them: the app stayed violet and the picker
+          # never appeared. The list is now generated from the overlay itself.
+          python3 "$GITHUB_WORKSPACE/out/tools/webview_assets_1.3.py" \
+            "$PROJECT" "$GITHUB_WORKSPACE/out/assets-1.1"
+
+          PKG="$PROJECT/src/app/lovelycrxshx/kuro"
+          test -f "$PKG/KuroWebAssets13.java" \
+            || { echo "::error::KuroWebAssets13.java was not generated."; exit 1; }
+          for f in theme-teal-1.1.css theme-crimson-1.1.css theme-indigo-1.1.css \
+                   theme-amber-1.1.css theme-violet-1.1.css theme-picker-1.1.css \
+                   theme-accent-1.1.js; do
+            grep -qF "/$f" "$PKG/KuroWebAssets13.java" \
+              || { echo "::error::$f is in assets/ but the WebView would drop it."; exit 1; }
+          done
+          grep -q 'KuroWebAssets13.served(u)' "$PKG/MainActivity.java" \
+            || { echo "::error::shouldInterceptRequest does not consult the overlay list."; exit 1; }
 
       - name: Apply the 1.2 native theme (accent-aware Java palette)
         run: |
