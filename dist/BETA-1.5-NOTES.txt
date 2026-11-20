@@ -1,0 +1,74 @@
+Kuro TV - 1.5 beta (take 8)
+===========================
+
+File      : Kuro-tv-beta-1.5.apk
+Size      : 48,494,449 bytes
+sha256    : 4f51836533dc843ff201ddf28e088d165660cf933128c3a6ced7ddfb8d15fb6d
+md5       : a8e28cda25e275091a6fa248734dbf5b
+version   : 1.5-beta  (versionCode 92 - unchanged)
+signing   : v2, CN=Kuro Anime  (same key as 1.0-1.4)
+Delivery  : Google Drive only. NOT on GitHub, no tag, no release.
+
+Install
+-------
+Straight over take 7. No uninstall, data, theme and settings kept.
+
+New: an update button that is actually there
+--------------------------------------------
+Two ways in, both one tap:
+
+  * the round arrow icon in the header, left of "Log in", on every screen
+  * the "Keep Kuro current" card at the top of Account, with
+    "Check for updates" and "Update settings"
+
+One tap checks now. If a newer release exists it downloads in the background,
+verifies it, and hands it to Android's installer - you never leave the app to
+find the file. Android still asks before installing (that prompt cannot be
+skipped by any app), and automatic checks/downloads keep following your
+existing Kuro updates settings.
+
+Right now the updater reads GitHub's latest release, which is 1.4 - older than
+this beta - so it will correctly tell you that you are already ahead. It starts
+working the moment a newer release is published.
+
+New: four more themes, and a richer surface
+-------------------------------------------
+The picker went from ten accents to fourteen:
+
+  Signature   teal    violet   graphite
+  Cool        sky     royal    indigo   emerald   lime
+  Warm        citron  amber    sunset   rose      crimson   magenta
+
+  new: royal (#805be7)  lime (#8fe444)  citron (#e2e756)  rose (#e968a9)
+
+They are generated from the same palette tool as the original ten, so the ten
+you already had are byte-for-byte unchanged - nothing you liked moved.
+
+"Richer" here is depth, not decoration: the backdrop carries an accent-tinted
+glow in every theme, the header is glass with a top highlight, posters and
+cards sit on a hairline plus a real shadow, primary buttons are lit from above
+and cast an accent-tinted shadow, panels and the dock get top-light gradients,
+and the picker's current tile and preview card get a glow and a gradient ring.
+One layer, no colours of its own, so it follows all fourteen accents and both
+light and dark. Blur is deliberately light - a heavy blur over scroll-linked
+motion is what makes a WebView stutter.
+
+Gone: the Motion - Beta card
+----------------------------
+The "Motion - Beta" card and its "Play the reel" video player are removed from
+both files and from the UI. The motion itself stays exactly as it was: the
+opening film, the press spring on every control, no tap ripple, the Home banner
+still gone, and the scroll-linked movement.
+
+Still from earlier takes
+------------------------
+  * Settings > Developer opens the Discord profile, deep-linked into the app
+  * scrolling is scroll-linked like the reel (rails, grids, banners, headers)
+  * the tap ripple / water droplets are gone
+  * the "One library - Twelve connected sources" card is gone
+
+Known
+-----
+Nothing opens a browser or a store; the update path is shell-side, so it works
+even with no page loaded. Because it reuses the existing updater, its state is
+the one you see in Settings > Kuro updates.
