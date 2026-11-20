@@ -12,7 +12,7 @@ An open-source media client designed for Android TV, Fire TV, and mobile devices
 Get the latest stable build directly from GitHub:
 
 * **[Download Latest APK](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)**
-
+ 
 ---
 
 ## 🗂️ Sources & mirrors
