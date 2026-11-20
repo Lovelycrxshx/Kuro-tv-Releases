@@ -284,3 +284,20 @@ both pass; all four touched Java files parse; the build guards were extended and
   verified against `CN=Kuro Anime` (`1d37c3ca…`); source `7,246,069 B`. Publish run
   `44676375461` refreshed `v5.81`. Drive folder back to 11 files (old APK/sha and two older source
   zips trashed).
+
+## Rev 11.1 — launch crash fixed (released)
+
+- **Cause.** Rev 11 declared `private String profileArt581=getSharedPreferences(...)…`. A field
+  initialiser runs inside the Activity constructor, and `attach()` only supplies the base context
+  afterwards, so `getSharedPreferences` threw a NullPointerException before `onCreate` — the app
+  closed the instant it was opened.
+- **Fix.** The field is a plain `""` now and the preference is read as the first statement in
+  `onCreate`; `WatchHeader` still falls back to initials whenever the id is empty or unreadable.
+- **Guard.** `build-current.yml` now fails if anything *before* `onCreate` in `MainActivity`
+  touches `getSharedPreferences`, `getResources` or `getSystemService` (`early` check), so this
+  class of crash cannot ship again. The check was verified against the buggy line (1) and the
+  fixed file (0).
+- Build `44677089469`; signed APK **43,963,616 B**, sha256
+  `76eb0595ea88c064ed824fa98c8409ba05e3fe7f88f4e79b47a17d8bbd06613d`, `CN=Kuro Anime`
+  (`1d37c3ca…`); source `7,246,067 B`. Publish run `44677577182` refreshed `v5.81`. Drive holds
+  only the newest APK, checksum and source (superseded rev-11 copies trashed).
