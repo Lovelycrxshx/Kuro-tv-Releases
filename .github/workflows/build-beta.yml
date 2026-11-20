@@ -172,6 +172,11 @@ jobs:
             || { echo "::error::the motion stylesheet is not linked."; exit 1; }
           grep -qF 'theme-rich-1.5.css' "$PROJECT/assets/index.html" \
             || { echo "::error::the richer surface layer is not linked."; exit 1; }
+          for f in beta-extras-1.5.css beta-extras-1.5.js beta-continue-1.5.js \
+                   beta-whatsnew-1.5.js beta-downloads-1.5.js; do
+            grep -qF "$f" "$PROJECT/assets/index.html" \
+              || { echo "::error::$f is shipped but the page never loads it."; exit 1; }
+          done
           # 1.5-beta: the update entry point is the header icon only - the Account
           # card that used to sit there is gone, and the LOCAL card is gone too.
           grep -q 'km-update-15' "$PROJECT/assets/beta-motion-1.5.js" \
@@ -213,7 +218,9 @@ jobs:
             || { echo "::error::the picker does not list the new accents."; exit 1; }
           grep -q 'accent-preview111' "$PROJECT/assets/theme-picker-1.1.css" \
             || { echo "::error::the richer picker styles are missing."; exit 1; }
-          for f in beta-motion-1.5.css beta-motion-1.5.js theme-rich-1.5.css intro/animation.mp4; do
+          for f in beta-motion-1.5.css beta-motion-1.5.js theme-rich-1.5.css intro/animation.mp4 \
+                   beta-extras-1.5.css beta-extras-1.5.js beta-continue-1.5.js \
+                   beta-whatsnew-1.5.js beta-downloads-1.5.js; do
             grep -qF "/$f" "$PKG/KuroWebAssets13.java" \
               || { echo "::error::$f is in assets/ but the WebView would drop it."; exit 1; }
           done
@@ -293,6 +300,27 @@ jobs:
           grep -q '@JavascriptInterface public void updateButton15()' "$PKG/MainActivity.java" \
             || { echo "::error::updateButton15 is not exposed to the WebView."; exit 1; }
           echo "update button -> checkNow(immediate) + update screen"
+
+      - name: Add progress readback and download housekeeping (1.5-beta)
+        run: |
+          set -euo pipefail
+          # Continue watching needs the playhead the native player already stores,
+          # and the downloads screen needs the shell's download index. Both are
+          # additive bridge methods plus an offline index scan.
+          python3 "$GITHUB_WORKSPACE/out/tools/offline_beta_1.5.py" "$PROJECT"
+
+          PKG="$PROJECT/src/app/lovelycrxshx/kuro"
+          grep -q 'public long progress15' "$PKG/MainActivity.java" \
+            || { echo "::error::progress15 is not exposed to the WebView."; exit 1; }
+          grep -q 'downloadsClean15' "$PKG/MainActivity.java" \
+            || { echo "::error::the downloads clean-up bridge is missing."; exit 1; }
+          grep -q 'static int clean15' "$PKG/KuroOffline561.java" \
+            || { echo "::error::KuroOffline561 has no clean15."; exit 1; }
+          grep -q 'markPlayed15' "$PKG/KuroOfflineActivity561.java" \
+            || { echo "::error::the offline player never marks a download as played."; exit 1; }
+          grep -q 'setActive15' "$PKG/KuroOfflineActivity561.java" \
+            || { echo "::error::the offline player does not clear its active download."; exit 1; }
+          echo "shell: progress15 + downloads summary/clean, active-download guard"
 
       - name: Verify the expected changes are in this source
         run: |
