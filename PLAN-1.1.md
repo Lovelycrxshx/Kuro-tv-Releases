@@ -119,3 +119,16 @@ A believable release is eight to ten items, not thirty. The cut I would ship:
 | 26 Update channels | Turns the release pipeline into a testing tool |
 
 Everything else stays on the roadmap and ships in 1.2 onward, one or two per cut.
+
+## Status of the theme + art request (built, not shipped)
+
+- **Art:** five more pairs, `design/art-1.1/` — Satoru Gojo, Sung Jinwoo, Frieren, Yor Forger,
+  Makima (catalogue entries 3, 4, 18, 10, 8). 256x256 pfps, 1024x576 banners, preview.png.
+- **Theme:** `tools/theme_gen.py` re-hues the 1.0 purple palette into five stylesheets —
+  teal (default), crimson, indigo, amber, plus violet as the 1.0 look. Picker lives in Account
+  (`theme-accent-1.1.js`), choice saved in `localStorage["kuro-accent-v1"]`.
+- **Shipping path:** web-layer cut only, so `assets-1.1/` is an overlay that
+  `.github/workflows/build-current.yml` lays over the Drive source before compiling, and bumps
+  build.gradle to 1.1 / 88. Wired and simulated, **not run**.
+- **Still purple:** the native surfaces (status bar, update dialog palette `0xffa65be4`) are Java
+  side and need the source tree; the web UI is the part that changes for now.
