@@ -169,8 +169,8 @@ jobs:
           ZIP="$RUNNER_TEMP/discord-sdk.zip"
           mkdir -p "$RUNNER_TEMP/cache"
           # 1. a permanent copy parked on this repo's sdk-cache release - no expiring URL needed
-          if gh release download sdk-cache -R "$GITHUB_REPOSITORY" -p 'DiscordSocialSdk-*.zip' -D "$RUNNER_TEMP/cache" --clobber 2>/dev/null; then
-            CACHED=$(find "$RUNNER_TEMP/cache" -name 'DiscordSocialSdk-*.zip' | head -1)
+          if gh release download sdk-cache -R "$GITHUB_REPOSITORY" -p '*.zip' -D "$RUNNER_TEMP/cache" --clobber 2>/dev/null; then
+            CACHED=$(find "$RUNNER_TEMP/cache" -name '*.zip' | head -1)
             if [ -n "$CACHED" ] && [ "$(stat -c%s "$CACHED")" -gt 1000000 ]; then
               cp "$CACHED" "$ZIP"
               echo "using the cached SDK copy: $(stat -c%s "$ZIP") bytes"
