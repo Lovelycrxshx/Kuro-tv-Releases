@@ -328,3 +328,23 @@ both pass; all four touched Java files parse; the build guards were extended and
 - Build `44678627093`; signed APK **43,967,712 B**, sha256
   `d215fa1aade2cec8690040a075b34534f64d10eaddaebcf6254e95609a88a615`; source `7,246,813 B`.
   Publish run `44679089873` refreshed `v5.81`; Drive trimmed to the newest three files.
+
+## Rev 11.3 — the SDK can see Discord (released)
+
+- **Evidence.** The status card showed "Current Discord app: Connecting to the Discord app…" and
+  "Current Discord app link: connecting" while the Discord app was open and signed in on the same
+  phone — so `Connect()` was issued (rev 11.2) but the handshake never finished.
+- **Cause.** Android 11+ hides installed packages unless the manifest declares them, and
+  `AndroidManifest.xml` had **no `<queries>` element at all**. The Social SDK discovers the Discord
+  app by package name, so `com.discord` was invisible and the connection could never complete.
+- **Fix.** `<queries><package android:name="com.discord"/></queries>` before `<application>`; a
+  handshake still unfinished after 12 s is now torn down and restarted (6 s backoff) instead of
+  hanging; `directError` carries `Client::Error` from the status callback and the card shows
+  "refused (SDK code N)" when the SDK rejects the connection.
+- **Guards.** `build-current.yml` fails if the `com.discord` package declaration disappears, and
+  `tests/test-discord-rpc563-static.py` asserts both the manifest query and `nativeDirectError`.
+  The native host test still passes against the fake SDK.
+- Build `44679512089`; signed APK **43,984,096 B**, sha256
+  `6ce4d18897066753b978f27b2f761a507fab6044950e7c48dd6813c1c6491fc7` (compiled manifest verified
+  to contain `com.discord`); source `7,247,110 B`; publish `44680044668` refreshed `v5.81`; Drive
+  trimmed to the newest three files.
