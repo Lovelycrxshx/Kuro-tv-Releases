@@ -1,0 +1,71 @@
+plugins {
+    id 'com.android.application' version '8.7.3'
+}
+
+def discordAar = System.getenv('KURO_DISCORD_SDK_AAR')
+if (!discordAar || !file(discordAar).isFile()) {
+    throw new GradleException('Set KURO_DISCORD_SDK_AAR to your separately downloaded Discord Social SDK AAR.')
+}
+
+
+android {
+    namespace 'app.lovelycrxshx.kuro'
+    compileSdk 35
+    buildToolsVersion '35.0.0'
+
+    defaultConfig {
+        applicationId 'app.lovelycrxshx.kuro'
+        minSdk 26
+        targetSdk 35
+        versionCode 87
+        versionName '1.0'
+    }
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+            java.srcDirs = ['src']
+            res.srcDirs = ['res']
+            assets.srcDirs = ['assets']
+            jniLibs.srcDirs = ['build/kuro-discord-jni']
+        }
+        test.java.srcDirs = ['tests/native-panel/src/test/java']
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    buildFeatures { buildConfig = false }
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            all {
+                systemProperty 'robolectric.dependency.repo.url', 'https://repo.maven.apache.org/maven2'
+                maxHeapSize = '384m'
+                maxParallelForks = 1
+                forkEvery = 1
+            }
+        }
+    }
+    packaging.jniLibs.keepDebugSymbols += ['**/libdiscord_partner_sdk.so']
+    packaging.resources.excludes += ['/META-INF/AL2.0', '/META-INF/LGPL2.1']
+}
+
+dependencies {
+    implementation files(discordAar) // supplied by the application owner under Discord's SDK terms
+    implementation 'androidx.webkit:webkit:1.12.1'
+    // Align Kotlin's split JDK modules with the merged standard library.
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
+    // Keep the AndroidX versions used by the prior release for compatibility.
+    implementation 'androidx.core:core:1.13.1'
+    implementation 'androidx.activity:activity:1.5.1'
+    implementation 'androidx.loader:loader:1.1.0'
+    // Native playback is only used for an existing, strictly validated direct stream.
+    implementation 'androidx.media3:media3-exoplayer:1.7.1'
+    implementation 'androidx.media3:media3-exoplayer-hls:1.7.1'
+    implementation 'androidx.media3:media3-ui:1.7.1'
+    implementation 'androidx.media3:media3-database:1.7.1'
+    implementation 'androidx.media3:media3-datasource-okhttp:1.7.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.12.2'
+}

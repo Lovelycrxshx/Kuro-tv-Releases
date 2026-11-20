@@ -1,0 +1,24 @@
+<resources>
+    <style name="KuroTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:statusBarColor">@android:color/black</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- Kuro 5.81: dialogs used to render with the platform grey panel and the
+         default teal accent. This theme gives the stock alerts the app's panel,
+         ink and violet accent; the content-rich dialogs are built by
+         KuroDialogs581 instead. -->
+    <style name="KuroDialogTheme" parent="android:style/Theme.Material.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/kuro_dialog_panel</item>
+        <item name="android:colorAccent">#FFA65BE4</item>
+        <item name="android:textColorPrimary">#FFF3EEF7</item>
+        <item name="android:textColorSecondary">#FFB7A4C7</item>
+        <item name="android:textColorPrimaryInverse">#FF0F0A16</item>
+        <item name="android:textColorHighlight">#66A65BE4</item>
+        <item name="android:backgroundDimAmount">0.78</item>
+        <item name="android:windowMinWidthMajor">48%</item>
+        <item name="android:windowMinWidthMinor">78%</item>
+    </style>
+</resources>
