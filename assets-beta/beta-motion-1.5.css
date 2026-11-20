@@ -232,30 +232,14 @@
    paints for a frame; beta-motion-1.5.js also drops it from the DOM. */
 .profile-private547{display:none!important}
 
-/* ------------------------- update button (header + Account) ------------ */
+/* ------------------------------- update button (header) ---------------- */
 .km-update-btn{position:relative;color:var(--ku-accent,#3be3d2)}
 .km-update-btn svg{stroke-width:2}
 .km-update-btn:after{content:'';position:absolute;inset:-1px;border-radius:50%;
  box-shadow:inset 0 0 0 1px var(--ku-accent,#3be3d2);opacity:.45}
 .km-update-btn:active:after{opacity:1}
 .km-update-off{opacity:.55}
-
-.km-update-card{margin:0 0 18px}
-.km-update-card .account-section-head h2{margin-bottom:4px}
-.km-update-overline{color:var(--ku-accent,#3be3d2)}
-.km-update-row{display:flex;flex-wrap:wrap;gap:9px;margin-top:13px}
-.km-update-go{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border:0;
- border-radius:var(--ku-r-md,14px);background:var(--ku-accent,#3be3d2);color:#04100f;
- font-size:13px;font-weight:900;cursor:pointer;
- box-shadow:var(--ku-shadow-1,0 2px 8px #0005);
- background-image:linear-gradient(180deg,#ffffff3d,#ffffff00 62%)}
-.km-update-go:active{transform:scale(.96)}
-.km-update-more{padding:11px 16px;border-radius:var(--ku-r-md,14px);
- border:1px solid var(--ku-hair-strong,#ffffff1f);background:transparent;
- color:var(--ink,#f1f4f3);font-size:13px;font-weight:700;cursor:pointer}
-.km-update-more:active{transform:scale(.97)}
-.km-update-note{margin:11px 0 0;font-size:12px;line-height:1.55;color:var(--muted,#a6adc5)}
-.km-update-go:focus-visible,.km-update-btn:focus-visible{outline:2px solid var(--ink,#f1f4f3);outline-offset:3px}
+.km-update-btn:focus-visible{outline:2px solid var(--ink,#f1f4f3);outline-offset:3px}
 
 /* ======================================================================
  * APPLIED EVERYWHERE - "clicking every option animates".

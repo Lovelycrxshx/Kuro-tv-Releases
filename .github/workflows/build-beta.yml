@@ -172,6 +172,16 @@ jobs:
             || { echo "::error::the motion stylesheet is not linked."; exit 1; }
           grep -qF 'theme-rich-1.5.css' "$PROJECT/assets/index.html" \
             || { echo "::error::the richer surface layer is not linked."; exit 1; }
+          # 1.5-beta: the update entry point is the header icon only - the Account
+          # card that used to sit there is gone, and the LOCAL card is gone too.
+          grep -q 'km-update-15' "$PROJECT/assets/beta-motion-1.5.js" \
+            || { echo "::error::the header update button is missing."; exit 1; }
+          ! grep -q 'km-update-card' "$PROJECT/assets/beta-motion-1.5.js" \
+            || { echo "::error::the Account update card is still being built."; exit 1; }
+          ! grep -q 'km-update-go' "$PROJECT/assets/beta-motion-1.5.css" \
+            || { echo "::error::the Account update card styles are still shipping."; exit 1; }
+          grep -q '.profile-private547{display:none' "$PROJECT/assets/beta-motion-1.5.css" \
+            || { echo "::error::the LOCAL card is not hidden."; exit 1; }
           grep -q 'km-intro-15' "$PROJECT/assets/beta-motion-1.5.js" \
             || { echo "::error::the title sequence is missing from the motion script."; exit 1; }
           ls -l "$PROJECT/assets/intro" "$PROJECT/assets/beta-motion-1.5."*

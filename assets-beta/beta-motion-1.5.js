@@ -283,9 +283,9 @@ function bindScroll() {
 }
 
 /* ------------------------------------------------------- update button ---
- * In-app, on every screen: the header icon, and a card at the top of Account.
- * Both run the shell's real updater - check now, download in the background,
- * then Android's installer. The shell owns all of that; this only asks.
+ * One entry point: the round arrow in the header, on every screen. It runs the
+ * shell's real updater - check now, download in the background, then Android's
+ * installer. The shell owns all of that; this only asks.
  */
 function updateBridge() {
  try {
@@ -300,14 +300,6 @@ function updateBridge() {
   }
  } catch (e) {}
  return false;
-}
-
-function openUpdateSettings() {
- try {
-  if (window.KuroNative && typeof window.KuroNative.settingsAction560 === 'function') {
-   window.KuroNative.settingsAction560('updates572');
-  }
- } catch (e) {}
 }
 
 function updateButton() {
@@ -329,30 +321,6 @@ function updateButton() {
  var login = actions.querySelector('#header-login');
  if (login && login.parentNode === actions) actions.insertBefore(b, login);
  else actions.appendChild(b);
-}
-
-function updateCard() {
- var page = document.querySelector('.profile-page547');
- if (!page || page.querySelector('#km-update-card')) return;
- var card = document.createElement('div');
- card.className = 'account-section km-update-card';
- card.id = 'km-update-card';
- card.innerHTML =
-  '<div class="account-section-head"><div>' +
-   '<div class="overline km-update-overline">Kuro updates</div>' +
-   '<h2>Keep Kuro current</h2>' +
-   '<p>Checks the public release page now, downloads in the background and hands ' +
-   'the file to Android\u2019s installer.</p>' +
-  '</div></div>' +
-  '<div class="km-update-row">' +
-   '<button type="button" class="km-update-go">Check for updates</button>' +
-   '<button type="button" class="km-update-more">Update settings</button>' +
-  '</div>' +
-  '<p class="km-update-note">Android always asks before installing. Automatic checks ' +
-  'and downloads follow the Kuro updates settings.</p>';
- card.querySelector('.km-update-go').addEventListener('click', function () { updateBridge(); });
- card.querySelector('.km-update-more').addEventListener('click', openUpdateSettings);
- page.insertBefore(card, page.firstChild);
 }
 
 /* --------------------------------------------- removed Account cards ---
@@ -394,7 +362,6 @@ function dropPrivateCard() {
      armAll();
      dropPrivateCard();
      updateButton();
-     updateCard();
      collectPar();
      queuePar();
     }, 110);
@@ -411,7 +378,6 @@ function dropPrivateCard() {
   }
   dropPrivateCard();
   updateButton();
-  updateCard();
   /* cards that were on screen behind the film get their spring now */
   setTimeout(armAll, 60);
 }
