@@ -46,7 +46,7 @@ jobs:
           }
           dl 130M_aSgLGQiM-3WdJ3Xq5UuUf47Nk82g Kuro-tv-5.81.apk
           dl 18lJzH23ijPSPaxbvXo0DSgrphZS1khdW Kuro-tv-5.81.apk.sha256
-          dl 1N3abP3VkxIplMt_GmiQkkmnnDNyzi6Pw Kuro-tv-5.81-Source.zip
+          dl 1Bakj61sITw6n1UK63vTCLhvM5GvVGD71 Kuro-tv-5.81-Source.zip
           file dist/* | sed 's/^/  /'
 
       - name: Gate on the exact build that was signed
