@@ -30,9 +30,9 @@ env:
   # SHA-256 of the signed APK committed as dist/Kuro-tv-1.2.apk. Signed with the
   # Kuro Anime release key; the job re-checks the signature with the real
   # apksigner before it publishes.
-  APK_SHA256: "10bd3436e9f9f4deef2af324240e057da5cb457c84a704a1e93f669054c34962"
+  APK_SHA256: "0046b9c07932d112ead4e63b7324175a73ea5bcdf569a89c27b321a58a4bbf35"
   SIGNER_SHA256: "1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e"
-  UNSIGNED_SHA256: "17257bdc551e5ce0c89b4968eff3e83d18d621f78f25ae73b0e98a97f57753c8"
+  UNSIGNED_SHA256: "adf060c58cef850248b05e97a005093c0f351e7f82bbe14280b6aa19e9b06420"
   # The 1.0 source zip the 1.1 assets and the 1.2 native theme are applied to.
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
 
