@@ -71,12 +71,14 @@ def section_digest(data, cd_offset, eocd):
     # the APK Signing Block, which starts where the CD used to start.
     eocd_patched = bytearray(eocd)
     struct.pack_into("<I", eocd_patched, 16, cd_offset)
-    chunks = []
+    chunk_digests = []
     for section in (data[:cd_offset], cd, bytes(eocd_patched)):
         for i in range(0, len(section), CHUNK):
             part = section[i:i + CHUNK]
-            chunks.append(hashlib.sha256(b"\xa5" + u32(len(part)) + part).digest())
-    return hashlib.sha256(b"".join(chunks)).digest()
+            chunk_digests.append(hashlib.sha256(b"\xa5" + u32(len(part)) + part).digest())
+    # The content digest is computed over: byte 0x5a, the total number of chunks
+    # (uint32 little-endian), then the digests of all chunks in order.
+    return hashlib.sha256(b"\x5a" + u32(len(chunk_digests)) + b"".join(chunk_digests)).digest()
 
 
 def build_signer(cert_der, spki_der, key, digest):

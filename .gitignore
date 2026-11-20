@@ -14,3 +14,6 @@ staging/*.zip
 dist/*.zip
 .venv-art/
 google_drive/
+
+# python bytecode
+__pycache__/

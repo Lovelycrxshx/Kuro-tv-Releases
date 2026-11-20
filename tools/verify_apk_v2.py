@@ -99,12 +99,14 @@ def main(argv):
     cd = data[cd_offset:cd_offset + cd_size]
     eocd = bytearray(data[eocd_pos:])
     struct.pack_into("<I", eocd, 16, block_start)
-    chunks = []
+    chunk_digests = []
     for section in (data[:block_start], cd, bytes(eocd)):
         for i in range(0, len(section), CHUNK):
             part = section[i:i + CHUNK]
-            chunks.append(hashlib.sha256(b"\xa5" + struct.pack("<I", len(part)) + part).digest())
-    digest = hashlib.sha256(b"".join(chunks)).digest()
+            chunk_digests.append(hashlib.sha256(b"\xa5" + struct.pack("<I", len(part)) + part).digest())
+    digest = hashlib.sha256(
+        b"\x5a" + struct.pack("<I", len(chunk_digests)) + b"".join(chunk_digests)
+    ).digest()
 
     if stored != digest:
         raise SystemExit("content digest mismatch: stored %s, computed %s" % (stored.hex(), digest.hex()))
