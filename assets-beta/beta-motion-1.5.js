@@ -178,7 +178,52 @@ function armAll() {
   el.classList.add('km-run');
  }
 
- /* ------------------------------------------ browser chrome on the banner */
+ 
+/* ---------------------------------------------------- tap ripple (every tap)
+ * The reel's expanding circle, small and fast, fired from the point the user
+ * actually touched.  Position is set through CSSOM (element.style), which CSP
+ * permits - a style attribute in markup would not be.
+ */
+function rippleAt(x, y) {
+  if (reduced || !started) return;
+  var dot = document.createElement('span');
+  dot.className = 'km-ripple';
+  dot.setAttribute('aria-hidden', 'true');
+  dot.style.left = x + 'px';
+  dot.style.top = y + 'px';
+  body().appendChild(dot);
+  setTimeout(function () { if (dot.parentNode) dot.parentNode.removeChild(dot); }, 540);
+}
+
+function tapTarget(node) {
+  if (!node || !node.closest) return null;
+  return node.closest('button, a, .card, .chip, [role="button"], .kuro-dock button, .preset-choice571, .profile-card547');
+}
+
+function bindTaps() {
+  document.addEventListener('pointerdown', function (ev) {
+   if (!started || ev.button) return;
+   if (!tapTarget(ev.target)) return;
+   var x = ev.clientX, y = ev.clientY;
+   if (!x && !y) {
+    var r = ev.target.getBoundingClientRect();
+    x = r.left + r.width / 2;
+    y = r.top + r.height / 2;
+   }
+   rippleAt(x, y);
+  }, true);
+
+  /* keyboard activation has no pointer: fire from the control's centre */
+  document.addEventListener('click', function (ev) {
+   if (!started || ev.detail) return;
+   var t = tapTarget(ev.target);
+   if (!t) return;
+   var r = t.getBoundingClientRect();
+   rippleAt(r.left + r.width / 2, r.top + r.height / 2);
+  }, true);
+}
+
+/* ------------------------------------------ browser chrome on the banner */
  function decorate() {
   var spots;
   try { spots = document.querySelectorAll('.hero-slide'); } catch (e) { return; }
@@ -251,6 +296,7 @@ function armAll() {
  function finish() {
   if (started) return;
   started = true;
+  bindTaps();
   decorate();
   armAll();
   if (introEl && introEl.parentNode) {

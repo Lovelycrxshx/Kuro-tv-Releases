@@ -259,6 +259,68 @@
  border:1px solid #ffffff38;background:#000000a6;color:#f1f4f3;font-size:13px;font-weight:800;cursor:pointer}
 #km-reel-15 .km-reel-close:focus-visible{outline:2px solid var(--ku-accent,#3be3d2);outline-offset:2px}
 
+
+/* ======================================================================
+ * APPLIED EVERYWHERE - "clicking every option animates".
+ * Press spring on every control, an entrance spring on every screen and
+ * on the rows inside it, and a tap ripple (the reel's expanding circle).
+ * All transform/opacity only, all short, all off under reduced motion.
+ * ====================================================================== */
+
+/* --- press spring ------------------------------------------------------ */
+button,.btn,.chip,.card,.history-card,.poster,.info .poster,.hero-slide,
+.kuro-dock button,.header-icon,.login-button,.sourcebar button,.tabs button,
+.episode-row button,.episodeList button,.popup-result,.genre-back,.clear-recent,
+.next-episode,.back,.preset-choice571,.profile-card547,.air-source-trigger,
+.seasonal-open573,.queue-open571{
+ transition:transform 240ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1))}
+button:active,.btn:active,.chip:active,.card:active,.history-card:active,
+.kuro-dock button:active,.header-icon:active,.login-button:active,.sourcebar button:active,
+.tabs button:active,.episode-row button:active,.episodeList button:active,.popup-result:active,
+.genre-back:active,.clear-recent:active,.next-episode:active,.back:active,
+.preset-choice571:active,.profile-card547:active,.air-source-trigger:active,
+.seasonal-open573:active,.queue-open571:active,.info .poster:active{transform:scale(.955)}
+.hero-slide:active{transform:scale(.99)}
+
+/* --- every screen springs in ------------------------------------------ */
+main > *{animation:km-block-in .36s var(--ku-ease-out,cubic-bezier(.16,1,.3,1)) both}
+main > *:nth-child(2){animation-delay:.02s}
+main > *:nth-child(3){animation-delay:.04s}
+main > *:nth-child(4){animation-delay:.06s}
+main > *:nth-child(5){animation-delay:.08s}
+main > *:nth-child(n+6){animation-delay:.1s}
+@keyframes km-block-in{
+ 0%{opacity:0;transform:translateY(14px) scale(.996)}
+ 62%{opacity:1;transform:translateY(-2px) scale(1)}
+ 100%{opacity:1;transform:none}
+}
+
+/* --- rows and list items spring in with their screen ------------------- */
+.episode-row:nth-child(-n+12),.episodeList>button:nth-child(-n+12),
+.popup-result:nth-child(-n+12),.air-source-line,.home-rail-heading,
+.anime-facts div:nth-child(-n+10),.detail-badges span:nth-child(-n+8){
+ animation:km-item-in .36s var(--ku-ease-out,cubic-bezier(.16,1,.3,1)) both}
+.episode-row:nth-child(2),.episodeList>button:nth-child(2),.popup-result:nth-child(2){animation-delay:.025s}
+.episode-row:nth-child(3),.episodeList>button:nth-child(3),.popup-result:nth-child(3){animation-delay:.05s}
+.episode-row:nth-child(4),.episodeList>button:nth-child(4),.popup-result:nth-child(4){animation-delay:.075s}
+.episode-row:nth-child(5),.episodeList>button:nth-child(5),.popup-result:nth-child(5){animation-delay:.1s}
+.episode-row:nth-child(6),.episodeList>button:nth-child(6),.popup-result:nth-child(6){animation-delay:.11s}
+.episode-row:nth-child(n+7),.episodeList>button:nth-child(n+7),.popup-result:nth-child(n+7){animation-delay:.13s}
+@keyframes km-item-in{
+ 0%{opacity:0;transform:translateX(-8px) scale(.99)}
+ 100%{opacity:1;transform:none}
+}
+
+/* --- the tap ripple: a solid accent circle, the reel's wipe, in small --- */
+.km-ripple{position:fixed;z-index:9996;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;
+ background:var(--ku-accent,#3be3d2);opacity:.3;pointer-events:none;will-change:transform,opacity;
+ animation:km-ripple .48s cubic-bezier(.16,1,.3,1) forwards}
+@keyframes km-ripple{from{transform:scale(.6);opacity:.3}to{transform:scale(26);opacity:0}}
+
+/* --- and this banner goes away ----------------------------------------- */
+.unified-banner{display:none!important}
+
+/* --------------------------------------------------------------------- */
 /* ------------------------------------------------- reduced motion ----- */
 @media (prefers-reduced-motion:reduce){
  #km-intro-15{display:none}
@@ -266,5 +328,9 @@
  .card,.history-card,.hero-slide,.shelf .grid>*,.info .poster{transition:none}
  #km-sweep-15{display:none}
  .hero-slide .km-spot-chrome{display:none}
+ main > *,.episode-row,.episodeList>button,.popup-result,.air-source-line,.home-rail-heading,
+ .anime-facts div,.detail-badges span{animation:none}
+ .km-ripple{display:none}
+ button,.btn,.chip,.card,.history-card,.kuro-dock button,.info .poster{transition:none}
  #km-intro-15 .km-art img{animation:none;transform:none}
 }
