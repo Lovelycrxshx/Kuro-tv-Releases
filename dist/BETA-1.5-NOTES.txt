@@ -1,38 +1,42 @@
-Kuro TV - 1.5 beta (take 10)
-============================
+Kuro.tv 1.5 beta — take 11
 
-File      : Kuro-tv-beta-1.5.apk
-Size      : 48,676,511 bytes
-sha256    : 48c75ecce3f07f65671cab1a811339390777bf41e1b780bd7b5377118f39ef9d
-md5       : 26bba42fc5c6981bbc3a60395809b4b4
-version   : 1.5-beta  (versionCode 92 - unchanged)
-signing   : v2, CN=Kuro Anime  (same key as 1.0-1.4)
-Delivery  : Google Drive only. NOT on GitHub, no tag, no release.
+Installs straight over the previous beta. Same version (1.5-beta, code 92),
+same signing key, so no uninstall is needed.
 
-Install
--------
-Straight over take 9. No uninstall, data, theme and settings kept.
+APK      https://drive.google.com/file/d/1dlqrVG5cPKDzezq7eT78uy35J0d0oNkG/view
+sha256   4ca15359997cd521194df8fabfd6219b05ec2355802b4b4666c23acfd6688717
+md5      7a47579f5cd407cc0f0b296edc28ca9b
+size     48,688,950 bytes
 
-The account update card is gone
--------------------------------
-"Keep Kuro current" no longer appears at the top of Account, and neither do its
-two buttons. Nothing about the updater changed - only where you start it.
+What is new in take 11
+  1. Continue watching on Home. One rail under the header with the episodes you
+     have actually started, newest first: poster, episode badge, accent progress
+     line and how many minutes you are in. Tap to resume. It replaces the old
+     "Recently watched" rail instead of listing the same shows twice, and it
+     disappears completely when there is nothing in progress.
+  2. Long press a poster. Hold for about half a second anywhere a poster appears
+     — Home, My Lists, search, or a title page rail — and a compact sheet opens
+     with Open, Add to / Remove from My List, and Hide this title. It does not
+     fight horizontal scrolling, and a long press never also opens the title
+     behind the sheet.
+  3. What's new after an update. The first time you open this build you get one
+     card at the top of Home with the changes, and a "Got it" button. It shows
+     once per build. The same notes stay reachable in Settings > Developer >
+     What's new.
+  4. Downloads upkeep. Settings > Manage downloads now opens a real summary:
+     how many episodes, how much space, then Delete watched episodes, Keep only
+     the latest episode of each series, Delete all downloads, and an auto-clean
+     switch (off / 7 days / 30 days) that quietly sweeps finished and watched
+     downloads at start-up. The episode you are playing right now is never
+     touched.
 
-The update button is now the round arrow in the header, left of "Log in", on
-every screen. One tap = check now, download in the background, hand the file to
-Android's installer. Android still asks before installing, and the automatic
-check/download behaviour is still the one set in Settings > Kuro updates.
+Fixed in this take
+  - nothing regressed from take 10; themes, motion and the header updater are
+    unchanged.
 
-Everything else from earlier takes stands
------------------------------------------
-  * Settings > Appearance and startup holds the theme colour picker, twenty
-    accents in three groups, saved on this phone
-  * Account's "Private profile / LOCAL" card is removed
-  * Settings > Developer opens the Discord profile, deep-linked into Discord
-  * motion: opening film, press spring on every control, scroll-linked movement
-  * no tap ripple, no Motion - Beta card, no "One library" banner on Home
+Known limitation (unchanged)
+  - The in-app update check still reads the public release page, which points at
+    1.4, so a 1.5 beta reports "already up to date". Beta builds are handed out
+    here by hand until the beta update channel is built.
 
-Known
------
-The updater reads GitHub's latest release (1.4, older than this beta), so it
-reports that you are already ahead until something newer is published.
+Previous take 10 files are trashed.
