@@ -1,24 +1,71 @@
-/* Theme colour picker (1.1). Swatches are painted from these rules because the
-   app's CSP (style-src 'self') forbids inline style attributes. */
+/* Theme colour picker (1.4). Ten accents in three groups, plus a live preview
+   strip painted from the accent's own palette.
+
+   Swatches and the preview are painted from these rules because the app's CSP
+   (style-src 'self') forbids inline style attributes. Every accent defines the
+   same five variables, so the preview, the focus ring and the "on" state all
+   follow whichever accent is active without repeating a rule per accent. */
+
+html[data-accent=teal]{--pv-accent:#27d7c5;--pv-panel:#0c1817;--pv-card:#122927;--pv-ink:#f1f4f3;--pv-muted:#a6adc5}
+html[data-accent=violet]{--pv-accent:#a65be4;--pv-panel:#100c18;--pv-card:#211229;--pv-ink:#f3eef7;--pv-muted:#b7a4c7}
+html[data-accent=graphite]{--pv-accent:#989898;--pv-panel:#121212;--pv-card:#1e1e1e;--pv-ink:#f2f2f2;--pv-muted:#b6b6b6}
+html[data-accent=sky]{--pv-accent:#2e92d9;--pv-panel:#0c1318;--pv-card:#121f29;--pv-ink:#f1f3f4;--pv-muted:#a6a6c5}
+html[data-accent=indigo]{--pv-accent:#3f54dd;--pv-panel:#0c0e18;--pv-card:#121529;--pv-ink:#f1f2f4;--pv-muted:#ada6c5}
+html[data-accent=emerald]{--pv-accent:#2ed984;--pv-panel:#0c1812;--pv-card:#12291e;--pv-ink:#f1f4f2;--pv-muted:#a6b3c5}
+html[data-accent=amber]{--pv-accent:#dc9b3b;--pv-panel:#18130c;--pv-card:#292012;--pv-ink:#f4f3f1;--pv-muted:#c5a6b5}
+html[data-accent=sunset]{--pv-accent:#de7548;--pv-panel:#18100c;--pv-card:#291912;--pv-ink:#f4f2f1;--pv-muted:#c5a6ba}
+html[data-accent=crimson]{--pv-accent:#de4866;--pv-panel:#180c0e;--pv-card:#291217;--pv-ink:#f4f1f2;--pv-muted:#c5a6c1}
+html[data-accent=magenta]{--pv-accent:#e050c3;--pv-panel:#180c16;--pv-card:#291224;--pv-ink:#f4f1f3;--pv-muted:#c1a6c5}
+
 .accent-111{margin-top:18px}
-.accent-grid111{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-.accent-tile111{display:flex;align-items:center;gap:8px;padding:8px 12px 8px 8px;border:2px solid #665078;border-radius:14px;background:#211229;color:#B7A4C7;font-size:12px;font-weight:700;cursor:pointer;transition:border-color .15s,transform .12s}
-.accent-tile111 span{width:26px;height:26px;border-radius:9px;display:block;box-shadow:inset 0 0 0 1px #ffffff26}
-.accent-tile111 em{font-style:normal;letter-spacing:.02em}
-.accent-tile111[data-accent=teal] span{background:#2bd8c6}
-.accent-tile111[data-accent=crimson] span{background:#de4e6b}
-.accent-tile111[data-accent=indigo] span{background:#4559dc}
-.accent-tile111[data-accent=amber] span{background:#dc9e41}
-.accent-tile111[data-accent=violet] span{background:#a662e4}
-.accent-tile111.is-on{border-color:#2bd8c6;color:#f3eef7;box-shadow:0 0 0 2px #2bd8c659}
-.accent-tile111:active{transform:scale(.96)}
-.accent-tile111:focus-visible{outline:2px solid #2bd8c6;outline-offset:2px}
-.accent-note111{margin:10px 0 0;font-size:12px;color:#B7A4C7;line-height:1.5}
-html[data-accent=crimson] .accent-tile111.is-on{border-color:#de4e6b;box-shadow:0 0 0 2px #de4e6b59}
-html[data-accent=crimson] .accent-tile111:focus-visible{outline-color:#de4e6b}
-html[data-accent=indigo] .accent-tile111.is-on{border-color:#4559dc;box-shadow:0 0 0 2px #4559dc59}
-html[data-accent=indigo] .accent-tile111:focus-visible{outline-color:#4559dc}
-html[data-accent=amber] .accent-tile111.is-on{border-color:#dc9e41;box-shadow:0 0 0 2px #dc9e4159}
-html[data-accent=amber] .accent-tile111:focus-visible{outline-color:#dc9e41}
-html[data-accent=violet] .accent-tile111.is-on{border-color:#a662e4;box-shadow:0 0 0 2px #a662e459}
-html[data-accent=violet] .accent-tile111:focus-visible{outline-color:#a662e4}
+
+/* ---- live preview ---- */
+.accent-preview111{margin-top:14px;padding:12px 12px 10px;border-radius:16px;border:1px solid var(--pv-muted,#b7a4c7);background:var(--pv-panel,#100c18);transition:background .18s,border-color .18s}
+.accent-preview-head111{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.accent-preview-dot111{width:18px;height:18px;border-radius:6px;background:var(--pv-accent,#27d7c5);box-shadow:0 0 0 3px color-mix(in srgb,var(--pv-accent,#27d7c5) 22%,transparent);flex:none}
+.accent-preview-name111{font-size:13px;font-weight:800;letter-spacing:.01em;color:var(--pv-ink,#f3eef7)}
+.accent-preview-tag111{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--pv-accent,#27d7c5);border:1px solid currentColor;border-radius:999px;padding:3px 8px}
+.accent-preview-body111{display:flex;flex-direction:column;gap:10px}
+.accent-preview-card111{display:flex;align-items:center;gap:8px;padding:10px;border-radius:12px;background:var(--pv-card,#211229)}
+.accent-preview-card111 .pv-line{display:block;height:7px;border-radius:4px;background:var(--pv-muted,#b7a4c7);opacity:.55}
+.accent-preview-card111 .pv-line-wide{width:64px}
+.accent-preview-card111 .pv-line-short{width:34px;margin-left:2px}
+.accent-preview-card111 .pv-pill{margin-left:auto;font-size:10px;font-weight:800;padding:5px 10px;border-radius:999px;white-space:nowrap}
+.accent-preview-card111 .pv-pill-solid{background:var(--pv-accent,#27d7c5);color:#0b0710}
+.accent-preview-card111 .pv-pill-ghost{border:1px solid var(--pv-muted,#b7a4c7);color:var(--pv-ink,#f3eef7);margin-left:6px;opacity:.85}
+.accent-preview-nav111{display:flex;gap:6px;align-items:center}
+.accent-preview-nav111 .pv-nav{flex:1;height:22px;border-radius:8px;background:var(--pv-card,#211229)}
+.accent-preview-nav111 .pv-nav.on{background:var(--pv-accent,#27d7c5);opacity:.9}
+
+/* ---- groups and tiles ---- */
+.accent-groups111{margin-top:14px;display:flex;flex-direction:column;gap:12px}
+.accent-group-label111{margin:0;font-size:10px;font-weight:800;letter-spacing:.14em;color:var(--pv-muted,#b7a4c7)}
+.accent-grid111{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px;margin-top:8px}
+.accent-tile111{display:flex;align-items:center;gap:8px;padding:9px 10px;border:2px solid var(--pv-card,#211229);border-radius:14px;background:var(--pv-card,#211229);color:var(--pv-muted,#b7a4c7);font-size:12px;font-weight:700;cursor:pointer;text-align:left;transition:border-color .15s,transform .12s,color .15s}
+.accent-tile111 .accent-swatch111{position:relative;width:26px;height:26px;border-radius:9px;flex:none;box-shadow:inset 0 0 0 1px #ffffff2e}
+.accent-tile111 .accent-swatch111::after{content:"";position:absolute;inset:6px 6px auto auto;width:7px;height:7px;border-radius:50%;background:#ffffff59}
+.accent-tile111 em{font-style:normal;letter-spacing:.02em;flex:1}
+.accent-tile111 .accent-tick111{font-size:12px;font-weight:900;color:var(--pv-accent,#27d7c5);opacity:0;transition:opacity .15s}
+.accent-tile111.is-on{border-color:var(--pv-accent,#27d7c5);color:var(--pv-ink,#f3eef7)}
+.accent-tile111.is-on .accent-tick111{opacity:1}
+.accent-tile111:active{transform:scale(.97)}
+.accent-tile111:focus-visible{outline:2px solid var(--pv-accent,#27d7c5);outline-offset:2px}
+
+/* swatch colours (one per accent; the chosen tile's ring comes from --pv-accent) */
+.accent-tile111[data-accent=teal] .accent-swatch111{background:#27d7c5}
+.accent-tile111[data-accent=violet] .accent-swatch111{background:#a65be4}
+.accent-tile111[data-accent=graphite] .accent-swatch111{background:#989898}
+.accent-tile111[data-accent=sky] .accent-swatch111{background:#2e92d9}
+.accent-tile111[data-accent=indigo] .accent-swatch111{background:#3f54dd}
+.accent-tile111[data-accent=emerald] .accent-swatch111{background:#2ed984}
+.accent-tile111[data-accent=amber] .accent-swatch111{background:#dc9b3b}
+.accent-tile111[data-accent=sunset] .accent-swatch111{background:#de7548}
+.accent-tile111[data-accent=crimson] .accent-swatch111{background:#de4866}
+.accent-tile111[data-accent=magenta] .accent-swatch111{background:#e050c3}
+
+.accent-note111{margin:12px 0 0;font-size:12px;color:var(--pv-muted,#B7A4C7);line-height:1.55}
+
+@media (max-width:420px){
+ .accent-grid111{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+ .accent-tile111{font-size:11.5px;padding:8px}
+}

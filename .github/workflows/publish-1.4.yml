@@ -1,0 +1,215 @@
+name: publish Kuro 1.4 release
+
+# This sandbox cannot reach uploads.github.com, but a runner can. The signed APK
+# travels back into the branch as dist/Kuro-tv-1.4.apk (the owner signs it off
+# this runner with the existing release key), and this job only publishes when
+# the SHA-256 matches the byte-exact build that was signed.
+#
+# The 1.2 source archive is produced here too: the 1.0 tree from Drive plus the
+# same assets-1.1 overlay and the same tools/theme_native_1.2.py rewrite the
+# build applied, so the published source and the published binary are the same
+# program.
+#
+# Trigger: manual dispatch, or a commit whose message contains "[release]".
+
+on:
+  push:
+    branches: [main, 'arena/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kuro-release
+  cancel-in-progress: false
+
+env:
+  TAG: v1.4
+  APK_NAME: Kuro-tv-1.4
+  # SHA-256 of the signed APK committed as dist/Kuro-tv-1.4.apk. Signed with the
+  # Kuro Anime release key; the job re-checks the signature with the real
+  # apksigner before it publishes.
+  APK_SHA256: "1578cc2d61f3fba1b3935ced92181bfd26adb83fa4cb1294f3fec525da4ca2db"
+  SIGNER_SHA256: "1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e"
+  UNSIGNED_SHA256: "70f2cdbbeee737b0c167e70cbb4d03f2700c63d954f2d572c120a4a35059e0c5"
+  # The 1.0 source zip the 1.1 assets and the 1.2 native theme are applied to.
+  SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
+
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Refuse to publish with an unset digest
+        run: |
+          set -euo pipefail
+          for v in APK_SHA256 SIGNER_SHA256 UNSIGNED_SHA256; do
+            if ! printf '%s' "${!v}" | grep -qE '^[0-9a-f]{64}$'; then
+              echo "::error::$v is not a real digest ('${!v}')."
+              exit 1
+            fi
+          done
+
+      - name: Gate on the exact build that was signed
+        run: |
+          set -euo pipefail
+          APK="dist/$APK_NAME.apk"
+          [ -f "$APK" ] || { echo "::error::$APK is missing from this branch."; exit 1; }
+          SIZE=$(stat -c%s "$APK")
+          echo "signed APK: $SIZE bytes"
+          [ "$SIZE" -gt 40000000 ] || { echo "::error::$APK is only $SIZE bytes - that is not the build."; exit 1; }
+          ACTUAL=$(sha256sum "$APK" | cut -d' ' -f1)
+          echo "expected: $APK_SHA256"
+          echo "actual  : $ACTUAL"
+          [ "$ACTUAL" = "$APK_SHA256" ] || { echo "::error::checksum mismatch - refusing to publish a different binary"; exit 1; }
+          grep -q "$ACTUAL" "dist/$APK_NAME.apk.sha256" || { echo "::error::the .sha256 file does not match the APK"; exit 1; }
+          # the signed file must be our build plus a signature block, nothing else
+          UNSIGNED=$(sha256sum "dist/$APK_NAME-aligned.apk" | cut -d' ' -f1)
+          echo "unsigned build: $UNSIGNED"
+          [ "$UNSIGNED" = "$UNSIGNED_SHA256" ] || { echo "::error::the unsigned build in dist is not the one that was signed"; exit 1; }
+
+          # Independent signature check with the real apksigner (no JDK elsewhere).
+          # The APK declares minSdkVersion 26, and v2 is the only scheme this signer
+          # emits, so tell apksigner the range instead of letting it fall back to v1.
+          java -jar dist/toolchain/apksigner.jar verify \
+            --min-sdk-version 26 --max-sdk-version 35 \
+            --print-certs --verbose "$APK" 2>&1 | tee /tmp/verify.txt
+          grep -qiE "Verified using v2 scheme .*: true" /tmp/verify.txt \
+            || { echo "::error::apksigner did not accept a v2 signature"; exit 1; }
+          tr -d ':' < /tmp/verify.txt | tr 'A-F' 'a-f' | grep -q "$SIGNER_SHA256" \
+            || { echo "::error::the APK is not signed by the pinned Kuro Anime certificate"; exit 1; }
+
+          # The 1.1 web layer must still be inside the binary.
+          unzip -p "$APK" 'assets/index.html' | grep -aq 'theme-teal-1.1.css' \
+            || { echo "::error::the APK has no accent stylesheet linked - wrong build attached"; exit 1; }
+          unzip -p "$APK" 'assets/index.html' | grep -aq 'theme-accent-1.1.js' \
+            || { echo "::error::the APK has no accent picker - wrong build attached"; exit 1; }
+          for f in theme-teal theme-crimson theme-indigo theme-amber theme-violet theme-picker; do
+            unzip -l "$APK" | grep -q "assets/$f-1.1.css" \
+              || { echo "::error::assets/$f-1.1.css is missing from the APK"; exit 1; }
+          done
+          COUNT=$(unzip -l "$APK" | grep -cE 'assets/profile-art/(pfp|banner)/art-[0-9]{2}\.webp')
+          echo "profile art files in the APK: $COUNT"
+          [ "$COUNT" -ge 20 ] || { echo "::error::only $COUNT art files in the APK - the ten-pair pack did not ship"; exit 1; }
+          unzip -p "$APK" 'assets/profile-art-arm.js' | grep -aq "'art-10'" \
+            || { echo "::error::the art registry in the APK stops before art-10"; exit 1; }
+          # 1.2: the native half of the accent theme has to be in the binary.
+          # 1.3: the theme files must be reachable from the shell, not merely packed.
+          unzip -p "$APK" classes.dex | grep -aq 'KuroWebAssets13' \
+            || { echo "::error::the WebView has no overlay asset list - the theme would not load"; exit 1; }
+          for f in theme-teal-1.1.css theme-violet-1.1.css theme-graphite-1.1.css \
+                   theme-sky-1.1.css theme-indigo-1.1.css theme-emerald-1.1.css \
+                   theme-amber-1.1.css theme-sunset-1.1.css theme-crimson-1.1.css \
+                   theme-magenta-1.1.css theme-picker-1.1.css theme-accent-1.1.js; do
+            unzip -l "$APK" | grep -q "assets/$f" \
+              || { echo "::error::assets/$f is missing from the APK"; exit 1; }
+            unzip -p "$APK" classes.dex | grep -aq "$f" \
+              || { echo "::error::$f is packed but the WebView would drop it again"; exit 1; }
+          done
+          unzip -p "$APK" classes.dex | grep -aq 'KuroTheme12' \
+            || { echo "::error::KuroTheme12 is missing from the APK - the native theme did not ship"; exit 1; }
+          unzip -p "$APK" classes.dex | grep -aq 'themeAccent111' \
+            || { echo "::error::the APK has no themeAccent111 bridge for the picker"; exit 1; }
+          unzip -p "$APK" resources.arsc | grep -aq 'KuroDialogCrimson' \
+            || { echo "::error::the per-accent dialog styles are missing from the APK"; exit 1; }
+          unzip -p "$APK" classes.dex | grep -aq 'kuro-native-12' \
+            || { echo "::error::the native accent preference store is missing"; exit 1; }
+          echo "All artifacts sane; APK matches the signed build."
+
+      - name: Build the 1.2 source archive (same overlay and rewrite as the build)
+        run: |
+          set -euo pipefail
+          URL="https://drive.usercontent.google.com/download?id=${SOURCE_ID}&export=download&confirm=t"
+          code=$(curl -sSL --retry 3 --retry-delay 4 -o "$RUNNER_TEMP/src.zip" -w '%{http_code}' "$URL")
+          bytes=$(stat -c%s "$RUNNER_TEMP/src.zip" 2>/dev/null || echo 0)
+          echo "HTTP $code, $bytes bytes"
+          [ "$code" = "200" ] && [ "$bytes" -gt 1000000 ] \
+            || { echo "::error::source download failed (HTTP $code, $bytes bytes) - is the Drive file still shared with anyone-with-the-link?"; exit 1; }
+          mkdir -p src
+          unzip -q "$RUNNER_TEMP/src.zip" -d src
+          PROJECT=$(dirname "$(find src -maxdepth 3 -name settings.gradle -print -quit)")
+          [ -n "$PROJECT" ] || { echo "::error::no settings.gradle in the source zip"; exit 1; }
+          ( cd assets-1.1 && find . -type f -print0 ) | while IFS= read -r -d '' f; do
+            mkdir -p "$PROJECT/assets/$(dirname "$f")"
+            cp -f "assets-1.1/$f" "$PROJECT/assets/$f"
+          done
+          python3 tools/webview_assets_1.3.py "$PROJECT" assets-1.1
+          python3 tools/theme_native_1.2.py "$PROJECT"
+          sed -i -E "s/versionCode +[0-9]+/versionCode 91/" "$PROJECT/build.gradle"
+          sed -i -E "s/versionName +'[^']*'/versionName '1.4'/" "$PROJECT/build.gradle"
+          grep -nE "versionName|versionCode" "$PROJECT/build.gradle"
+          ROOT=$(dirname "$PROJECT")
+          rm -f "dist/$APK_NAME-Source.zip"
+          ( cd "$ROOT" && zip -qr "$GITHUB_WORKSPACE/dist/$APK_NAME-Source.zip" . )
+          unzip -l "dist/$APK_NAME-Source.zip" | grep -q 'assets/theme-teal-1.1.css' \
+            || { echo "::error::the source archive does not contain the accent stylesheets"; exit 1; }
+          unzip -l "dist/$APK_NAME-Source.zip" | grep -q 'KuroTheme12.java' \
+            || { echo "::error::the source archive does not contain the native theme class"; exit 1; }
+          unzip -l "dist/$APK_NAME-Source.zip" | grep -q 'KuroWebAssets13.java' \
+            || { echo "::error::the source archive does not contain the served-assets list"; exit 1; }
+          printf '%s  %s\n' "$(sha256sum "dist/$APK_NAME-Source.zip" | cut -d' ' -f1)" "$APK_NAME-Source.zip" \
+            > "dist/$APK_NAME-Source.zip.sha256"
+          ls -l dist
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          ASSETS=(dist/$APK_NAME.apk dist/$APK_NAME.apk.sha256 dist/$APK_NAME-Source.zip dist/$APK_NAME-Source.zip.sha256)
+          for f in "${ASSETS[@]}"; do [ -s "$f" ] || { echo "::error::$f missing"; exit 1; }; done
+          SIZE=$(stat -c%s "dist/$APK_NAME.apk")
+          sed -e "s/{{APK_SHA256}}/$APK_SHA256/" -e "s/{{APK_BYTES}}/$SIZE/" RELEASE-1.4.md > /tmp/notes.md
+          grep -q '{{' /tmp/notes.md && { echo "::error::release notes still contain placeholders"; exit 1; } || true
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release $TAG exists - uploading assets"
+            if ! OUT=$(gh release upload "$TAG" "${ASSETS[@]}" --clobber 2>&1); then
+              echo "::error::release upload failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
+            fi
+            if ! OUT=$(gh release edit "$TAG" --notes-file /tmp/notes.md --latest 2>&1); then
+              echo "::error::release edit failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
+            fi
+          else
+            if ! OUT=$(gh release create "$TAG" "${ASSETS[@]}" \
+                 --title "Kuro 1.4" --notes-file /tmp/notes.md --latest 2>&1); then
+              echo "::error::release create failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
+            fi
+            echo "$OUT"
+          fi
+          gh release view "$TAG" --json tagName,name,assets \
+            --jq '"published \(.tagName) \(.name) | assets: \(.assets|map("\(.name) \(.size)B")|join(", "))"'
+
+      - name: Keep the apksigner output on the branch (failures only)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          [ -s /tmp/verify.txt ] || java -jar dist/toolchain/apksigner.jar verify --print-certs --verbose "dist/$APK_NAME.apk" > /tmp/verify.txt 2>&1
+          cp /tmp/verify.txt dist/apksigner-verify.txt
+          git config user.name "Siva"
+          git config user.email "sivaabhishek4@gmail.com"
+          git add -f dist/apksigner-verify.txt
+          git commit -m "publish: apksigner output from the failed run"
+          git push origin "HEAD:${GITHUB_REF_NAME}" || echo "::warning::could not push the diagnostics"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Release $TAG"
+            echo "- tag: \`$TAG\` (target \`${{ github.ref_name }}\`)"
+            echo "- APK SHA-256 gate: \`$APK_SHA256\`"
+            echo "- notes: \`RELEASE-1.4.md\`"
+          } >> "$GITHUB_STEP_SUMMARY"

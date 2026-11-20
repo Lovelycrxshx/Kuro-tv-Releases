@@ -29,10 +29,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  APK_NAME: Kuro-tv-1.3
+  APK_NAME: Kuro-tv-1.4
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
-  EXPECT_VERSION_NAME: "1.3"
-  EXPECT_VERSION_CODE: "90"
+  EXPECT_VERSION_NAME: "1.4"
+  EXPECT_VERSION_CODE: "91"
 
 jobs:
   apk:
@@ -126,8 +126,8 @@ jobs:
           done
 
           # The version bump lives here until the Drive source itself is regenerated.
-          sed -i -E "s/versionCode +[0-9]+/versionCode 90/" "$PROJECT/build.gradle"
-          sed -i -E "s/versionName +'[^']*'/versionName '1.3'/" "$PROJECT/build.gradle"
+          sed -i -E "s/versionCode +[0-9]+/versionCode 91/" "$PROJECT/build.gradle"
+          sed -i -E "s/versionName +'[^']*'/versionName '1.4'/" "$PROJECT/build.gradle"
           grep -nE "versionName|versionCode" "$PROJECT/build.gradle"
 
           grep -qF 'theme-teal-1.1.css' "$PROJECT/assets/index.html" \
@@ -155,12 +155,20 @@ jobs:
           PKG="$PROJECT/src/app/lovelycrxshx/kuro"
           test -f "$PKG/KuroWebAssets13.java" \
             || { echo "::error::KuroWebAssets13.java was not generated."; exit 1; }
-          for f in theme-teal-1.1.css theme-crimson-1.1.css theme-indigo-1.1.css \
-                   theme-amber-1.1.css theme-violet-1.1.css theme-picker-1.1.css \
-                   theme-accent-1.1.js; do
-            grep -qF "/$f" "$PKG/KuroWebAssets13.java" \
-              || { echo "::error::$f is in assets/ but the WebView would drop it."; exit 1; }
+          # Derive the list from the overlay, so a new accent cannot ship unserved.
+          for f in "$GITHUB_WORKSPACE/out/assets-1.1/"theme-*.css \
+                   "$GITHUB_WORKSPACE/out/assets-1.1/"theme-accent-1.1.js; do
+            name=$(basename "$f")
+            grep -qF "/$name" "$PKG/KuroWebAssets13.java" \
+              || { echo "::error::$name is in assets/ but the WebView would drop it."; exit 1; }
           done
+          COUNT=$(ls "$GITHUB_WORKSPACE/out/assets-1.1/"theme-*-1.1.css | wc -l)
+          echo "accent stylesheets served: $COUNT"
+          [ "$COUNT" -ge 10 ] || { echo "::error::expected at least ten accent stylesheets, found $COUNT."; exit 1; }
+          grep -q 'sunset' "$PROJECT/assets/theme-accent-1.1.js" \
+            || { echo "::error::the picker does not list the new accents."; exit 1; }
+          grep -q 'accent-preview111' "$PROJECT/assets/theme-picker-1.1.css" \
+            || { echo "::error::the richer picker styles are missing."; exit 1; }
           grep -q 'KuroWebAssets13.served(u)' "$PKG/MainActivity.java" \
             || { echo "::error::shouldInterceptRequest does not consult the overlay list."; exit 1; }
 

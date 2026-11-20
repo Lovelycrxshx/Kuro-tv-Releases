@@ -1,26 +1,43 @@
-/* Kuro 1.1 theme accents.
+/* Kuro 1.4 theme accents.
    The shipped palette is one fluorescent purple family baked into hundreds of
    literal hex values; tools/theme_gen.py re-hues that family into one flat
    stylesheet per accent (theme-<accent>-1.1.css).  This module only decides
    which of those stylesheets is on, remembers the choice on the phone, and
    paints the picker in Account.
 
-   Default is Teal.  Violet is the 1.0 look, kept so a user can go back
-   without reinstalling. */
+   Ten accents in three groups.  Teal is the default; Violet is the 1.0 look,
+   kept so a user can go back without reinstalling; Graphite is the same depth
+   with no hue at all.
+
+   The native shell reads the same choice through KuroNative.themeAccent111, so
+   the status bar, dialogs and player panels follow too. */
 (function () {
  'use strict';
  var KEY = 'kuro-accent-v1';
  var DEFAULT = 'teal';
  var ACCENTS = [
-  { id: 'teal',    label: 'Teal',    swatch: '#2bd8c6' },
-  { id: 'crimson', label: 'Crimson', swatch: '#de4e6b' },
-  { id: 'indigo',  label: 'Indigo',  swatch: '#4559dc' },
-  { id: 'amber',   label: 'Amber',   swatch: '#dc9e41' },
-  { id: 'violet',  label: 'Violet',  swatch: '#a662e4' }
+  { id: 'teal',     label: 'Teal',     group: 'Signature', swatch: '#27d7c5' },
+  { id: 'violet',   label: 'Violet',   group: 'Signature', swatch: '#a65be4' },
+  { id: 'graphite', label: 'Graphite', group: 'Signature', swatch: '#989898' },
+  { id: 'sky',      label: 'Sky',      group: 'Cool',      swatch: '#2e92d9' },
+  { id: 'indigo',   label: 'Indigo',   group: 'Cool',      swatch: '#3f54dd' },
+  { id: 'emerald',  label: 'Emerald',  group: 'Cool',      swatch: '#2ed984' },
+  { id: 'amber',    label: 'Amber',    group: 'Warm',      swatch: '#dc9b3b' },
+  { id: 'sunset',   label: 'Sunset',   group: 'Warm',      swatch: '#de7548' },
+  { id: 'crimson',  label: 'Crimson',  group: 'Warm',      swatch: '#de4866' },
+  { id: 'magenta',  label: 'Magenta',  group: 'Warm',      swatch: '#e050c3' }
  ];
  var IDS = ACCENTS.map(function (a) { return a.id; });
+ var GROUPS = ['Signature', 'Cool', 'Warm'];
 
  function valid(id) { return IDS.indexOf(id) >= 0; }
+
+ function entry(id) {
+  for (var i = 0; i < ACCENTS.length; i++) {
+   if (ACCENTS[i].id === id) return ACCENTS[i];
+  }
+  return ACCENTS[0];
+ }
 
  function read() {
   try {
@@ -58,14 +75,44 @@
   } catch (e) {}
  }
 
- function swatches(current) {
-  return ACCENTS.map(function (a) {
-   var on = a.id === current;
-   return '<button type="button" class="accent-tile111' + (on ? ' is-on' : '') + '"' +
-    ' data-accent="' + a.id + '" aria-pressed="' + (on ? 'true' : 'false') + '"' +
-    ' aria-label="' + a.label + ' theme"><span data-swatch="' + a.id + '"></span>' +
-    '<em>' + a.label + '</em></button>';
+ function tile(a, current) {
+  var on = a.id === current;
+  return '<button type="button" class="accent-tile111' + (on ? ' is-on' : '') + '"' +
+   ' data-accent="' + a.id + '" data-group="' + a.group + '"' +
+   ' aria-pressed="' + (on ? 'true' : 'false') + '"' +
+   ' aria-label="' + a.label + ' theme">' +
+   '<span class="accent-swatch111" aria-hidden="true"></span>' +
+   '<em>' + a.label + '</em>' +
+   '<b class="accent-tick111" aria-hidden="true">\u2713</b></button>';
+ }
+
+ function groups(current) {
+  return GROUPS.map(function (name) {
+   var tiles = ACCENTS.filter(function (a) { return a.group === name; })
+    .map(function (a) { return tile(a, current); }).join('');
+   return '<p class="accent-group-label111">' + name.toUpperCase() + '</p>' +
+    '<div class="accent-grid111">' + tiles + '</div>';
   }).join('');
+ }
+
+ function preview() {
+  return '<div class="accent-preview111">' +
+   '<div class="accent-preview-head111">' +
+   '<span class="accent-preview-dot111" aria-hidden="true"></span>' +
+   '<strong class="accent-preview-name111">Teal</strong>' +
+   '<span class="accent-preview-tag111">CURRENT</span>' +
+   '</div>' +
+   '<div class="accent-preview-body111">' +
+   '<div class="accent-preview-card111" aria-hidden="true">' +
+   '<span class="pv-line pv-line-wide"></span><span class="pv-line pv-line-short"></span>' +
+   '<span class="pv-pill pv-pill-solid">Play</span>' +
+   '<span class="pv-pill pv-pill-ghost">+ List</span>' +
+   '</div>' +
+   '<div class="accent-preview-nav111" aria-hidden="true">' +
+   '<span class="pv-nav on"></span><span class="pv-nav"></span>' +
+   '<span class="pv-nav"></span><span class="pv-nav"></span>' +
+   '</div>' +
+   '</div></div>';
  }
 
  function build(current) {
@@ -74,8 +121,10 @@
   el.id = 'accent-111';
   el.innerHTML = '<div class="account-section-head"><div><h2>Theme colour</h2>' +
    '<p>Teal is the default. Every screen, dialog and player control follows it. Saved on this phone.</p>' +
-   '</div></div><div class="accent-grid111">' + swatches(current) + '</div>' +
-   '<p class="accent-note111">Violet is the 1.0 look, kept in case you want it back.</p>';
+   '</div></div>' + preview() +
+   '<div class="accent-groups111">' + groups(current) + '</div>' +
+   '<p class="accent-note111">Violet is the 1.0 look, kept in case you want it back. ' +
+   'Graphite keeps the same depth with no colour at all.</p>';
   return el;
  }
 
@@ -98,6 +147,8 @@
    b.classList.toggle('is-on', on);
    b.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
+  var name = host.querySelector('.accent-preview-name111');
+  if (name) name.textContent = entry(cur).label;
   if (!host.dataset.bound) {
    host.dataset.bound = '1';
    host.addEventListener('click', function (ev) {
