@@ -1,63 +1,38 @@
-Kuro TV - 1.5 beta (take 9)
-===========================
+Kuro TV - 1.5 beta (take 10)
+============================
 
 File      : Kuro-tv-beta-1.5.apk
-Size      : 48,677,091 bytes
-sha256    : d8073d59635cee20f8148840ef8d6ca9e26116a20da86dfa6250f86b6b06314d
-md5       : eda0f99537b937ba6b51761ab3aa1bee
+Size      : 48,676,511 bytes
+sha256    : 48c75ecce3f07f65671cab1a811339390777bf41e1b780bd7b5377118f39ef9d
+md5       : 26bba42fc5c6981bbc3a60395809b4b4
 version   : 1.5-beta  (versionCode 92 - unchanged)
 signing   : v2, CN=Kuro Anime  (same key as 1.0-1.4)
 Delivery  : Google Drive only. NOT on GitHub, no tag, no release.
 
 Install
 -------
-Straight over take 8. No uninstall, data, theme and settings kept.
+Straight over take 9. No uninstall, data, theme and settings kept.
 
-Theme colour moved into Settings
---------------------------------
-It is no longer a card in Account. It is the first block inside
-
-    Settings  ->  Appearance and startup
-
-right at the top of that group, above Site view. Pick a colour there and every
-screen, dialog, player control and status bar follows it, exactly as before; the
-choice is still saved on the phone. The shell's old eight-swatch "Accent color"
-row is gone from that group - it tinted only the menu and would have been a
-second, conflicting accent control next to the real one.
-
-Twenty accents now, in the same three groups
-
-  Signature   Teal      Violet    Plum       Graphite
-  Cool        Sky       Ice       Royal      Sapphire
-  Indigo      Emerald   Mint      Lime
-  Warm        Citron    Gold      Amber      Sunset
-  Coral       Rose      Crimson   Magenta
-
-  new in this take:  Plum #d252e6   Ice #25b4e0      Sapphire #4f7ce8
-                     Mint #32e2ad   Gold #e9c25a     Coral   #ed9183
-
-All twenty are generated from the same palette tool as the original ten, so the
-fourteen you already had are byte-for-byte unchanged - nothing you liked moved.
-
-Also fixed: in take 8 the Royal, Lime, Citron and Rose tiles showed an empty
-grey circle instead of a colour chip, and choosing one left the preview strip in
-the previous theme's colours. All twenty now have a swatch and their own preview
-colours; picking one repaints the preview, the picker and the whole app.
-
-Account: the LOCAL card is gone
+The account update card is gone
 -------------------------------
-The "Private profile / LOCAL" row is removed from Account - hidden before the
-page paints and taken out of the page itself, so it cannot be tapped or tabbed
-to either.
+"Keep Kuro current" no longer appears at the top of Account, and neither do its
+two buttons. Nothing about the updater changed - only where you start it.
 
-Everything from earlier takes still stands
-------------------------------------------
-  * the header round arrow / Account card: one tap checks, downloads, installs
+The update button is now the round arrow in the header, left of "Log in", on
+every screen. One tap = check now, download in the background, hand the file to
+Android's installer. Android still asks before installing, and the automatic
+check/download behaviour is still the one set in Settings > Kuro updates.
+
+Everything else from earlier takes stands
+-----------------------------------------
+  * Settings > Appearance and startup holds the theme colour picker, twenty
+    accents in three groups, saved on this phone
+  * Account's "Private profile / LOCAL" card is removed
   * Settings > Developer opens the Discord profile, deep-linked into Discord
   * motion: opening film, press spring on every control, scroll-linked movement
   * no tap ripple, no Motion - Beta card, no "One library" banner on Home
 
 Known
 -----
-The updater still reads GitHub's latest release (1.4, older than this beta), so
-it will tell you that you are already ahead until something newer is published.
+The updater reads GitHub's latest release (1.4, older than this beta), so it
+reports that you are already ahead until something newer is published.
