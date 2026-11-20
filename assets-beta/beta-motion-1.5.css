@@ -1,0 +1,339 @@
+/* Kuro 1.5-beta - motion layer, take 3.
+ *
+ * Take 3 rules:
+ *
+ *   1. NOTHING real is ever held invisible waiting for a scroll observer.
+ *      Banners, hero slides and news posters are never touched at all - that
+ *      was the "keeps loading for a while" glitch: a banner got armed, went to
+ *      opacity 0, and waited for an IntersectionObserver that arrived late (or
+ *      never, when the carousel re-rendered the slide underneath it).
+ *      Grid cards animate once, at the moment they are inserted, with the
+ *      hidden state living inside the keyframe only.
+ *
+ *   2. The launch film is louder and shorter - oversized cropped type as a
+ *      background layer, the foreground wordmark over the cards, a card that
+ *      sweeps across the type, a bigger ticker band, and the iris. 2.3 s, not
+ *      2.8 s.
+ *
+ * Everything is class-driven (the app's CSP forbids inline style attributes)
+ * and every colour comes from the theme tokens, so the film re-tints with the
+ * accent the user picked.  Reduced-motion users get none of it.
+ */
+
+/* ---------------------------------------------------------------- tokens */
+#km-intro-15{
+ --km-accent:var(--ku-accent,#3be3d2);
+ --km-ink:var(--ink,#f1f4f3);
+ --km-bg:var(--bg,#081615);
+ --km-ease-out:var(--ku-ease-out,cubic-bezier(.16,1,.3,1));
+ --km-ease:var(--ku-ease,cubic-bezier(.32,.72,0,1));
+ --km-hair:var(--ku-hair,#ffffff12);
+ --km-hair-strong:var(--ku-hair-strong,#ffffff1f);
+ --km-shadow:var(--ku-shadow-2,0 2px 6px #0006,0 12px 28px #0007);
+ --km-r-lg:var(--ku-r-lg,20px);
+ --km-r-md:var(--ku-r-md,14px);
+}
+
+/* --------------------------------------------------------------- overlay */
+#km-intro-15{position:fixed;inset:0;z-index:9999;overflow:hidden;background:var(--km-bg);isolation:isolate;
+ transition:opacity .15s linear;contain:strict}
+#km-intro-15.km-gone{opacity:0;pointer-events:none}
+
+/* dot grid */
+#km-intro-15 .km-dots{position:absolute;inset:-24px 0 0;z-index:0;color:var(--km-ink);opacity:0;
+ background-image:radial-gradient(currentColor 1px,transparent 1px);background-size:19px 19px;
+ animation:km-dots-in .45s linear both,km-dots-drift 7s linear .45s infinite}
+@keyframes km-dots-in{from{opacity:0}to{opacity:.075}}
+@keyframes km-dots-drift{from{transform:translateY(0)}to{transform:translateY(-19px)}}
+
+/* ------------------------------------------------------------------------
+ * oversized cropped background type - the reel's "MINICING" layer
+ * --------------------------------------------------------------------- */
+#km-intro-15 .km-t0{position:absolute;right:-12%;top:4%;z-index:1;display:block;
+ font-weight:900;font-stretch:condensed;line-height:.74;letter-spacing:-.085em;
+ font-size:46vw;color:var(--km-ink);opacity:0;transform:scaleX(1.16);
+ animation:km-t0-in .7s var(--km-ease-out) .1s both;pointer-events:none}
+@keyframes km-t0-in{0%{opacity:0;transform:translateY(-6%) scaleX(1.16)}100%{opacity:.07;transform:translateY(0) scaleX(1.16)}}
+
+/* ---------------------------------------------- browser frame + chrome --- */
+#km-intro-15 .km-frame{position:absolute;left:50%;top:38%;z-index:2;width:min(76vw,380px);aspect-ratio:16/10;
+ transform:translate(-50%,-50%);border-radius:var(--km-r-lg);overflow:hidden;background:#0c1918;
+ border:1.5px solid var(--km-hair-strong);box-shadow:var(--km-shadow);opacity:0;will-change:transform,opacity;
+ animation:km-frame-in .68s cubic-bezier(.18,1.14,.32,1) .16s both}
+@keyframes km-frame-in{
+ 0%{opacity:0;transform:translate(-50%,-50%) translateY(44px) scale(.9) rotate(-2.2deg)}
+ 55%{opacity:1;transform:translate(-50%,-50%) translateY(-4px) scale(1.015) rotate(.4deg)}
+ 100%{opacity:1;transform:translate(-50%,-50%)}
+}
+#km-intro-15 .km-chrome{position:relative;z-index:2;height:22px;display:flex;align-items:center;gap:6px;padding:0 9px;
+ background:#0000003d;border-bottom:1px solid var(--km-hair)}
+#km-intro-15 .km-lights{display:flex;gap:5px;align-items:center}
+#km-intro-15 .km-lights i{display:block;width:5px;height:5px;border-radius:50%;background:var(--km-ink);
+ transform:scale(.2);animation:km-light .4s cubic-bezier(.2,1.6,.4,1) both}
+#km-intro-15 .km-lights i:nth-child(1){animation-delay:.32s}
+#km-intro-15 .km-lights i:nth-child(2){animation-delay:.36s}
+#km-intro-15 .km-lights i:nth-child(3){animation-delay:.4s;background:var(--km-accent)}
+@keyframes km-light{0%{transform:scale(.2)}100%{transform:scale(1)}}
+#km-intro-15 .km-url{margin-left:auto;display:block;width:44%;height:9px;border-radius:5px;background:var(--km-ink);
+ opacity:0;transform:scaleX(.35);transform-origin:right;animation:km-url-in .42s var(--km-ease-out) .42s both}
+@keyframes km-url-in{to{opacity:.15;transform:scaleX(1)}}
+#km-intro-15 .km-art{position:absolute;inset:22px 0 0;z-index:1;overflow:hidden;background:#0a1413}
+#km-intro-15 .km-art img{width:100%;height:100%;object-fit:cover;object-position:center 24%;opacity:.94;
+ transform:scale(1.1);animation:km-ken 5.5s var(--km-ease) both}
+@keyframes km-ken{from{transform:scale(1.17)}to{transform:scale(1.02)}}
+#km-intro-15 .km-art.km-empty{background:
+ radial-gradient(circle at 22% 18%,var(--km-accent) 0,transparent 46%),
+ linear-gradient(135deg,#123 0,#0a1413 62%)}
+#km-intro-15 .km-art.km-empty:after{content:'';position:absolute;inset:0;background:
+ repeating-linear-gradient(115deg,transparent 0 26px,#ffffff0a 26px 27px)}
+
+/* ------------------------------------------- poster cards, one sweeps --- */
+#km-intro-15 .km-stack{position:absolute;inset:0;z-index:3;pointer-events:none}
+#km-intro-15 .km-card{position:absolute;left:50%;top:50%;width:min(28vw,112px);aspect-ratio:2/3;
+ border-radius:12px;overflow:hidden;background:#0d1a19;border:1.5px solid var(--km-hair-strong);
+ box-shadow:var(--km-shadow);opacity:0;will-change:transform,opacity;
+ transform:translate(-50%,-50%) var(--km-to);
+ animation:km-card-stack .8s cubic-bezier(.2,1.3,.36,1) var(--km-at,0s) both}
+#km-intro-15 .km-card img{width:100%;height:100%;object-fit:cover;display:block}
+#km-intro-15 .km-card.km-empty{background:
+ radial-gradient(circle at 30% 20%,var(--km-accent) 0,transparent 55%),
+ linear-gradient(150deg,#16333a,#0b1514)}
+#km-intro-15 .km-c1{--km-to:translate(2%,80%) rotate(-8deg);--km-from:translate(-150%,40%) rotate(-26deg);--km-at:.38s;z-index:4}
+#km-intro-15 .km-c2{--km-to:translate(-126%,74%) rotate(-16deg);--km-from:translate(-70%,150%) rotate(-34deg);--km-at:.26s;z-index:2}
+#km-intro-15 .km-c3{--km-to:translate(128%,72%) rotate(13deg);--km-from:translate(70%,150%) rotate(30deg);--km-at:.32s;z-index:2}
+@keyframes km-card-stack{
+ 0%{opacity:0;transform:translate(-50%,-50%) var(--km-from) scale(.62)}
+ 55%{opacity:1}
+ 100%{opacity:1;transform:translate(-50%,-50%) var(--km-to) scale(1)}
+}
+
+/* -------------------------------------------------------- pill rail ---- */
+#km-intro-15 .km-rail{position:absolute;left:max(12px,2.6vw);top:52%;z-index:1;
+ transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:9px}
+#km-intro-15 .km-pill{display:block;width:15px;height:52px;border-radius:8px;
+ border:1.5px solid var(--km-ink);opacity:0;animation:km-rail-in .5s var(--km-ease-out) both}
+#km-intro-15 .km-pill:nth-child(1){animation-delay:.12s;opacity:.32}
+#km-intro-15 .km-pill:nth-child(2){animation-delay:.16s;opacity:.22;height:62px}
+#km-intro-15 .km-pill:nth-child(3){animation-delay:.2s;opacity:.15}
+#km-intro-15 .km-railbtn{display:block;width:15px;height:15px;border-radius:50%;
+ border:1.5px solid var(--km-ink);opacity:0;animation:km-rail-in .5s var(--km-ease-out) both}
+#km-intro-15 .km-railbtn:nth-child(4){animation-delay:.25s;opacity:.26}
+#km-intro-15 .km-railbtn:nth-child(5){animation-delay:.29s;opacity:.17}
+#km-intro-15 .km-railbtn:nth-child(6){animation-delay:.33s;opacity:.28;border-color:var(--km-accent)}
+@keyframes km-rail-in{0%{opacity:0;transform:translateX(-12px)}100%{transform:translateX(0)}}
+
+/* ------------------------------------------------- connector curve ---- */
+#km-intro-15 .km-curve{position:absolute;left:6%;top:14%;width:44%;height:48%;z-index:3;opacity:0;
+ animation:km-appear .3s linear .34s both}
+#km-intro-15 .km-curve path{fill:none;stroke:var(--km-accent);stroke-width:1.4;stroke-linecap:round;
+ vector-effect:non-scaling-stroke;stroke-dasharray:220;stroke-dashoffset:220;
+ animation:km-draw .76s var(--km-ease-out) .36s both}
+@keyframes km-draw{to{stroke-dashoffset:0}}
+@keyframes km-appear{from{opacity:0}to{opacity:.8}}
+
+/* --------------------------------------------- foreground kinetic type -- */
+#km-intro-15 .km-type{position:absolute;left:0;right:0;bottom:21%;z-index:5;text-align:center;pointer-events:none}
+#km-intro-15 .km-t1{display:block;font-weight:900;font-stretch:condensed;letter-spacing:-.07em;line-height:.78;
+ font-size:clamp(58px,22vw,132px);color:var(--km-ink);transform:scaleX(1.12);
+ text-shadow:0 10px 34px #00000073}
+#km-intro-15 .km-t1 span{display:inline-block;opacity:0;transform:translateY(.5em) rotate(2.5deg);
+ animation:km-letter .52s cubic-bezier(.2,1.25,.35,1) both}
+#km-intro-15 .km-t1 span:nth-child(1){animation-delay:.42s}
+#km-intro-15 .km-t1 span:nth-child(2){animation-delay:.46s}
+#km-intro-15 .km-t1 span:nth-child(3){animation-delay:.5s}
+#km-intro-15 .km-t1 span:nth-child(4){animation-delay:.54s}
+#km-intro-15 .km-t2{display:inline-flex;align-items:center;gap:9px;margin-top:7px;
+ font-size:clamp(11px,3.2vw,16px);font-weight:800;letter-spacing:.52em;text-transform:uppercase;
+ color:var(--km-accent);opacity:0;animation:km-fade-up .45s var(--km-ease-out) .62s both}
+#km-intro-15 .km-t2:before{content:'';display:block;width:24px;height:2px;background:var(--km-accent)}
+@keyframes km-letter{0%{opacity:0;transform:translateY(.5em) rotate(2.5deg)}100%{opacity:1;transform:none}}
+@keyframes km-fade-up{0%{opacity:0;transform:translateY(9px)}100%{opacity:1;transform:none}}
+
+/* ------------------------------------------------------- ticker band --- */
+#km-intro-15 .km-ticker{position:absolute;left:-10%;right:-10%;bottom:8%;z-index:6;height:32px;overflow:hidden;
+ background:var(--km-accent);color:#04100f;opacity:0;
+ transform:rotate(-3deg) translateY(34px);animation:km-band-in .46s cubic-bezier(.2,1.35,.4,1) .22s both}
+@keyframes km-band-in{to{opacity:1;transform:rotate(-3deg) translateY(0)}}
+#km-intro-15 .km-track{display:flex;align-items:center;height:100%;white-space:nowrap;will-change:transform;
+ animation:km-ticker 8s linear infinite}
+#km-intro-15 .km-track span{display:inline-block;font-size:13px;font-weight:900;letter-spacing:.26em;
+ text-transform:uppercase;padding-right:.75em}
+@keyframes km-ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ------------------------------------------------------------ specks --- */
+#km-intro-15 .km-specks{position:absolute;inset:0;z-index:4;pointer-events:none}
+#km-intro-15 .km-specks i{position:absolute;display:block;width:5px;height:5px;border-radius:50%;
+ background:var(--km-accent);opacity:0;animation:km-speck 3.4s cubic-bezier(.4,0,.6,1) infinite}
+#km-intro-15 .km-specks i:nth-child(1){left:16%;top:34%;animation-delay:.15s}
+#km-intro-15 .km-specks i:nth-child(2){left:76%;top:26%;width:3px;height:3px;animation-delay:.85s}
+#km-intro-15 .km-specks i:nth-child(3){left:36%;top:78%;width:4px;height:4px;animation-delay:1.5s;background:var(--km-ink)}
+#km-intro-15 .km-specks i:nth-child(4){left:88%;top:60%;width:3px;height:3px;animation-delay:.5s}
+#km-intro-15 .km-specks i:nth-child(5){left:58%;top:16%;width:3px;height:3px;animation-delay:2s;background:var(--km-ink)}
+#km-intro-15 .km-specks i:nth-child(6){left:26%;top:60%;width:4px;height:4px;animation-delay:1.1s}
+@keyframes km-speck{
+ 0%{opacity:0;transform:translateY(14px) scale(.6)}
+ 25%{opacity:.6}
+ 70%{opacity:.32}
+ 100%{opacity:0;transform:translateY(-26px) scale(1)}
+}
+
+/* ---------------------------------------------------------- iris wipe -- */
+#km-intro-15 .km-iris{position:absolute;left:50%;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;
+ border-radius:50%;z-index:9;background:var(--km-bg);transform:scale(0);
+ box-shadow:0 0 0 1.5px var(--km-accent);
+ animation:km-iris .48s cubic-bezier(.62,.02,.9,.4) 1.46s forwards}
+@keyframes km-iris{from{transform:scale(0)}to{transform:scale(460)}}
+
+#km-intro-15 .km-skip{position:absolute;right:16px;bottom:11px;z-index:10;font-size:10px;font-weight:700;
+ letter-spacing:.2em;text-transform:uppercase;color:var(--km-ink);opacity:0;
+ animation:km-skip-in .4s linear .7s both}
+@keyframes km-skip-in{to{opacity:.42}}
+
+/* ------------------------------------------------------------------------
+ * card entrance - applied once, at insertion, never on a scroll observer.
+ * The hidden state exists only inside the keyframe, so an element can never
+ * be left invisible by this layer.  6 steps x 38 ms.
+ * --------------------------------------------------------------------- */
+.km-reveal{animation:km-card-in .44s var(--ku-ease-out,cubic-bezier(.16,1,.3,1)) both}
+.km-reveal.km-d1{animation-delay:0s}
+.km-reveal.km-d2{animation-delay:.038s}
+.km-reveal.km-d3{animation-delay:.076s}
+.km-reveal.km-d4{animation-delay:.114s}
+.km-reveal.km-d5{animation-delay:.152s}
+.km-reveal.km-d6{animation-delay:.19s}
+.km-reveal.km-d2,.km-reveal.km-d5{--km-rot:-1deg}
+@keyframes km-card-in{
+ 0%{opacity:0;transform:translateY(18px) scale(.93) rotate(var(--km-rot,.8deg))}
+ 62%{opacity:1;transform:translateY(-2px) scale(1.006) rotate(0)}
+ 100%{opacity:1;transform:none}
+}
+
+/* ------------------------------------------------ press spring ------- */
+.card,.history-card,.hero-slide,.shelf .grid>*,.info .poster{
+ transition:transform 250ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1))}
+.card:active,.history-card:active,.shelf .grid>*:active{transform:scale(.96)}
+.hero-slide:active,.info .poster:active{transform:scale(.985)}
+
+/* ------------------------------ focus, for remote and keyboard -------- */
+:focus-visible{outline:2px solid var(--ku-accent,#3be3d2);outline-offset:2px}
+
+/* ------------------------------------------- route-change sweep ------ */
+#km-sweep-15{position:fixed;left:0;right:0;top:0;height:2px;z-index:9997;pointer-events:none;
+ background:linear-gradient(90deg,transparent,var(--ku-accent,#3be3d2),transparent);
+ transform:scaleX(0);transform-origin:left;opacity:.85}
+#km-sweep-15.km-run{animation:km-sweep .5s var(--ku-ease-out,cubic-bezier(.16,1,.3,1)) both}
+@keyframes km-sweep{0%{transform:scaleX(0);transform-origin:left}
+ 55%{transform:scaleX(1);transform-origin:left}
+ 56%{transform:scaleX(1);transform-origin:right}
+ 100%{transform:scaleX(0);transform-origin:right}}
+
+/* --------------------- Account: the LOCAL card is gone ------------------ */
+/* 1.5-beta removes the "Private profile / LOCAL" card. Hidden here so it never
+   paints for a frame; beta-motion-1.5.js also drops it from the DOM. */
+.profile-private547{display:none!important}
+
+/* ------------------------------- update button (header) ---------------- */
+.km-update-btn{position:relative;color:var(--ku-accent,#3be3d2)}
+.km-update-btn svg{stroke-width:2}
+.km-update-btn:after{content:'';position:absolute;inset:-1px;border-radius:50%;
+ box-shadow:inset 0 0 0 1px var(--ku-accent,#3be3d2);opacity:.45}
+.km-update-btn:active:after{opacity:1}
+.km-update-off{opacity:.55}
+.km-update-btn:focus-visible{outline:2px solid var(--ink,#f1f4f3);outline-offset:3px}
+
+/* ======================================================================
+ * APPLIED EVERYWHERE - "clicking every option animates".
+ * Press spring on every control, an entrance spring on every screen and
+ * on the rows inside it, and a tap ripple (the reel's expanding circle).
+ * All transform/opacity only, all short, all off under reduced motion.
+ * ====================================================================== */
+
+/* --- press spring ------------------------------------------------------ */
+button,.btn,.chip,.card,.history-card,.poster,.info .poster,.hero-slide,
+.kuro-dock button,.header-icon,.login-button,.sourcebar button,.tabs button,
+.episode-row button,.episodeList button,.popup-result,.genre-back,.clear-recent,
+.next-episode,.back,.preset-choice571,.profile-card547,.air-source-trigger,
+.seasonal-open573,.queue-open571{
+ transition:transform 200ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1))}
+button:active,.btn:active,.chip:active,.card:active,.history-card:active,
+.kuro-dock button:active,.header-icon:active,.login-button:active,.sourcebar button:active,
+.tabs button:active,.episode-row button:active,.episodeList button:active,.popup-result:active,
+.genre-back:active,.clear-recent:active,.next-episode:active,.back:active,
+.preset-choice571:active,.profile-card547:active,.air-source-trigger:active,
+.seasonal-open573:active,.queue-open571:active,.info .poster:active{transform:scale(.955)}
+.hero-slide:active{transform:scale(.99)}
+
+/* --- every screen springs in ------------------------------------------ */
+main > *{animation:km-block-in .32s var(--ku-ease-out,cubic-bezier(.16,1,.3,1)) both}
+main > *:nth-child(2){animation-delay:.016s}
+main > *:nth-child(3){animation-delay:.032s}
+main > *:nth-child(4){animation-delay:.048s}
+main > *:nth-child(5){animation-delay:.064s}
+main > *:nth-child(n+6){animation-delay:.08s}
+@keyframes km-block-in{
+ 0%{opacity:0;transform:translateY(14px) scale(.996)}
+ 62%{opacity:1;transform:translateY(-2px) scale(1)}
+ 100%{opacity:1;transform:none}
+}
+
+/* --- rows and list items spring in with their screen ------------------- */
+.episode-row:nth-child(-n+12),.episodeList>button:nth-child(-n+12),
+.popup-result:nth-child(-n+12),.air-source-line,.home-rail-heading,
+.anime-facts div:nth-child(-n+10),.detail-badges span:nth-child(-n+8){
+ animation:km-item-in .3s var(--ku-ease-out,cubic-bezier(.16,1,.3,1)) both}
+.episode-row:nth-child(2),.episodeList>button:nth-child(2),.popup-result:nth-child(2){animation-delay:.025s}
+.episode-row:nth-child(3),.episodeList>button:nth-child(3),.popup-result:nth-child(3){animation-delay:.05s}
+.episode-row:nth-child(4),.episodeList>button:nth-child(4),.popup-result:nth-child(4){animation-delay:.075s}
+.episode-row:nth-child(5),.episodeList>button:nth-child(5),.popup-result:nth-child(5){animation-delay:.1s}
+.episode-row:nth-child(6),.episodeList>button:nth-child(6),.popup-result:nth-child(6){animation-delay:.11s}
+.episode-row:nth-child(n+7),.episodeList>button:nth-child(n+7),.popup-result:nth-child(n+7){animation-delay:.13s}
+@keyframes km-item-in{
+ 0%{opacity:0;transform:translateY(6px)}
+ 100%{opacity:1;transform:none}
+}
+
+/* --- and this banner goes away ----------------------------------------- */
+.unified-banner{display:none!important}
+
+/* --------------------------------------------------------------------- */
+
+/* ======================================================================
+ * SCROLL-LINKED MOTION
+ *
+ * The reel's motion is not "things fade in once" - it is continuous: cards
+ * sit smaller at the edges and come up to full size as they reach the middle
+ * of the screen, banners drift inside their frame, headings travel at their
+ * own rate.  That is what this block does, driven from the scroll position by
+ * one rAF loop in the script.
+ *
+ * Nothing here hides content: every value is a continuous function of where
+ * the element sits on screen, and it is all transform only.
+ * ====================================================================== */
+.poster,.hero-slide img,.shelf .poster{
+ transform-origin:50% 60%;backface-visibility:hidden}
+
+/* header condenses once the page is scrolled (transform only - no reflow) */
+header{transition:box-shadow 260ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1)),background-color 260ms linear}
+body.km-scrolled header{box-shadow:0 10px 30px -12px #000000cc}
+body.km-scrolled header .brand-logo{transform:scale(.9);transform-origin:left center;
+ transition:transform 260ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1))}
+
+/* scroll position, as a hairline under the header */
+#km-scrollbar-15{position:fixed;left:0;right:0;top:0;height:2px;z-index:9997;pointer-events:none;
+ background:var(--ku-accent,#3be3d2);opacity:.55;transform:scaleX(0);transform-origin:left}
+#km-scrollbar-15.km-idle{opacity:0;transition:opacity .3s linear}
+
+/* ------------------------------------------------- reduced motion ----- */
+@media (prefers-reduced-motion:reduce){
+ #km-intro-15{display:none}
+ .km-reveal{animation:none}
+ .card,.history-card,.hero-slide,.shelf .grid>*,.info .poster{transition:none}
+ .poster,.hero-slide img{transform:none!important}
+ #km-scrollbar-15{display:none}
+ body.km-scrolled header .brand-logo{transform:none}
+ #km-sweep-15{display:none}
+ main > *,.episode-row,.episodeList>button,.popup-result,.air-source-line,.home-rail-heading,
+ .anime-facts div,.detail-badges span{animation:none}
+ button,.btn,.chip,.card,.history-card,.kuro-dock button,.info .poster{transition:none}
+ #km-intro-15 .km-art img{animation:none;transform:none}
+}

@@ -1,5 +1,6 @@
-/* Theme colour picker (1.4). Ten accents in three groups, plus a live preview
-   strip painted from the accent's own palette.
+/* Theme colour picker (1.5). Twenty accents in three groups, plus a live
+   preview strip painted from the accent's own palette. It is mounted at the top
+   of Settings -> Appearance and startup, not in Account.
 
    Swatches and the preview are painted from these rules because the app's CSP
    (style-src 'self') forbids inline style attributes. Every accent defines the
@@ -16,6 +17,16 @@ html[data-accent=amber]{--pv-accent:#dc9b3b;--pv-panel:#18130c;--pv-card:#292012
 html[data-accent=sunset]{--pv-accent:#de7548;--pv-panel:#18100c;--pv-card:#291912;--pv-ink:#f4f2f1;--pv-muted:#c5a6ba}
 html[data-accent=crimson]{--pv-accent:#de4866;--pv-panel:#180c0e;--pv-card:#291217;--pv-ink:#f4f1f2;--pv-muted:#c5a6c1}
 html[data-accent=magenta]{--pv-accent:#e050c3;--pv-panel:#180c16;--pv-card:#291224;--pv-ink:#f4f1f3;--pv-muted:#c1a6c5}
+html[data-accent=plum]{--pv-accent:#d252e6;--pv-panel:#160c18;--pv-card:#261229;--pv-ink:#f3f1f4;--pv-muted:#baafbc}
+html[data-accent=ice]{--pv-accent:#25b4e0;--pv-panel:#0c1518;--pv-card:#122329;--pv-ink:#f1f3f4;--pv-muted:#afb9bc}
+html[data-accent=royal]{--pv-accent:#805be7;--pv-panel:#0f0c18;--pv-card:#181229;--pv-ink:#f2f1f4;--pv-muted:#b2afbc}
+html[data-accent=sapphire]{--pv-accent:#4f7ce8;--pv-panel:#0c0f18;--pv-card:#121929;--pv-ink:#f1f2f4;--pv-muted:#afb3bc}
+html[data-accent=mint]{--pv-accent:#32e2ad;--pv-panel:#0c1814;--pv-card:#122922;--pv-ink:#f1f4f3;--pv-muted:#afbcb8}
+html[data-accent=lime]{--pv-accent:#8fe444;--pv-panel:#11180c;--pv-card:#1d2912;--pv-ink:#f2f4f1;--pv-muted:#b5bcaf}
+html[data-accent=citron]{--pv-accent:#e2e756;--pv-panel:#17180c;--pv-card:#282912;--pv-ink:#f4f4f1;--pv-muted:#bcbcaf}
+html[data-accent=gold]{--pv-accent:#e9c25a;--pv-panel:#18150c;--pv-card:#292312;--pv-ink:#f4f3f1;--pv-muted:#bcb9af}
+html[data-accent=coral]{--pv-accent:#ed9183;--pv-panel:#180e0c;--pv-card:#291512;--pv-ink:#f4f1f1;--pv-muted:#bcb1af}
+html[data-accent=rose]{--pv-accent:#e968a9;--pv-panel:#180c12;--pv-card:#29121d;--pv-ink:#f4f1f2;--pv-muted:#bcafb6}
 
 .accent-111{margin-top:18px}
 
@@ -62,6 +73,16 @@ html[data-accent=magenta]{--pv-accent:#e050c3;--pv-panel:#180c16;--pv-card:#2912
 .accent-tile111[data-accent=sunset] .accent-swatch111{background:#de7548}
 .accent-tile111[data-accent=crimson] .accent-swatch111{background:#de4866}
 .accent-tile111[data-accent=magenta] .accent-swatch111{background:#e050c3}
+.accent-tile111[data-accent=plum] .accent-swatch111{background:#d252e6}
+.accent-tile111[data-accent=ice] .accent-swatch111{background:#25b4e0}
+.accent-tile111[data-accent=royal] .accent-swatch111{background:#805be7}
+.accent-tile111[data-accent=sapphire] .accent-swatch111{background:#4f7ce8}
+.accent-tile111[data-accent=mint] .accent-swatch111{background:#32e2ad}
+.accent-tile111[data-accent=lime] .accent-swatch111{background:#8fe444}
+.accent-tile111[data-accent=citron] .accent-swatch111{background:#e2e756}
+.accent-tile111[data-accent=gold] .accent-swatch111{background:#e9c25a}
+.accent-tile111[data-accent=coral] .accent-swatch111{background:#ed9183}
+.accent-tile111[data-accent=rose] .accent-swatch111{background:#e968a9}
 
 .accent-note111{margin:12px 0 0;font-size:12px;color:var(--pv-muted,#B7A4C7);line-height:1.55}
 
@@ -69,3 +90,17 @@ html[data-accent=magenta]{--pv-accent:#e050c3;--pv-panel:#180c16;--pv-card:#2912
  .accent-grid111{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
  .accent-tile111{font-size:11.5px;padding:8px}
 }
+
+/* ---- inside Settings -> Appearance and startup ---- */
+.accent-settings111{margin:0;padding:12px 12px 14px;border-bottom:1px solid var(--pv-card,#211229)}
+.accent-settings111 .accent-head111 h3{margin:0;font-size:14px;font-weight:800;letter-spacing:.01em;color:var(--pv-ink,#f3eef7)}
+.accent-settings111 .accent-head111 p{margin:4px 0 0;font-size:11px;line-height:1.45;color:var(--pv-muted,#b7a4c7)}
+.accent-settings111 .accent-preview111{margin-top:12px}
+.accent-settings111 .accent-groups111{margin-top:12px;gap:10px}
+.accent-settings111 .accent-grid111{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:7px;margin-top:7px}
+.accent-settings111 .accent-tile111{padding:8px 9px;border-radius:12px;font-size:11.5px}
+.accent-settings111 .accent-tile111 .accent-swatch111{width:24px;height:24px;border-radius:8px}
+.accent-settings111 .accent-note111{margin-top:12px}
+.kuro-layer560[data-theme=light] .accent-settings111{border-bottom-color:#00000014}
+/* the shell's old eight-swatch "Accent color" select is replaced by the picker */
+.accent-old-row111{display:none!important}

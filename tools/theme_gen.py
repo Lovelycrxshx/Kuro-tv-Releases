@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the 1.1 accent themes from the shipped 1.0 stylesheets.
+"""Generate the accent themes from the shipped 1.0 stylesheets.
 
 The app's palette is a fluorescent purple family (hue ~272) spread over
 hundreds of literal hex values.  Re-theming by hand would drift, so this
@@ -28,14 +28,24 @@ ACCENTS = {
     # signature
     "teal":     (174, 0.50, 1.0),   # default
     "violet":   (272, 0.63, 1.0),   # the 1.0 look, kept as an escape hatch
+    "plum":     (292, 0.55, 1.0),   # 1.5: deep orchid, between violet and magenta
     "graphite": (272, 0.60, 0.0),   # neutral: no hue, same depth
     # cool
     "sky":      (205, 0.52, 1.0),
+    "ice":      (194, 0.45, 1.0),   # 1.5: pale cyan, between teal and sky
+    "royal":    (256, 0.57, 1.0),   # 1.5: blue-violet, between indigo and violet
+    "sapphire": (220, 0.62, 1.0),   # 1.5: deep blue, between indigo and sky
     "indigo":   (232, 0.56, 1.0),
     "emerald":  (150, 0.52, 1.0),
+    "mint":     (162, 0.48, 1.0),   # 1.5: soft green-cyan, between teal and emerald
+    "lime":     (92, 0.52, 1.0),    # 1.5: fresh yellow-green
     # warm
+    "citron":   (62, 0.56, 1.0),    # 1.5: yellow
+    "gold":     (47, 0.67, 1.0),    # 1.5: rich gold, between citron and amber
     "amber":    (36, 0.55, 1.0),
     "sunset":   (18, 0.58, 1.0),
+    "coral":    (8, 0.66, 1.0),     # 1.5: hot coral, between sunset and crimson
+    "rose":     (330, 0.60, 1.0),   # 1.5: pink-red
     "crimson":  (348, 0.58, 1.0),
     "magenta":  (312, 0.60, 1.0),
 }

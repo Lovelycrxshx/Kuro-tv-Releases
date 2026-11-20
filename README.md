@@ -5,8 +5,9 @@ An open-source media client designed for Android TV, Fire TV, and mobile devices
 [![Latest Release](https://img.shields.io/github/v/release/Lovelycrxshx/Kuro-tv-Releases?color=blue&label=Latest%20Version)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green.svg)](LICENSE)
 
-**Current release: 1.0** (`versionCode` 87) — release notes in [RELEASE-1.0.md](RELEASE-1.0.md).
-The site is at [lovelycrxshx.github.io/Kuro-tv-Releases](https://lovelycrxshx.github.io/Kuro-tv-Releases/).
+**Current release: 1.5** (`versionCode` 92) — release notes in [RELEASE-1.5.md](RELEASE-1.5.md).
+Notes for every earlier cut are in [archive/1.x/](archive/1.x/), and the same text is on the
+[releases page](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases).
 
 ---
 
@@ -51,6 +52,13 @@ Kuro is a player / front-end and hosts no media. The catalogue comes from these 
 * Lightweight playback engine with subtitle support
 * Skip suggestions on every episode — a source marker or your own marker always wins, and a
   suggestion never skips by itself
+* **Continue watching** — Home opens with the episodes you have started, the minutes you are in,
+  and one tap back to the right episode
+* **Long press a poster** — Open, add or remove from My List, or hide it from Home
+* **Twenty accents** chosen in Settings, with the native dialogs, bars and player following
+* **Downloads upkeep** — count and size, delete watched, keep the latest episode per series,
+  delete all, and an optional quiet sweep every 7 or 30 days
+* **What's new** — one card per build on Home, and the same list in Settings → Developer
 
 ---
 
@@ -75,9 +83,10 @@ Kuro TV is purely a media player / front-end interface. It does not host, upload
 
 ## 🗺️ Roadmap
 
-What's next for the 1.x line — the DPAD/focus overhaul, home skeletons, the airing calendar and
-theming v2 — lives in **[ROADMAP.md](ROADMAP.md)**. The 5.x line is closed; its notes are in
-[archive/](archive/).
+What's next for the 1.x line — an update channel with a real beta ring, the DPAD/focus
+overhaul, home skeletons, the airing calendar and theming v2 — lives in
+**[ROADMAP.md](ROADMAP.md)**. The 5.x line is closed, and 1.0–1.4 are history: both are in
+**[archive/](archive/)**.
 
 ---
 

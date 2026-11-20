@@ -6,18 +6,27 @@ every install by the updater.
 
 ## Next up
 
-1. **DPAD / focus overhaul** — the highest-impact change left for Fire TV. A deliberate focus
+1. **An update channel with a beta ring** — a published/beta split so a beta newer than the
+   latest release is offered instead of reading "already up to date", which is what every 1.5
+   beta did until 1.5 itself was published.
+2. **DPAD / focus overhaul** — the highest-impact change left for Fire TV. A deliberate focus
    path on every screen, larger hit targets at TV density, and no focus ever lost to a
    decorative view.
-2. **Home v2 skeletons** — a load state that mirrors the final layout instead of a spinner, so
+3. **Home v2 skeletons** — a load state that mirrors the final layout instead of a spinner, so
    the home screen does not jump when artwork arrives.
-3. **Airing calendar and new-episode notifications** — a schedule surface and opt-in per
+4. **Airing calendar and new-episode notifications** — a schedule surface and opt-in per
    series, built on data the app already has.
-4. **Theming v2** — a Material 3 token pass, a true AMOLED black, and overscan-safe margins for
+5. **Theming v2** — a Material 3 token pass, a true AMOLED black, and overscan-safe margins for
    televisions.
 
 ## Shipped
 
+- **1.5** — continue watching, long press on a poster, what's new after an update, downloads
+  upkeep, twenty accents in Settings, the motion layer and the header update button.
+- **1.4** — ten accents and a richer theme picker, with the native dialogs following.
+- **1.3** — the WebView actually serves the overlay assets, so a theme can no longer ship dead.
+- **1.2** — the native layer follows the theme.
+- **1.1** — switchable theme colour.
 - **1.0** — the version line restarted; the updater learns that 1.x follows 5.x.
 - **5.83** — the update window: a release installs itself 24 hours after publication (48 by
   choice), or on the next check once that window has passed.

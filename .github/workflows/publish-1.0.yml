@@ -146,12 +146,12 @@ jobs:
             if ! OUT=$(gh release upload "$TAG" "${ASSETS[@]}" --clobber 2>&1); then
               echo "::error::release upload failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
             fi
-            if ! OUT=$(gh release edit "$TAG" --notes-file RELEASE-1.0.md --latest 2>&1); then
+            if ! OUT=$(gh release edit "$TAG" --notes-file archive/1.x/RELEASE-1.0.md --latest 2>&1); then
               echo "::error::release edit failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
             fi
           else
             if ! OUT=$(gh release create "$TAG" "${ASSETS[@]}" \
-                 --title "Kuro 1.0" --notes-file RELEASE-1.0.md --latest 2>&1); then
+                 --title "Kuro 1.0" --notes-file archive/1.x/RELEASE-1.0.md --latest 2>&1); then
               echo "::error::release create failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
             fi
             echo "$OUT"
@@ -166,5 +166,5 @@ jobs:
             echo "### Release $TAG"
             echo "- tag: \`$TAG\` (target \`${{ github.ref_name }}\`)"
             echo "- APK SHA-256 gate: \`$APK_SHA256\`"
-            echo "- notes: \`RELEASE-1.0.md\`"
+            echo "- notes: \`archive/1.x/RELEASE-1.0.md\`"
           } >> "$GITHUB_STEP_SUMMARY"
