@@ -6,18 +6,25 @@ Signed with the original Kuro release key (`CN=Kuro Anime`), so this installs st
 5.72 – 5.80. **Do not uninstall or clear data.**
 
 ```
-SHA-256  76eb0595ea88c064ed824fa98c8409ba05e3fe7f88f4e79b47a17d8bbd06613d
-Size     43,963,616 bytes
+SHA-256  d215fa1aade2cec8690040a075b34534f64d10eaddaebcf6254e95609a88a615
+Size     43,967,712 bytes
 ```
 
-> **This is the fifth cut of 5.81, same versionCode 84 — it fixes the launch crash in the
-> fourth cut.** Because the version code did not
+> **This is the sixth cut of 5.81, same versionCode 84 — it makes the Discord presence actually
+> connect, on top of the fifth cut's launch-crash fix.** Because the version code did not
 > change, the in-app updater will not offer it (it only offers strictly higher builds). Install
 > this one manually — over the top, no uninstall — to get the Cast screen removed, a quieter
 > Discord presence loop, the browsing card that says what it is, the profile art on the player
 > chip and per-episode resume labels in the episode drawer.
 
 ## What's new
+
+**Rev 11.2 makes Discord Rich Presence appear.** The current-account client was created with the
+app id and then never connected — every update went to a client the SDK had not brought up, so
+Discord showed nothing at all. It now connects on start, publishes again the moment the SDK reports
+Ready, retries every three seconds while the Discord app is unreachable, and refuses to publish to a
+client that is not ready. The status card reports the connection ("connected", "connecting",
+"not connected yet"), and the poll paces itself to that state instead of guessing.
 
 **Rev 11.1 fixes the launch crash.** The fourth cut closed immediately on open: the new profile-art
 preference was read from a field initialiser, which runs while the Activity is still being built,
@@ -171,7 +178,7 @@ adb install -r Kuro-tv-5.81.apk
 
 ```bash
 sha256sum Kuro-tv-5.81.apk
-# 76eb0595ea88c064ed824fa98c8409ba05e3fe7f88f4e79b47a17d8bbd06613d
+# d215fa1aade2cec8690040a075b34534f64d10eaddaebcf6254e95609a88a615
 
 apksigner verify --print-certs Kuro-tv-5.81.apk
 # CN=Kuro Anime
