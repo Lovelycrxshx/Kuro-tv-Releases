@@ -13,18 +13,19 @@
  if (!window.km15) return;
  var K = window.km15;
 
- var STAMP = '1.5-beta.11';
+ var STAMP = '1.5.1';
  var SEEN_KEY = 'kuro-whatsnew-15';
  var CARD_ID = 'km-whatsnew-15';
 
  var ITEMS = [
-  'Continue watching now sits at the top of Home, with the episode number and how far in you are.',
+  'Kuro updates now clearly displays "You are on the latest version" instead of a stale 100% progress bar when no newer release exists.',
+  'The opening title sequence now plays smoothly for ~3.6 seconds from cold launch (still skippable with a tap).',
+  'Continue watching sits at the top of Home, with the episode number and how far in you are.',
   'Hold any poster for quick actions: open it, add it to My List, or hide it from Home.',
   'Downloads can clean themselves up: delete watched episodes, keep one per series, or clear them all.',
   'Theme colour lives in Settings > Appearance and startup, with twenty accents.',
-  'Discord Rich Presence now includes a Download button linking to Kuro\u2019s download page, with a Show / Hide option in Presence customization.',
-  'The update arrow in the header is now the only update button - the Account card is gone.',
-  'The "Private profile / LOCAL" card is gone from Account.'
+  'Discord Rich Presence includes a Download button linking to Kuro\u2019s download page, with a Show / Hide option in Presence customization.',
+  'The update arrow in the header is the only update button - the Account card and LOCAL card are gone.'
  ];
 
  function seen() {
@@ -36,7 +37,7 @@
  }
 
  function openSheet() {
-  K.sheet("What's new", 'Kuro 1.5 beta \u00b7 this build', ITEMS.map(function (text) {
+  K.sheet("What's new", 'Kuro 1.5.1 \u00b7 this build', ITEMS.map(function (text) {
    return { label: text };
   }));
  }
@@ -53,7 +54,7 @@
   el.className = 'km-whatsnew-15';
   el.setAttribute('aria-labelledby', 'km-whatsnew-title-15');
   el.innerHTML =
-   '<div class="overline">NEW IN THIS BETA</div>' +
+   '<div class="overline">NEW IN 1.5.1</div>' +
    '<h2 id="km-whatsnew-title-15">What\u2019s new</h2>' +
    '<ul class="km-whatsnew-list-15">' + ITEMS.slice(0, 4).map(function (t) {
     return '<li>' + K.esc(t) + '</li>';
@@ -88,7 +89,7 @@
   var row = document.createElement('button');
   row.type = 'button';
   row.className = 'settings-row560 settings-action560 km-wn-row-15';
-  row.innerHTML = '<span><strong>What\u2019s new</strong><small>Changes in this beta build</small></span>' +
+  row.innerHTML = '<span><strong>What\u2019s new</strong><small>Changes in Kuro 1.5.1</small></span>' +
    '<b aria-hidden="true">\u203a</b>';
   row.addEventListener('click', openSheet);
   rows.insertBefore(row, rows.firstChild);

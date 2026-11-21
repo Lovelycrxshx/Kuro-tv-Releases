@@ -227,15 +227,32 @@ public final class KuroUpdateDialog582 {
         title.setText(KuroUpdateCenter582.headline(s));
         chip.setText(chip(s));
         chip.setTextColor(s.failed() ? KuroDialogs581.INK : KuroDialogs581.PURPLE_SOFT);
-        percent.setText(s.percent >= 0 && !s.scheduled() ? s.percent + "%" : "—");
-        if (s.percent >= 0 && (s.transferring() || s.verifying() || s.ready())) {
-            bar.setIndeterminate(false);
-            bar.setProgress(Math.max(0, Math.min(1000, s.percent * 10)));
-        } else if (s.ready()) {
-            bar.setIndeterminate(false);
-            bar.setProgress(1000);
-        } else {
+        if (s.transferring() || s.verifying() || s.ready()) {
+            percent.setVisibility(View.VISIBLE);
+            percent.setTextSize(TypedValue.COMPLEX_UNIT_SP, 34);
+            percent.setText(s.ready() ? "100%" : (s.percent >= 0 ? s.percent + "%" : "0%"));
+            bar.setVisibility(View.VISIBLE);
+            if (s.ready()) {
+                bar.setIndeterminate(false);
+                bar.setProgress(1000);
+            } else if (s.percent >= 0) {
+                bar.setIndeterminate(false);
+                bar.setProgress(Math.max(0, Math.min(1000, s.percent * 10)));
+            } else {
+                bar.setIndeterminate(true);
+            }
+        } else if (s.checking()) {
+            percent.setVisibility(View.GONE);
+            bar.setVisibility(View.VISIBLE);
             bar.setIndeterminate(true);
+        } else if (s.upToDate()) {
+            percent.setVisibility(View.VISIBLE);
+            percent.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+            percent.setText("You are on the latest version");
+            bar.setVisibility(View.GONE);
+        } else {
+            percent.setVisibility(View.GONE);
+            bar.setVisibility(View.GONE);
         }
         String line = KuroUpdateCenter582.detail(s);
         detail.setText(line);
@@ -267,17 +284,18 @@ public final class KuroUpdateDialog582 {
     }
 
     /** The action set only depends on which state the updater is in. */
-    private static String key(KuroUpdateCenter582.Snapshot s) {
+    static String key(KuroUpdateCenter582.Snapshot s) {
         if (s.ready()) return "ready";
         if (s.failed()) return "failed";
         if (s.checking()) return "checking";
         if (s.verifying()) return "verifying";
         if (s.transferring()) return "transferring";
         if (s.scheduled()) return "scheduled";
+        if (s.upToDate()) return "up_to_date";
         return "idle";
     }
 
-    private static String chip(KuroUpdateCenter582.Snapshot s) {
+    static String chip(KuroUpdateCenter582.Snapshot s) {
         if (s.ready()) return "READY";
         if (s.verifying()) return "VERIFYING";
         if (s.checking()) return "CHECKING";
@@ -285,6 +303,7 @@ public final class KuroUpdateDialog582 {
         if (s.scheduled()) return "SCHEDULED";
         if (s.failed()) return "FAILED";
         if (s.transferring()) return "DOWNLOADING";
+        if (s.upToDate()) return "UP TO DATE";
         return "IDLE";
     }
 
