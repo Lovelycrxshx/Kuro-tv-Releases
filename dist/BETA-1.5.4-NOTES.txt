@@ -4,13 +4,13 @@ Kuro 1.5.4-beta (Signed Beta Build — NOT Published on GitHub)
 Package:        app.lovelycrxshx.kuro
 Version Name:   1.5.4-beta
 Version Code:   96
-Size:           51,562,530 bytes (49.2 MB)
-SHA-256:        1b37ef37b4d18919878cc70a989e100de4d1a32cc2a06b931f3a5d7e4a7997d8
-MD5:            357e230a7a26098266c3ed8f8970986d
+Size:           51,583,530 bytes (49.2 MB)
+SHA-256:        88479bbcddc4e0515ef61ea8ac5c59f80e9aae3cf1984fd0f607652e733c7abf
+MD5:            8c385d5b1b38393a02afc3468b792d93
 Signer:         CN=Kuro Anime
 Signer SHA-256: 1D:37:C3:CA:28:ED:80:CC:48:46:01:A7:A7:90:7D:5C:43:97:0A:5D:57:D5:1A:A4:E9:14:75:A6:07:03:E9:3E
-Google Drive:   https://drive.google.com/file/d/1TGjU0aAJd9t48lHeV3FCE8hXHV_4rUE5/view
-Direct DL:      https://drive.google.com/uc?id=1TGjU0aAJd9t48lHeV3FCE8hXHV_4rUE5&export=download
+Google Drive:   https://drive.google.com/file/d/1k1Mn8KjR93xPBj3cVNMPtn0e_Z6dqJOA/view
+Direct DL:      https://drive.google.com/uc?id=1k1Mn8KjR93xPBj3cVNMPtn0e_Z6dqJOA&export=download
 
 Note:
 - Signed with the production Kuro Anime release certificate so it installs cleanly
@@ -18,32 +18,35 @@ Note:
 - GitHub Releases and main branch remain on v1.5.3 (official public release).
 
 What's Included in 1.5.4-beta:
-1. Hardened Multi-Layer Player Popup & In-Page-Push Ad Blocker:
+1. Signature Violet Default Theme Across the Entire App:
+   - Signature Violet (#a65be4) is now the default colour across all screens,
+     startup splash, Settings accent preview, native dialogs, system bars, player
+     controls, and Android TV banner.
+   - Automatically migrates installs that were still on the old default teal once,
+     while keeping all 20 custom accent colours selectable in Settings.
+
+2. Strong Performance & Compatibility Architecture (Zero Scroll/Animation Changes):
+   - Built-in Smart Encrypted DNS (DoH) unblock across Cloudflare (1.1.1.1/1.0.0.1),
+     Google (8.8.8.8), and Quad9 (9.9.9.9) with automatic IPv4 + IPv6 fallback when
+     carriers block anime domains, plus pooled HTTP/2 connections across catalogue,
+     posters, sources, and native HLS playback.
+   - Automatic ExoPlayer hardware-to-software video decoder fallback in both online
+     and offline players so older or picky phone/TV chips play smoothly instead of
+     showing a black screen.
+   - Non-blocking background temporary cache scanner and 1-tap "Clear temporary
+     stream cache" action in Settings -> Network & compatibility (never touches
+     accounts, watchlists, history, or offline downloads).
+   - Android TV / Fire TV Leanback launcher & banner support, foldable screen
+     continuity without player restarts, automatic low-memory cache trimming
+     (onTrimMemory / onLowMemory), and WebView crash-recovery shields.
+
+3. Hardened Multi-Layer Player Popup & In-Page-Push Ad Blocker:
    - Blocks Adsterra Social Bar, ExoClick In-Page Push, Monetag, Galaksion, AdCash,
-     AdSpyglass, Clickadu, HilltopAds, and adult fake-notification floating banners
-     at both the WebView network layer (50+ expanded ad/IPP CDN domains) and the
-     document-start cosmetic layer.
-   - Hooks Element.prototype.attachShadow at document-start so open and closed
-     Shadow DOM ad widgets are hidden along with their outer host container.
-   - Eliminates floating Ad/Sponsored banners with SVG/CSS close icons, neutralizes
-     window.open and invisible click-hijack overlays, and hides cross-origin ad
-     banner iframes while keeping video, subtitles, controls, and Cloudflare
-     verification untouched.
+     AdSpyglass, Clickadu, HilltopAds, and floating adult fake-notification banners
+     at both the WebView network layer and Shadow DOM / document-start cosmetic layer.
 
-2. Android 15 (targetSdk 35) Edge-to-Edge Status Bar & Gesture Bar Window Fix:
-   - Applies native WindowInsetsCompat (systemBars | displayCutout | ime) padding
-     to MainActivity and KuroOfflineActivity561 when not in fullscreen/PiP, so the
-     top Kuro header never overlaps the system clock, network speed, Bluetooth,
-     5G, or battery icons, and switches cleanly to true edge-to-edge in fullscreen.
+4. Android 15 (targetSdk 35) Edge-to-Edge Status Bar & Gesture Bar Window Fix:
+   - Native WindowInsetsCompat padding keeps top headers clear of system status bar
+     icons while preserving true edge-to-edge fullscreen playback.
 
-3. Unified Account, Trackers & Discord Rich Presence Hub (Proposal #3):
-   - Kuro Cloud Account card, AniList 2-Way Sync, MyAnimeList Sync, Discord Rich
-     Presence card, and granular sync toggles.
-
-4. 24 Real Manga Face PFPs & Matching 16:9 Banners (art-11 .. art-34):
-   - Replaced all legacy art-01..10 overlays with 24 authentic manga/manhwa face
-     PFPs and matching 16:9 banners + one-tap "Match banner" pairing.
-
-5. Desktop Leanback Left-Rail UI (Desktop Site Mode Only) & UI Cleanups:
-   - Activates only when Settings -> Site view -> Desktop is enabled.
-   - Hidden "Verify Library 11", "Surprise Me", and "Source sites · open separately".
+5. Unified Account Hub (#3) + 24 Manga Face PFPs & Matching 16:9 Banners (art-11..34).
