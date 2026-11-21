@@ -174,7 +174,7 @@ jobs:
               ud = [n for n in names if n.endswith("KuroUpdateDialog582.java")]
               assert ud and b"notifBanner152" in z.read(ud[0]), "Source.zip missing notifBanner152"
               pu = [n for n in names if n.endswith("KuroPlayerUi153.java")]
-              assert pu and b"presentAutoNextCard" in z.read(pu[0]), "Source.zip missing KuroPlayerUi153.java"
+              assert pu and b"buildAutoNextDialog" in z.read(pu[0]), "Source.zip missing KuroPlayerUi153.java"
               ps = [n for n in names if n.endswith("assets/player-skin.js")]
               assert ps and b"kuro-oled-hud153" in z.read(ps[0]), "Source.zip missing assets/player-skin.js"
           PY
