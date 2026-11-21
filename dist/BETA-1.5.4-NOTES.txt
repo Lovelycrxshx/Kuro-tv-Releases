@@ -4,55 +4,51 @@ Kuro 1.5.4-beta (Signed Beta Build — NOT Published on GitHub)
 Package:        app.lovelycrxshx.kuro
 Version Name:   1.5.4-beta
 Version Code:   96
-Size:           51,658,664 bytes (49.3 MB)
-SHA-256:        c9d2146fe4edf20f096f854cc83fd371fd2202a164209f797bc5d687426edca1
-MD5:            e64e530c1d67e4dbf7a4c600391ff976
+Size:           53,160,408 bytes (50.7 MB)
+SHA-256:        75ca585af14c6384a49e90b569b71bee1fd514c9137730a67283c7683b5625c6
+MD5:            b7f2d9c2500720d63fee4fb65911510c
 Signer:         CN=Kuro Anime
 Signer SHA-256: 1D:37:C3:CA:28:ED:80:CC:48:46:01:A7:A7:90:7D:5C:43:97:0A:5D:57:D5:1A:A4:E9:14:75:A6:07:03:E9:3E
-Google Drive:   https://drive.google.com/file/d/1eARL1GWjKtzZS5c-H_9tO2xqiaEjC5Ho/view
-Direct DL:      https://drive.google.com/uc?id=1eARL1GWjKtzZS5c-H_9tO2xqiaEjC5Ho&export=download
+Google Drive:   https://drive.google.com/file/d/1sZpJFsqdFt9JwA4MRo2g5i2joY3gi5U9/view
+Direct DL:      https://drive.google.com/uc?id=1sZpJFsqdFt9JwA4MRo2g5i2joY3gi5U9&export=download
 
 Note:
 - Signed with the production Kuro Anime release certificate so it installs cleanly
   as an in-place upgrade over v1.5.3 / earlier 1.5.4-beta without wiping history.
 - GitHub Releases and main branch remain on v1.5.3 (official public release).
 
-What's Fixed & Included in 1.5.4-beta:
-1. Fixed Theme Colours Picker (All 20 Accents):
+What's Included & Fixed in 1.5.4-beta:
+1. 40 Anime & Manga Profile Art Sets (PFPs + Matching 16:9 Banners):
+   - Expanded Profile Art from 24 to 40 character pairs (art-11 .. art-50),
+     keeping all 24 existing sets and adding 16 iconic anime character PFPs +
+     matching 16:9 banners: Monkey D. Luffy (Gear 5), Roronoa Zoro, Itachi
+     Uchiha, Naruto Uzumaki, Sasuke Uchiha, Tanjiro Kamado, Kyojuro Rengoku,
+     Killua Zoldyck, Ken Kaneki, Thorfinn, Guts, Lelouch Lamperouge, Power,
+     Okarun (Turbo Granny), Zero Two, and Spike Spiegel.
+
+2. Fixed Theme Colours Picker (All 20 Accents):
    - Fixed a strict-mode ReferenceError (`host is not defined`) inside
      `theme-accent-1.1.js` `schedule()` that prevented the 20-colour Theme Accent
-     picker (`#accent-111`) from mounting inside Settings -> Appearance, leaving
-     only the legacy 8-colour dropdown. All 20 custom colours now appear and
-     switch both WebView surfaces and native Android dialogs/bars live.
+     picker (`#accent-111`) from mounting inside Settings -> Appearance.
 
-2. Fixed MyAnimeList & AniList Two-Way Sync:
+3. Fixed MyAnimeList & AniList Two-Way Sync:
    - Fixed episode watch detection across embedded iframe players (`megaplay`,
      `vidtube`, `vidnest`, `tryembed`, `hianimes`, `zorotv`), direct HLS stream
      playback, and native ExoPlayer so episodes mark watched & sync at >= 85%
-     playback (including when closing the player after the ending credits start)
-     instead of silently failing inside child iframes or requiring 98% end.
-   - Fixed `TrackerSync553` progress advancement when watching mid-season or
-     non-sequential episodes (`episodes.length() - 1` instead of stopping at
-     episode 1).
-   - Added automatic AniList + MyAnimeList ID resolution (`autoResolveIds154` +
-     detail-page ID stamping) so titles watched from Home / Search / Browse sync
-     automatically without getting stuck in manual `MATCH_REQUIRED`.
-   - Routed `AccountHttp` through `KuroFastNet154` (Encrypted DoH `1.1.1.1` /
-     `8.8.8.8` + pooled HTTP/2) so carrier DNS blocks never stall tracker sync.
-   - Updated `Sync Now` and `putImports` to perform true two-way sync, refreshing
-     progress & status on already-imported entries as well as pushing local updates.
+     playback.
+   - Fixed `TrackerSync553` progress advancement on mid-season / non-sequential
+     episodes, added automatic AniList + MyAnimeList ID resolution
+     (`autoResolveIds154`), routed `AccountHttp` through `KuroFastNet154`
+     (Encrypted DoH `1.1.1.1` / `8.8.8.8`), and enabled true two-way refresh on
+     `Sync Now`.
 
-3. Fixed Discord Login & Rich Presence Account Linking:
+4. Fixed Discord Login & Rich Presence Account Linking:
    - Added Android 15 (`targetSdkVersion 35`) `https` `BROWSABLE` `<queries>`
      visibility and explicit web-browser package selection (`openInBrowser154`)
-     so the Discord Android app (`com.discord`) no longer hijacks OAuth URLs onto
-     Discord's Home screen.
-   - Wired Account Hub's "Connect Discord" button directly to native Discord
-     Social SDK PKCE OAuth (`linkDirect154` -> `discord-1569077670074122250:/authorize/callback`),
-     auto-enabling Rich Presence and updating the Account Hub live upon return,
-     plus added token-endpoint redirect preflight & dual-URI callback routing for
-     profile sign-in.
+     so the Discord Android app (`com.discord`) no longer hijacks OAuth URLs, and
+     wired Account Hub's "Connect Discord" button directly to native Discord
+     Social SDK PKCE OAuth (`linkDirect154`).
 
-4. Buttery-Smooth Native Scrolling, Compact SUB | DUB Pills, Signature Violet
+5. Buttery-Smooth Native Scrolling, Compact SUB | DUB Pills, Signature Violet
    Default, Smart DoH + Decoder Fallback, Multi-Layer Ad Guard, Android 15
-   Edge-to-Edge Insets, Unified Account Hub, and 24 Manga PFPs & Banners.
+   Edge-to-Edge Insets, and Unified Account Hub.
