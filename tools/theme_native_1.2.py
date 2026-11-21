@@ -216,6 +216,7 @@ public final class KuroTheme12 {
 
     private static final List<Runnable> LISTENERS = new ArrayList<>();
     private static int accent = TEAL;
+    private static boolean amoled;
     private static Map<Integer, Integer> map = table(TEAL);
     private static boolean loaded;
 
@@ -243,8 +244,31 @@ public final class KuroTheme12 {
         return ACCENTS[accent];
     }
 
+    public static boolean amoled() {
+        return amoled;
+    }
+
     /** The colour {@code base} becomes in the current accent. Unknown values pass through. */
     public static int col(int base) {
+        if (amoled) {
+            switch (base) {
+                case 0xff0a070f:
+                case 0xff100c18:
+                case 0xff100c17:
+                case 0xff0d0914:
+                case 0xff0e0916:
+                case 0xff110b19:
+                    return 0xff000000;
+                case 0xff211229:
+                case 0xff221b2b:
+                case 0xff251730:
+                case 0xff1b1325:
+                case 0xff1a1224:
+                    return 0xff0a0a0e;
+                default:
+                    break;
+            }
+        }
         Integer mapped = map.get(base);
         return mapped == null ? base : mapped;
     }
@@ -274,7 +298,9 @@ public final class KuroTheme12 {
             return;
         }
         loaded = true;
-        String saved = prefs(context).getString("accent", DEFAULT);
+        SharedPreferences p = prefs(context);
+        String saved = p.getString("accent", DEFAULT);
+        amoled = p.getBoolean("amoled", false);
         accent = indexOf(saved);
         apply();
     }
@@ -299,6 +325,22 @@ public final class KuroTheme12 {
             return;
         }
         accent = next;
+        apply();
+        if (context instanceof Activity) {
+            applyWindow((Activity) context);
+        }
+    }
+
+    /** 1.5.2: toggle pure-black OLED surfaces alongside the chosen accent. */
+    public static void setAmoled(Context context, boolean on) {
+        if (context != null) {
+            prefs(context).edit().putBoolean("amoled", on).apply();
+        }
+        loaded = true;
+        if (on == amoled) {
+            return;
+        }
+        amoled = on;
         apply();
         if (context instanceof Activity) {
             applyWindow((Activity) context);
@@ -451,6 +493,10 @@ def patch_main_activity(project):
     method = ('class Bridge{\n  @android.webkit.JavascriptInterface public void themeAccent111('
               'final String id){if(id==null||!KuroTheme12.isKnown(id))return;'
               'runOnUiThread(()->{KuroTheme12.set(MainActivity.this,id);'
+              'KuroTheme12.applyWindow(MainActivity.this);if(ui!=null)'
+              'ui.setBackgroundColor(KuroTheme12.background());});}\n'
+              '  @android.webkit.JavascriptInterface public void themeAmoled152('
+              'final boolean on){runOnUiThread(()->{KuroTheme12.setAmoled(MainActivity.this,on);'
               'KuroTheme12.applyWindow(MainActivity.this);if(ui!=null)'
               'ui.setBackgroundColor(KuroTheme12.background());});}\n')
     if "themeAccent111" not in text:

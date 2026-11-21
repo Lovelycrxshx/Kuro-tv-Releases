@@ -19,6 +19,7 @@
  if (!window.km15) return;
  var K = window.km15;
  var HIDDEN_KEY = 'kuro-hidden-15';
+ var HIDDEN_META_KEY = 'kuro-hidden-meta-152';
  var RAIL_ID = 'km-continue-15';
  var CARD_LIMIT = 8;
 
@@ -26,6 +27,17 @@
  function hiddenList() {
   var raw = K.lsGet(HIDDEN_KEY, []);
   return Array.isArray(raw) ? raw : [];
+ }
+
+ function hiddenMeta() {
+  var raw = K.lsGet(HIDDEN_META_KEY, {});
+  return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+ }
+
+ function prettyHiddenLabel(normKey, meta) {
+  var row = meta && meta[normKey];
+  if (row && typeof row.title === 'string' && row.title.trim()) return row.title.trim();
+  return String(normKey || '').replace(/\b[a-z]/g, function (c) { return c.toUpperCase(); });
  }
 
  function isHidden(title) {
@@ -38,9 +50,21 @@
   var n = K.norm(title);
   if (!n) return false;
   var list = hiddenList().filter(function (x) { return x !== n; });
-  if (on) list.push(n);
+  var meta = hiddenMeta();
+  if (on) {
+   list.push(n);
+   meta[n] = { title: String(title || '').trim().slice(0, 200) || n, at: Date.now() };
+  } else {
+   delete meta[n];
+  }
   K.lsSet(HIDDEN_KEY, list.slice(-200));
+  K.lsSet(HIDDEN_META_KEY, meta);
   return true;
+ }
+
+ function clearAllHidden() {
+  K.lsSet(HIDDEN_KEY, []);
+  K.lsSet(HIDDEN_META_KEY, {});
  }
 
  function historyRows() {
@@ -130,13 +154,96 @@
  /* --------------------------------------------------------- hidden cards --- */
  function applyHidden(main) {
   var list = hiddenList();
-  if (!list.length) return;
   Array.prototype.forEach.call(main.querySelectorAll('.card'), function (card) {
    var title = card.querySelector('strong');
    if (!title) return;
-   if (list.indexOf(K.norm(title.textContent)) >= 0) card.classList.add('km-card-hidden-15');
+   var hide = list.length > 0 && list.indexOf(K.norm(title.textContent)) >= 0;
+   if (hide) card.classList.add('km-card-hidden-15');
+   else card.classList.remove('km-card-hidden-15');
   });
  }
+
+ function hiddenSummaryText() {
+  var n = hiddenList().length;
+  if (!n) return 'No titles hidden from Home right now';
+  return n + (n === 1 ? ' title' : ' titles') + ' hidden from Home \u00b7 tap to unhide';
+ }
+
+ function openHiddenSheet() {
+  var list = hiddenList();
+  var meta = hiddenMeta();
+  if (!list.length) {
+   K.sheet('Hidden titles', 'Long-press any poster on Home to hide it', [
+    { label: 'No hidden titles right now', sub: 'Titles you hide stay off Home on this phone until you restore them here.' }
+   ]);
+   return;
+  }
+  var rows = list.slice().reverse().map(function (normKey) {
+   var label = prettyHiddenLabel(normKey, meta);
+   return {
+    label: label,
+    sub: 'Tap to show on Home again',
+    onPick: function () {
+     setHidden(normKey, false);
+     K.toast('Shown again: ' + label);
+     K.schedule();
+    }
+   };
+  });
+  if (list.length > 1) {
+   rows.push({
+    label: 'Unhide all (' + list.length + ')',
+    sub: 'Restore every hidden title on Home',
+    tone: 'danger',
+    onPick: function () {
+     clearAllHidden();
+     K.toast('All hidden titles restored');
+     K.schedule();
+    }
+   });
+  }
+  K.sheet('Hidden titles', list.length + (list.length === 1 ? ' title hidden on this phone' : ' titles hidden on this phone'), rows);
+ }
+
+ function mountHiddenSettingsRow() {
+  var overlay = document.getElementById('settings-overlay560');
+  if (!overlay) return;
+  var existing = overlay.querySelector('.km-hidden-row-152');
+  if (existing) {
+   var sub = existing.querySelector('small');
+   var want = hiddenSummaryText();
+   if (sub && sub.textContent !== want) sub.textContent = want;
+   return;
+  }
+  var group = null;
+  Array.prototype.forEach.call(overlay.querySelectorAll('.settings-group560'), function (g) {
+   var key = (g.getAttribute('data-section') || '').toLowerCase();
+   if (!group && key.indexOf('privacy') === 0) group = g;
+  });
+  if (!group) return;
+  var rows = group.querySelector('.settings-rows560');
+  if (!rows) return;
+  var row = document.createElement('button');
+  row.type = 'button';
+  row.className = 'settings-row560 settings-action560 km-hidden-row-152';
+  row.setAttribute('data-filter', 'hidden titles home unhide restore');
+  row.innerHTML = '<span><strong>Hidden titles</strong><small>' + K.esc(hiddenSummaryText()) + '</small></span>' +
+   '<b aria-hidden="true">\u203a</b>';
+  row.addEventListener('click', openHiddenSheet);
+  var queueRow = rows.querySelector('[data-action="queue571"]');
+  if (queueRow && queueRow.nextSibling) rows.insertBefore(row, queueRow.nextSibling);
+  else rows.appendChild(row);
+ }
+
+ window.kuroHidden152 = {
+  list: function () {
+   var meta = hiddenMeta();
+   return hiddenList().map(function (n) { return { key: n, title: prettyHiddenLabel(n, meta) }; });
+  },
+  unhide: function (titleOrKey) { var ok = setHidden(titleOrKey, false); K.schedule(); return ok; },
+  clearAll: function () { clearAllHidden(); K.schedule(); },
+  openSheet: openHiddenSheet
+ };
 
  /* ------------------------------------------------------- item resolution --- */
  function resolveItem(card) {
@@ -300,6 +407,7 @@
   wireLongPress();
   applyHidden(main);
   renderRail(main);
+  mountHiddenSettingsRow();
  }
 
  K.observe(render);

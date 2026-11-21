@@ -12,15 +12,20 @@ every install by the updater.
 2. **DPAD / focus overhaul** — the highest-impact change left for Fire TV. A deliberate focus
    path on every screen, larger hit targets at TV density, and no focus ever lost to a
    decorative view.
-3. **Home v2 skeletons** — a load state that mirrors the final layout instead of a spinner, so
-   the home screen does not jump when artwork arrives.
-4. **Airing calendar and new-episode notifications** — a schedule surface and opt-in per
+3. **Airing calendar and new-episode notifications** — a schedule surface and opt-in per
    series, built on data the app already has.
-5. **Theming v2** — a Material 3 token pass, a true AMOLED black, and overscan-safe margins for
-   televisions.
+4. **Theming v2 (TV overscan & Material 3 pass)** — a Material 3 token pass and overscan-safe
+   margins for televisions (true AMOLED black shipped in 1.5.2).
 
 ## Shipped
 
+- **1.5.2** — Pure black (OLED) mode across all twenty accents, Home & Browse shimmer loading
+  skeletons, Hidden titles manager in Settings, full local `.json` Backup & restore (including
+  profile art, theme/OLED, hidden titles, auto-clean and episode resume checkpoints), monochrome
+  status-bar icon, inline Android 13+ notification permission in Kuro updates, and slimmed
+  `Source.zip`.
+- **1.5.1** — "You are on the latest version" state in Kuro updates, worker-thread update
+  checks, and a smoother 3.6-second cold-launch title sequence.
 - **1.5** — continue watching, long press on a poster, what's new after an update, downloads
   upkeep, twenty accents in Settings, the motion layer and the header update button.
 - **1.4** — ten accents and a richer theme picker, with the native dialogs following.
