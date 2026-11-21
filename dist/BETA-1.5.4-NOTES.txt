@@ -4,13 +4,13 @@ Kuro 1.5.4-beta (Signed Beta Build — NOT Published on GitHub)
 Package:        app.lovelycrxshx.kuro
 Version Name:   1.5.4-beta
 Version Code:   96
-Size:           53,160,408 bytes (50.7 MB)
-SHA-256:        75ca585af14c6384a49e90b569b71bee1fd514c9137730a67283c7683b5625c6
-MD5:            b7f2d9c2500720d63fee4fb65911510c
+Size:           53,085,258 bytes (50.6 MB)
+SHA-256:        cc4821700a7128dde5be921285b7ff6a41f8bc11600c48f0611cc9c52fa7555d
+MD5:            5e6df5cce65e3eb088deb84d331ea46c
 Signer:         CN=Kuro Anime
 Signer SHA-256: 1D:37:C3:CA:28:ED:80:CC:48:46:01:A7:A7:90:7D:5C:43:97:0A:5D:57:D5:1A:A4:E9:14:75:A6:07:03:E9:3E
-Google Drive:   https://drive.google.com/file/d/1sZpJFsqdFt9JwA4MRo2g5i2joY3gi5U9/view
-Direct DL:      https://drive.google.com/uc?id=1sZpJFsqdFt9JwA4MRo2g5i2joY3gi5U9&export=download
+Google Drive:   https://drive.google.com/file/d/1nXjFM3j5CxvKqiXLFBcJ9o5OjyZ90aKI/view
+Direct DL:      https://drive.google.com/uc?id=1nXjFM3j5CxvKqiXLFBcJ9o5OjyZ90aKI&export=download
 
 Note:
 - Signed with the production Kuro Anime release certificate so it installs cleanly
@@ -18,7 +18,28 @@ Note:
 - GitHub Releases and main branch remain on v1.5.3 (official public release).
 
 What's Included & Fixed in 1.5.4-beta:
-1. 40 Anime & Manga Profile Art Sets (PFPs + Matching 16:9 Banners):
+1. Watch Page v2 Overhaul (YouTube-Style Layout & Controls):
+   - 5-Servers-Per-Page Switcher ("Other servers"): `Servers & audio` now shows
+     at most 5 servers per page (`Server 1`–`Server 5`) in both SUB and DUB
+     columns, with an `"Other servers"` button underneath that flips cleanly to
+     the next 5 (`Server 6`–`Server 10`, plus `"‹  Servers 1–5"` to flip back),
+     automatically opening on whichever page holds the currently active server.
+   - 3-Row YouTube-Style Episode Playlist Card: `Episodes` now displays at most
+     3 visible episode rows (`3 × 52dp`) inside a nested-scroll playlist card
+     that scrolls smoothly inside itself like a YouTube playlist tab and
+     auto-scrolls the currently playing episode into view.
+   - YouTube-Style Recommended Anime Feed Below `Anime details`: Added a
+     `"More anime"` vertical feed of 16:9 widescreen video cards (banner/cover
+     thumbnail, gradient scrim, `SUB | DUB · X EP` badge, accent play badge,
+     2-line title, and `★ score · Studio · Format · Year` subtitle) powered by
+     AniList recommendations + popular fallback (`watchFeed154`); tapping any
+     card resolves & opens that show directly in Kuro.
+   - Removed Episode Slide-Over Drawer & Header Button: Removed the top-right
+     circular 3-line episode drawer button from `WatchHeader`, disabled the
+     right-side `"Episodes · X episodes · tap to play"` slide-over panel, and
+     removed redundant `"Episodes"` drawer triggers from fullscreen controls.
+
+2. 40 Anime & Manga Profile Art Sets (PFPs + Matching 16:9 Banners):
    - Expanded Profile Art from 24 to 40 character pairs (art-11 .. art-50),
      keeping all 24 existing sets and adding 16 iconic anime character PFPs +
      matching 16:9 banners: Monkey D. Luffy (Gear 5), Roronoa Zoro, Itachi
@@ -26,29 +47,7 @@ What's Included & Fixed in 1.5.4-beta:
      Killua Zoldyck, Ken Kaneki, Thorfinn, Guts, Lelouch Lamperouge, Power,
      Okarun (Turbo Granny), Zero Two, and Spike Spiegel.
 
-2. Fixed Theme Colours Picker (All 20 Accents):
-   - Fixed a strict-mode ReferenceError (`host is not defined`) inside
-     `theme-accent-1.1.js` `schedule()` that prevented the 20-colour Theme Accent
-     picker (`#accent-111`) from mounting inside Settings -> Appearance.
-
-3. Fixed MyAnimeList & AniList Two-Way Sync:
-   - Fixed episode watch detection across embedded iframe players (`megaplay`,
-     `vidtube`, `vidnest`, `tryembed`, `hianimes`, `zorotv`), direct HLS stream
-     playback, and native ExoPlayer so episodes mark watched & sync at >= 85%
-     playback.
-   - Fixed `TrackerSync553` progress advancement on mid-season / non-sequential
-     episodes, added automatic AniList + MyAnimeList ID resolution
-     (`autoResolveIds154`), routed `AccountHttp` through `KuroFastNet154`
-     (Encrypted DoH `1.1.1.1` / `8.8.8.8`), and enabled true two-way refresh on
-     `Sync Now`.
-
-4. Fixed Discord Login & Rich Presence Account Linking:
-   - Added Android 15 (`targetSdkVersion 35`) `https` `BROWSABLE` `<queries>`
-     visibility and explicit web-browser package selection (`openInBrowser154`)
-     so the Discord Android app (`com.discord`) no longer hijacks OAuth URLs, and
-     wired Account Hub's "Connect Discord" button directly to native Discord
-     Social SDK PKCE OAuth (`linkDirect154`).
-
-5. Buttery-Smooth Native Scrolling, Compact SUB | DUB Pills, Signature Violet
-   Default, Smart DoH + Decoder Fallback, Multi-Layer Ad Guard, Android 15
-   Edge-to-Edge Insets, and Unified Account Hub.
+3. Fixed Theme Colours Picker (All 20 Accents), MyAnimeList & AniList Two-Way
+   Sync, Discord Login & Rich Presence Account Linking, Smooth Native
+   Scrolling, Compact SUB | DUB Pills, Signature Violet Default, Smart DoH +
+   Decoder Fallback, Multi-Layer Ad Guard, and Android 15 Edge-to-Edge Insets.
