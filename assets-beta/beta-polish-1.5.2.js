@@ -22,14 +22,18 @@
   try { return localStorage.getItem(AMOLED_KEY) === '1'; } catch (e) { return false; }
  }
 
+ var lastSyncedAmoled = null;
+
  function syncAmoled() {
   var on = amoledEnabled();
-  var active = on && !isLightMode();
+  var active = Boolean(on && !isLightMode());
+  if (active === lastSyncedAmoled) return;
+  lastSyncedAmoled = active;
   if (active) document.documentElement.setAttribute('data-amoled', '1');
   else document.documentElement.removeAttribute('data-amoled');
   try {
    if (window.KuroNative && typeof window.KuroNative.themeAmoled152 === 'function') {
-    window.KuroNative.themeAmoled152(Boolean(active));
+    window.KuroNative.themeAmoled152(active);
    }
   } catch (e) {}
  }

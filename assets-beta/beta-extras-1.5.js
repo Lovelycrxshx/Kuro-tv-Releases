@@ -145,9 +145,39 @@ window.km15 = (function () {
   schedule();
  }
 
+ function isIgnoredMutation15(records) {
+  if (!records || !records.length) return true;
+  for (var i = 0; i < records.length; i++) {
+   var rec = records[i];
+   var t = rec.target;
+   if (t && t.closest && t.closest('#km-intro-15, #km-sweep-15, .km-toast-15, .km-sheet-15, #kb-whatsnew')) {
+    continue;
+   }
+   var lists = [rec.addedNodes, rec.removedNodes];
+   for (var l = 0; l < 2; l++) {
+    var nodes = lists[l];
+    if (!nodes) continue;
+    for (var j = 0; j < nodes.length; j++) {
+     var n = nodes[j];
+     if (!n || n.nodeType !== 1) continue;
+     if (n.id === 'km-intro-15' || n.id === 'km-sweep-15' || n.id === 'kb-whatsnew') continue;
+     var cl = n.classList;
+     if (cl && (cl.contains('k154-poster-split') || cl.contains('km-toast-15') ||
+                cl.contains('km-skel-shelf-152') || cl.contains('km-skel-results-152'))) {
+      continue;
+     }
+     return false;
+    }
+   }
+  }
+  return true;
+ }
+
  function boot() {
   if (window.MutationObserver && document.body) {
-   new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+   new MutationObserver(function (records) {
+    if (!isIgnoredMutation15(records)) schedule();
+   }).observe(document.body, { childList: true, subtree: true });
   }
   schedule();
  }

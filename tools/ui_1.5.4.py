@@ -1,0 +1,2843 @@
+#!/usr/bin/env python3
+"""Kuro 1.5.4 native & WebView bridge patcher.
+
+Implements:
+- #2 Cinematic Title Detail Page v2:
+  - KuroCatalog573 'detail154' (bannerImage, averageScore, duration, studios,
+    streamingEpisodes thumbnails, franchise watch-order relations)
+  - KuroOffline561.confirmBatchDownload154 + Bridge.batchDownload154
+  - HiAnime ssl-item-filler extraction + Skip Filler auto-next skip support
+- #3 Widescreen Left-Rail Leanback UI & Glowing DPAD Focus (ONLY when Desktop site is ON):
+  - MainActivity.applyWindowPreferences560 wide-viewport sync + Bridge.siteView154
+  - settings560.js live data-site-view attribute & 'kuro-settings560-changed' event
+- #4 Smart Multi-Filter Browse & Voice Command Search:
+  - AndroidManifest.xml RECOGNIZE_SPEECH <queries> intent (zero RECORD_AUDIO permission)
+  - MainActivity RecognizerIntent voiceSearch154 + hasVoiceSearch154 + result callback
+  - KuroCatalog573 'metaBatch154' (batch AniList ratings/genres/seasons/status + Surprise Me)
+- KuroUpdater572: safe numeric parsing for '-beta' version tags.
+"""
+
+from __future__ import annotations
+
+import pathlib
+import sys
+
+
+def patch_once(text: str, marker: str, old: str, new: str, label: str) -> str:
+    if marker in text:
+        return text
+    if old not in text:
+        raise SystemExit(f"ui_1.5.4: missing anchor for {label}")
+    return text.replace(old, new, 1)
+
+
+def patch_manifest(root: pathlib.Path) -> None:
+    path = root / "AndroidManifest.xml"
+    text = path.read_text(encoding="utf-8")
+    text = patch_once(
+        text,
+        "android.speech.action.RECOGNIZE_SPEECH",
+        "<intent><action android:name=\"com.discord.socialsdk.rpc.IDiscordRpcService\"/></intent></queries>",
+        "<intent><action android:name=\"com.discord.socialsdk.rpc.IDiscordRpcService\"/></intent>"
+        "<intent><action android:name=\"android.speech.action.RECOGNIZE_SPEECH\"/></intent>"
+        "<intent><action android:name=\"android.intent.action.VIEW\"/><category android:name=\"android.intent.category.BROWSABLE\"/><data android:scheme=\"https\"/></intent></queries>",
+        "AndroidManifest.xml RECOGNIZE_SPEECH & https browser queries",
+    )
+    path.write_text(text, encoding="utf-8")
+
+
+def patch_updater(root: pathlib.Path) -> None:
+    path = root / "src/app/lovelycrxshx/kuro/KuroUpdater572.java"
+    text = path.read_text(encoding="utf-8")
+    text = patch_once(
+        text,
+        "clean154",
+        'String[] parts = version.split("\\\\.");',
+        'String clean154 = versionFromTag(version); String[] parts = (clean154.isEmpty() ? version : clean154).split("\\\\.");',
+        "KuroUpdater572 beta tag numbers()",
+    )
+    path.write_text(text, encoding="utf-8")
+
+
+def patch_catalog(root: pathlib.Path) -> None:
+    path = root / "src/app/lovelycrxshx/kuro/KuroCatalog573.java"
+    text = path.read_text(encoding="utf-8")
+    text = patch_once(
+        text,
+        "metaBatch154",
+        'if(input==null||input.length()>300)throw new IOException("Invalid request");',
+        'if(input==null||input.length()>("metaBatch154".equals(action)||"watchFeed154".equals(action)?2400:300))throw new IOException("Invalid request");',
+        "KuroCatalog573 input limit",
+    )
+    extra_actions = (
+        '  }else if("detail154".equals(action)){\n'
+        '   long id=p.optLong("id",0);String provider=p.optString("provider",""),search=p.optString("search","").trim();\n'
+        '   String fields="{id idMal isAdult title{romaji english} bannerImage coverImage{extraLarge large} averageScore duration episodes status format season seasonYear genres studios(isMain:true){nodes{name}} nextAiringEpisode{airingAt episode} streamingEpisodes{title thumbnail} relations{edges{relationType node{id idMal type isAdult title{romaji english} format status episodes startDate{year month day}}}}}";\n'
+        '   if(id>=1&&id<=999999999&&(provider.equals("anilist")||provider.equals("mal"))){v.put("id",id);String field=provider.equals("mal")?"idMal":"id";query="query($id:Int){Media("+field+":$id,type:ANIME,isAdult:false)"+fields+"}";}\n'
+        '   else if(search.length()>=1&&search.length()<=140){v.put("search",search);query="query($search:String){Media(search:$search,type:ANIME,isAdult:false,sort:SEARCH_MATCH)"+fields+"}";}\n'
+        '   else throw new IOException("Invalid detail lookup");\n'
+        '  }else if("metaBatch154".equals(action)){\n'
+        '   if(p.optBoolean("random",false)){\n'
+        '    int page=Math.max(1,Math.min(12,p.optInt("page",1)));v.put("page",page);\n'
+        '    query="query($page:Int){Page(page:$page,perPage:24){media(type:ANIME,isAdult:false,sort:POPULARITY_DESC,averageScore_greater:74){id idMal isAdult title{romaji english} coverImage{large} bannerImage averageScore format status episodes season seasonYear genres}}}";\n'
+        '   }else if(p.optJSONArray("ids")!=null){\n'
+        '    JSONArray rawIds=p.optJSONArray("ids"),cleanIds=new JSONArray();\n'
+        '    for(int i=0;i<rawIds.length()&&cleanIds.length()<36;i++){long x=rawIds.optLong(i,0);if(x>=1&&x<=999999999)cleanIds.put(x);}\n'
+        '    if(cleanIds.length()==0)throw new IOException("Empty IDs");v.put("ids",cleanIds);\n'
+        '    query="query($ids:[Int]){Page(page:1,perPage:36){media(id_in:$ids,type:ANIME,isAdult:false){id idMal isAdult title{romaji english} averageScore format status episodes season seasonYear genres}}}";\n'
+        '   }else if(p.optJSONArray("titles")!=null){\n'
+        '    JSONArray names=p.optJSONArray("titles");if(names.length()==0||names.length()>8)throw new IOException("Invalid title batch");\n'
+        '    StringBuilder params=new StringBuilder("query("),body=new StringBuilder("{");int count=0;\n'
+        '    for(int i=0;i<names.length();i++){String name=names.optString(i,"").trim();if(name.length()<2||name.length()>140)continue;if(count>0)params.append(",");params.append("$q").append(count).append(":String");body.append("m").append(count).append(":Media(search:$q").append(count).append(",type:ANIME,isAdult:false,sort:SEARCH_MATCH){id idMal isAdult title{romaji english} averageScore format status episodes season seasonYear genres} ");v.put("q"+count,name);count++;}\n'
+        '    if(count==0)throw new IOException("Empty title batch");\n'
+        '    query=params.append(")").append(body).append("}").toString();\n'
+        '   }else throw new IOException("Invalid batch lookup");\n'
+        '  }else if("watchFeed154".equals(action)){\n'
+        '   long id=p.optLong("id",0);String search=p.optString("search","").trim();\n'
+        '   String recFields="{id idMal isAdult title{romaji english} bannerImage coverImage{extraLarge large} averageScore episodes format seasonYear genres studios(isMain:true){nodes{name}}}";\n'
+        '   String fb="fallback:Page(page:1,perPage:16){media(type:ANIME,isAdult:false,sort:POPULARITY_DESC)"+recFields+"}";\n'
+        '   if(id>=1&&id<=999999999){v.put("id",id);query="query($id:Int){Media(id:$id,type:ANIME,isAdult:false){id recommendations(page:1,perPage:14,sort:RATING_DESC){nodes{mediaRecommendation"+recFields+"}}} "+fb+"}";}\n'
+        '   else if(search.length()>=1&&search.length()<=140){v.put("search",search);query="query($search:String){Media(search:$search,type:ANIME,isAdult:false,sort:SEARCH_MATCH){id recommendations(page:1,perPage:14,sort:RATING_DESC){nodes{mediaRecommendation"+recFields+"}}} "+fb+"}";}\n'
+        '   else{query="query{"+fb+"}";}\n'
+        '  }else throw new IOException("Invalid action");'
+    )
+    text = patch_once(
+        text,
+        '"detail154".equals(action)',
+        '  }else throw new IOException("Invalid action");',
+        extra_actions,
+        "KuroCatalog573 detail154 & metaBatch154",
+    )
+    path.write_text(text, encoding="utf-8")
+
+
+def patch_offline(root: pathlib.Path) -> None:
+    path = root / "src/app/lovelycrxshx/kuro/KuroOffline561.java"
+    text = path.read_text(encoding="utf-8")
+    batch_method = """
+    static void confirmBatchDownload154(Activity activity, String rawJson) {
+        if (activity == null || activity.isFinishing() || activity.isDestroyed() || rawJson == null || rawJson.length() > 250000) return;
+        final List<JSONObject> valid = new ArrayList<>();
+        try {
+            org.json.JSONArray arr = new org.json.JSONArray(rawJson);
+            for (int i = 0; i < arr.length() && valid.size() < 30; i++) {
+                JSONObject row = arr.optJSONObject(i);
+                if (row == null) continue;
+                String addr = row.optString("address", "");
+                if (!KuroPlayback561.allowedHls(addr, "zenkai", "hls")) continue;
+                valid.add(row);
+            }
+        } catch (Exception ignored) {}
+        if (valid.isEmpty()) {
+            Toast.makeText(activity, "No direct HLS streams available for batch offline download on this source.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        String showTitle = limit(valid.get(0).optString("title", "Anime"), 90);
+        String firstEp = limit(valid.get(0).optString("episode", "1"), 16);
+        String lastEp = limit(valid.get(valid.size() - 1).optString("episode", firstEp), 16);
+        String rangeLabel = valid.size() == 1 ? ("Episode " + firstEp) : ("Episodes " + firstEp + " – " + lastEp + " (" + valid.size() + " episodes)");
+        new AlertDialog.Builder(KuroDialogs581.themed(activity))
+                .setTitle("Batch download " + valid.size() + (valid.size() == 1 ? " episode?" : " episodes?"))
+                .setMessage(showTitle + "\\n" + rangeLabel + "\\n\\nQueues verified direct HLS streams into Kuro offline storage. Only store content you have permission to keep.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Queue " + valid.size(), (d, w) -> {
+                    int queued = 0;
+                    for (JSONObject row : valid) {
+                        try {
+                            String addr = row.optString("address", "");
+                            String key = row.optString("key", "");
+                            String t = limit(row.optString("title", "Video"), 120);
+                            String ep = limit(row.optString("episode", ""), 20);
+                            String id = "kuro561:" + Integer.toHexString((addr + "|" + key).hashCode());
+                            JSONObject meta = new JSONObject().put("title", t).put("episode", ep).put("key", KuroPlayback561.validKey(key) ? key : "");
+                            DownloadRequest req = new DownloadRequest.Builder(id, android.net.Uri.parse(addr))
+                                    .setMimeType(MimeTypes.APPLICATION_M3U8)
+                                    .setData(meta.toString().getBytes(StandardCharsets.UTF_8))
+                                    .build();
+                            DownloadService.sendAddDownload(activity, KuroDownloadService561.class, req, false);
+                            queued++;
+                        } catch (Exception ignored) {}
+                    }
+                    if (queued > 0) {
+                        try { DownloadService.sendResumeDownloads(activity, KuroDownloadService561.class, false); } catch (Exception ignored) {}
+                        Toast.makeText(activity, "Queued " + queued + (queued == 1 ? " episode" : " episodes") + " for offline playback.", Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(activity, "Could not start batch download on this device.", Toast.LENGTH_LONG).show();
+                    }
+                })
+                .show();
+    }
+"""
+    text = patch_once(
+        text,
+        "confirmBatchDownload154",
+        "    private static String limit(String text,int max){",
+        batch_method + "    private static String limit(String text,int max){",
+        "KuroOffline561 confirmBatchDownload154",
+    )
+    path.write_text(text, encoding="utf-8")
+
+
+def patch_main_activity(root: pathlib.Path) -> None:
+    path = root / "src/app/lovelycrxshx/kuro/MainActivity.java"
+    text = path.read_text(encoding="utf-8")
+
+    # 1. Request code constant
+    text = patch_once(
+        text,
+        "VOICE_SEARCH_REQ154",
+        "private static final int BACKUP_EXPORT560=5600,BACKUP_IMPORT560=5601,ERROR_PERMISSION560=5602,UPDATE_PERMISSION152=5729;",
+        "private static final int BACKUP_EXPORT560=5600,BACKUP_IMPORT560=5601,ERROR_PERMISSION560=5602,UPDATE_PERMISSION152=5729,VOICE_SEARCH_REQ154=15401;",
+        "MainActivity VOICE_SEARCH_REQ154",
+    )
+
+    # 2. Voice search result in onActivityResult
+    text = patch_once(
+        text,
+        "finishVoiceSearch154",
+        "if(requestCode==BACKUP_EXPORT560||requestCode==BACKUP_IMPORT560){finishBackup560(requestCode,resultCode,data);return;}",
+        "if(requestCode==BACKUP_EXPORT560||requestCode==BACKUP_IMPORT560){finishBackup560(requestCode,resultCode,data);return;}"
+        "if(requestCode==VOICE_SEARCH_REQ154){finishVoiceSearch154(resultCode,data);return;}",
+        "MainActivity onActivityResult voiceSearch154",
+    )
+
+    # 3. Wide viewport + desktop site sync in applyWindowPreferences560 + voice search helper
+    voice_and_desktop = (
+        "int zoom=p.getInt(\"textZoom\",100);boolean desktopUi154=\"desktop\".equals(p.getString(\"siteView\",\"mobile\"));"
+        "if(ui!=null){ui.getSettings().setTextZoom(zoom);ui.getSettings().setUseWideViewPort(desktopUi154);ui.getSettings().setLoadWithOverviewMode(desktopUi154);"
+        "if(uiReady)ui.evaluateJavascript(\"window.kuroSyncDesktopSite154&&window.kuroSyncDesktopSite154(\"+desktopUi154+\")\",null);}"
+    )
+    text = patch_once(
+        text,
+        "desktopUi154",
+        'int zoom=p.getInt("textZoom",100);if(ui!=null)ui.getSettings().setTextZoom(zoom);',
+        voice_and_desktop,
+        "MainActivity applyWindowPreferences560 desktopUi154",
+    )
+
+    # 4. Skip-filler resolution for native Auto-Next & Fullscreen Next Episode + Voice Search launcher
+    helpers_154 = """ private int nextPlayableEpisode154(JSONObject wi,int fromIdx){
+  JSONArray eps=wi==null?null:wi.optJSONArray("episodes");
+  if(eps==null||fromIdx<0||fromIdx>=eps.length())return -1;
+  if(wi.optBoolean("skipFiller154",false)){
+   for(int i=fromIdx;i<eps.length();i++){JSONObject row=eps.optJSONObject(i);if(row==null||!row.optBoolean("filler154",false))return i;}
+  }
+  return fromIdx;
+ }
+ private void startVoiceSearch154(){
+  try{
+   Intent i=new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+   i.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+   i.putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS,3);
+   i.putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,"Search anime, genres, or studios");
+   startActivityForResult(i,VOICE_SEARCH_REQ154);
+  }catch(Exception e){
+   Toast.makeText(this,"Voice search is unavailable on this device.",Toast.LENGTH_SHORT).show();
+   if(ui!=null&&uiReady)ui.evaluateJavascript("window.kuroOnVoiceSearchError154&&window.kuroOnVoiceSearchError154()",null);
+  }
+ }
+ private void finishVoiceSearch154(int resultCode,Intent data){
+  if(resultCode!=RESULT_OK||data==null)return;
+  ArrayList<String> list=data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);
+  if(list==null||list.isEmpty())return;
+  String best="";
+  for(String s:list){if(s!=null&&!s.trim().isEmpty()){best=s.trim();break;}}
+  if(best.isEmpty())return;
+  if(best.length()>120)best=best.substring(0,120);
+  final String spoken=best;
+  main.post(()->{if(ui!=null&&uiReady)ui.evaluateJavascript("window.kuroOnVoiceSearch154&&window.kuroOnVoiceSearch154("+JSONObject.quote(spoken)+")",null);});
+ }
+"""
+    text = patch_once(
+        text,
+        "nextPlayableEpisode154",
+        " private void cancelAutoNext573(){",
+        helpers_154 + " private void cancelAutoNext573(){",
+        "MainActivity helpers_154",
+    )
+
+    text = patch_once(
+        text,
+        "rawNext154",
+        " private void offerAutoNext573(String session,int next){\n  if(!activityResumed||isInPictureInPictureMode()||playerLayer==null||ui==null||!session.equals(watchSession)||!getPreferences(MODE_PRIVATE).getBoolean(\"auto_next\",false))return;",
+        " private void offerAutoNext573(String session,int rawNext154){\n  final int next=nextPlayableEpisode154(watchInfo561,rawNext154);\n  if(next<0||!activityResumed||isInPictureInPictureMode()||playerLayer==null||ui==null||!session.equals(watchSession)||!getPreferences(MODE_PRIVATE).getBoolean(\"auto_next\",false))return;",
+        "MainActivity offerAutoNext573 skipFiller154",
+    )
+
+    text = patch_once(
+        text,
+        "nextPlayableEpisode154(wi,cur+1)",
+        "    if(eps!=null&&cur>=0&&cur+1<eps.length()){\n     if(customView!=null||enhancedFullscreen)resumeFullscreenUntil153=android.os.SystemClock.elapsedRealtime()+15000L;\n     chooseEpisode581(cur+1);\n    }",
+        "    int target154=nextPlayableEpisode154(wi,cur+1);\n    if(eps!=null&&cur>=0&&target154>=0&&target154<eps.length()){\n     if(customView!=null||enhancedFullscreen)resumeFullscreenUntil153=android.os.SystemClock.elapsedRealtime()+15000L;\n     chooseEpisode581(target154);\n    }",
+        "MainActivity fullscreenActions153 skipFiller154",
+    )
+
+    # 5. Store skipFiller154 on watchInfo561 inside openWatch
+    text = patch_once(
+        text,
+        '"skipFiller154"',
+        'watchInfo561=new JSONObject().put("title",title).put("episode",episode).put("episodeName",info.optString("episodeName","")).put("episodeImage",info.optString("episodeImage",""))',
+        'watchInfo561=new JSONObject().put("title",title).put("episode",episode).put("episodeName",info.optString("episodeName","")).put("episodeImage",info.optString("episodeImage","")).put("skipFiller154",info.optBoolean("skipFiller154",false))',
+        "MainActivity watchInfo561 skipFiller154",
+    )
+
+    # 6. Bridge methods for Voice Search, Batch Download & Desktop Site state
+    bridge_additions = (
+        '  @JavascriptInterface public boolean hasVoiceSearch154(){try{return getPackageManager().resolveActivity(new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH),0)!=null;}catch(Exception e){return false;}}\n'
+        '  @JavascriptInterface public void voiceSearch154(){main.post(()->{if(!isFinishing()&&!isDestroyed())startVoiceSearch154();});}\n'
+        '  @JavascriptInterface public void batchDownload154(String raw){if(raw!=null&&raw.length()<=250000)main.post(()->{if(!isFinishing()&&!isDestroyed())KuroOffline561.confirmBatchDownload154(MainActivity.this,raw);});}\n'
+        '  @JavascriptInterface public String siteView154(){return settings560().getString("siteView","mobile");}\n'
+        '  @JavascriptInterface public void play(String payload){'
+    )
+    text = patch_once(
+        text,
+        "voiceSearch154()",
+        '  @JavascriptInterface public void play(String payload){',
+        bridge_additions,
+        "MainActivity Bridge 1.5.4 methods",
+    )
+
+    # 7. Android 15 (targetSdk 35) & all-API edge-to-edge WindowInsets safe-area fix
+    insets_helpers = """ private androidx.core.view.WindowInsetsCompat lastWindowInsets154;
+ private int fallbackStatusBarHeight154(){
+  try{int id=getResources().getIdentifier("status_bar_height","dimen","android");return id>0?getResources().getDimensionPixelSize(id):0;}catch(RuntimeException e){return 0;}
+ }
+ private void applyRootInsets154(androidx.core.view.WindowInsetsCompat insets){
+  if(root==null)return;
+  if(customView!=null||enhancedFullscreen||isInPictureInPictureMode()){
+   if(root.getPaddingLeft()!=0||root.getPaddingTop()!=0||root.getPaddingRight()!=0||root.getPaddingBottom()!=0)root.setPadding(0,0,0,0);
+   return;
+  }
+  if(insets==null){
+   int topFb=(!isInMultiWindowMode()&&getResources().getConfiguration().orientation!=android.content.res.Configuration.ORIENTATION_LANDSCAPE)?fallbackStatusBarHeight154():0;
+   if(root.getPaddingTop()!=topFb||root.getPaddingLeft()!=0||root.getPaddingRight()!=0||root.getPaddingBottom()!=0)root.setPadding(0,topFb,0,0);
+   return;
+  }
+  int barMask=androidx.core.view.WindowInsetsCompat.Type.systemBars()|androidx.core.view.WindowInsetsCompat.Type.displayCutout();
+  androidx.core.graphics.Insets vis=insets.getInsets(barMask);
+  androidx.core.graphics.Insets ign=insets.getInsetsIgnoringVisibility(barMask);
+  androidx.core.graphics.Insets ime=insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime());
+  int l=Math.max(vis.left,ign.left);
+  int t=Math.max(vis.top,ign.top);
+  if(t<=0&&!isInMultiWindowMode()&&getResources().getConfiguration().orientation!=android.content.res.Configuration.ORIENTATION_LANDSCAPE)t=fallbackStatusBarHeight154();
+  int r=Math.max(vis.right,ign.right);
+  int b=Math.max(Math.max(vis.bottom,ign.bottom),ime.bottom);
+  if(root.getPaddingLeft()!=l||root.getPaddingTop()!=t||root.getPaddingRight()!=r||root.getPaddingBottom()!=b){
+   root.setPadding(l,t,r,b);
+  }
+ }
+ private void syncWindowSystemBars154(){
+  Window w=getWindow();if(w==null)return;
+  View decor=w.getDecorView();
+  boolean fs=customView!=null||enhancedFullscreen||isInPictureInPictureMode();
+  if(Build.VERSION.SDK_INT>=28){
+   WindowManager.LayoutParams lp=w.getAttributes();
+   int wantCutout=fs?WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES:WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT;
+   if(lp.layoutInDisplayCutoutMode!=wantCutout){lp.layoutInDisplayCutoutMode=wantCutout;w.setAttributes(lp);}
+  }
+  if(decor!=null){
+   androidx.core.view.WindowInsetsControllerCompat ctrl=androidx.core.view.WindowCompat.getInsetsController(w,decor);
+   if(ctrl!=null){
+    ctrl.setAppearanceLightStatusBars(false);
+    ctrl.setAppearanceLightNavigationBars(false);
+    if(fs){
+     ctrl.setSystemBarsBehavior(androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+     ctrl.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+    }else{
+     ctrl.show(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+    }
+   }
+  }
+  applyRootInsets154(lastWindowInsets154);
+  if(root!=null)androidx.core.view.ViewCompat.requestApplyInsets(root);
+ }
+ private void setupEdgeToEdgeInsets154(){
+  Window w=getWindow();
+  if(w!=null)androidx.core.view.WindowCompat.setDecorFitsSystemWindows(w,false);
+  if(root!=null){
+   root.setBackgroundColor(KuroTheme12.background());
+   androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root,(v,insets)->{
+    lastWindowInsets154=insets;
+    applyRootInsets154(insets);
+    return androidx.core.view.WindowInsetsCompat.CONSUMED;
+   });
+   syncWindowSystemBars154();
+  }
+ }
+"""
+    text = patch_once(
+        text,
+        "setupEdgeToEdgeInsets154()",
+        " private SharedPreferences settings560(){",
+        insets_helpers + " private SharedPreferences settings560(){",
+        "MainActivity setupEdgeToEdgeInsets154 helpers",
+    )
+    text = patch_once(
+        text,
+        "setContentView(root);setupEdgeToEdgeInsets154();",
+        "KuroTheme12.init(this);KuroTheme12.applyWindow(this);root=new FrameLayout(this);setContentView(root);",
+        "KuroTheme12.init(this);KuroTheme12.applyWindow(this);root=new FrameLayout(this);setContentView(root);setupEdgeToEdgeInsets154();",
+        "MainActivity onCreate setupEdgeToEdgeInsets154",
+    )
+    text = patch_once(
+        text,
+        "if(root!=null){root.setBackgroundColor(floor);syncWindowSystemBars154();}",
+        "if(ui!=null)ui.setBackgroundColor(floor);if(root!=null)root.setBackgroundColor(floor);",
+        "if(ui!=null)ui.setBackgroundColor(floor);if(root!=null){root.setBackgroundColor(floor);syncWindowSystemBars154();}",
+        "MainActivity kuroTheme12WindowApplied syncWindowSystemBars154",
+    )
+    text = patch_once(
+        text,
+        "getWindow().getDecorView().setSystemUiVisibility(5894);syncWindowSystemBars154();applyPlayerOptions(null);",
+        "getWindow().getDecorView().setSystemUiVisibility(5894);applyPlayerOptions(null);",
+        "getWindow().getDecorView().setSystemUiVisibility(5894);syncWindowSystemBars154();applyPlayerOptions(null);",
+        "MainActivity onShowCustomView syncWindowSystemBars154",
+    )
+    text = patch_once(
+        text,
+        "getWindow().getDecorView().setSystemUiVisibility(enhancedFullscreen?5894:0);syncWindowSystemBars154();",
+        "getWindow().getDecorView().setSystemUiVisibility(enhancedFullscreen?5894:0);",
+        "getWindow().getDecorView().setSystemUiVisibility(enhancedFullscreen?5894:0);syncWindowSystemBars154();",
+        "MainActivity hideFullscreen syncWindowSystemBars154",
+    )
+    text = patch_once(
+        text,
+        "getWindow().getDecorView().setSystemUiVisibility(5894);syncWindowSystemBars154();watchPlayerBox.requestLayout();",
+        "getWindow().getDecorView().setSystemUiVisibility(5894);watchPlayerBox.requestLayout();",
+        "getWindow().getDecorView().setSystemUiVisibility(5894);syncWindowSystemBars154();watchPlayerBox.requestLayout();",
+        "MainActivity enterEnhancedFullscreen syncWindowSystemBars154",
+    )
+    text = patch_once(
+        text,
+        "if(customView==null)getWindow().getDecorView().setSystemUiVisibility(0);syncWindowSystemBars154();",
+        "if(customView==null)getWindow().getDecorView().setSystemUiVisibility(0);",
+        "if(customView==null)getWindow().getDecorView().setSystemUiVisibility(0);syncWindowSystemBars154();",
+        "MainActivity exitEnhancedFullscreen syncWindowSystemBars154",
+    )
+    text = patch_once(
+        text,
+        "super.onPictureInPictureModeChanged(inPip,config);syncWindowSystemBars154();",
+        "super.onPictureInPictureModeChanged(inPip,config);",
+        "super.onPictureInPictureModeChanged(inPip,config);syncWindowSystemBars154();",
+        "MainActivity onPictureInPictureModeChanged syncWindowSystemBars154",
+    )
+    text = patch_once(
+        text,
+        "super.onConfigurationChanged(config);syncWindowSystemBars154();",
+        "super.onConfigurationChanged(config);",
+        "super.onConfigurationChanged(config);syncWindowSystemBars154();",
+        "MainActivity onConfigurationChanged syncWindowSystemBars154",
+    )
+    text = patch_once(
+        text,
+        "super.onResume();activityResumed=true;syncWindowSystemBars154();",
+        "super.onResume();activityResumed=true;",
+        "super.onResume();activityResumed=true;syncWindowSystemBars154();",
+        "MainActivity onResume syncWindowSystemBars154",
+    )
+
+    # 8. Always re-sweep cosmetic ad guard on player frame finish even when DOCUMENT_START is active
+    text = patch_once(
+        text,
+        "/*kuroAdSweep154*/",
+        'if(!adFrameMode&&settings560().getBoolean("adBlock",true))v.evaluateJavascript(assetText("player-ad-guard541.js"),null);',
+        'if(settings560().getBoolean("adBlock",true))/*kuroAdSweep154*/v.evaluateJavascript(assetText("player-ad-guard541.js"),null);',
+        "MainActivity onPageFinished player-ad-guard541 resweep",
+    )
+
+    path.write_text(text, encoding="utf-8")
+
+
+def patch_offline_activity_insets(root: pathlib.Path) -> None:
+    path = root / "src/app/lovelycrxshx/kuro/KuroOfflineActivity561.java"
+    text = path.read_text(encoding="utf-8")
+    text = patch_once(
+        text,
+        "setDecorFitsSystemWindows",
+        'LinearLayout layout=new LinearLayout(this);layout.setBackgroundColor(Color.BLACK);layout.setOrientation(LinearLayout.VERTICAL);setContentView(layout);',
+        'if(getWindow()!=null)androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(),false);'
+        'LinearLayout layout=new LinearLayout(this);layout.setBackgroundColor(Color.BLACK);layout.setOrientation(LinearLayout.VERTICAL);setContentView(layout);'
+        'androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(layout,(v,insets)->{'
+        'if(isInPictureInPictureMode()){v.setPadding(0,0,0,0);return androidx.core.view.WindowInsetsCompat.CONSUMED;}'
+        'int m=androidx.core.view.WindowInsetsCompat.Type.systemBars()|androidx.core.view.WindowInsetsCompat.Type.displayCutout();'
+        'androidx.core.graphics.Insets b=insets.getInsetsIgnoringVisibility(m);'
+        'v.setPadding(b.left,b.top,b.right,b.bottom);return androidx.core.view.WindowInsetsCompat.CONSUMED;});'
+        'androidx.core.view.ViewCompat.requestApplyInsets(layout);',
+        "KuroOfflineActivity561 WindowInsets",
+    )
+    text = patch_once(
+        text,
+        "requestApplyInsets((View)top.getParent())",
+        'if(top!=null)top.setVisibility(inPip?View.GONE:View.VISIBLE);',
+        'if(top!=null){top.setVisibility(inPip?View.GONE:View.VISIBLE);if(top.getParent() instanceof View)androidx.core.view.ViewCompat.requestApplyInsets((View)top.getParent());}',
+        "KuroOfflineActivity561 PiP insets refresh",
+    )
+    path.write_text(text, encoding="utf-8")
+
+
+PLAYER_AD_GUARD_154_JS = r"""/* Kuro 1.5.4 player-only multi-layer cosmetic & In-Page-Push ad guard.
+ * Blocks floating Ad/IPP/SocialBar banners (light DOM, open/closed Shadow DOM,
+ * and cross-origin banner iframes) without touching video, controls, subtitles,
+ * or human-verification challenges. */
+(function () {
+  'use strict';
+  try {
+    if (location.hostname === 'kuro.local') return;
+    if (window.__kuroAdGuard541) {
+      if (typeof window.__kuroAdGuardScan154 === 'function') window.__kuroAdGuardScan154();
+      return;
+    }
+    window.__kuroAdGuard541 = true;
+
+    const selectors = [
+      '[data-ad-slot]', '[data-ad-unit]', '[data-ad-zone]', '[data-ad-zone-id]',
+      'ins.adsbygoogle', 'iframe[id^="google_ads_iframe"]',
+      '.adsbox', '.ad-popup', '.ads-popup', '.ad-overlay', '.ads-overlay',
+      '.advertisement-overlay', '[id^="exoclick-"]', '[class^="exo-native-widget"]',
+      '[class*="exo-ipp"]', '[id*="exo-ipp"]', '[class*="in-page-push"]', '[id*="in-page-push"]',
+      '[class*="social-bar"]', '[id*="social-bar"]', '[class*="adspyglass"]', '[id*="adspyglass"]',
+      '[id^="asg-"]', '[class^="asg-"]', '[data-asg-zone]', '[data-exo-zone]',
+      'iframe[src*="adsterra"]', 'iframe[src*="exoclick"]', 'iframe[src*="exosrv"]',
+      'iframe[src*="monetag"]', 'iframe[src*="adspyglass"]', 'iframe[src*="clickadu"]',
+      'iframe[src*="hilltopads"]', 'iframe[src*="galaksion"]', 'iframe[src*="popads"]',
+      'iframe[src*="profitablecpmrate"]', 'iframe[src*="highperformanceformat"]',
+      'iframe[src*="topcreativeformat"]', 'iframe[src*="juicyads"]', 'iframe[src*="trafficjunky"]'
+    ].join(',');
+
+    const verification = '#challenge-form,#challenge-stage,.cf-challenge,.cf-turnstile,.h-captcha,.g-recaptcha,[src*="challenges.cloudflare.com"],[src*="hcaptcha.com"],[src*="recaptcha"]';
+    const controls = [
+      'video', 'audio', 'canvas', '[role="slider"]',
+      '.vjs-control-bar', '.jw-controls', '.plyr__controls', '.video-controls', '.player-controls',
+      '.art-bottom', '.art-controls', '.dplayer-controller', '#kuro-oled-hud153',
+      '.jw-captions', '.vjs-text-track-display', '.plyr__captions', '.art-subtitle',
+      '[id*="subtitle"]', '[class*="subtitle"]', '[class*="caption"]'
+    ].join(',');
+
+    let observer = null, timer = 0;
+    const pending = new Set(), retriedBadges = new WeakSet();
+    const shadowHosts = new WeakMap();
+    const observedRoots = new WeakSet();
+
+    function verificationActive() {
+      const t = (document.title || '').trim();
+      if (/^(just a moment|attention required|verify you are human|access denied)/i.test(t)) return true;
+      if (/challenges\.cloudflare\.com|hcaptcha\.com|recaptcha\.net/i.test(location.hostname)) return true;
+      return !!document.querySelector(verification);
+    }
+
+    // Block script-triggered popup windows inside third-party embeds (never on challenge pages).
+    try {
+      if (!verificationActive()) {
+        const noopOpen = function () { return null; };
+        window.open = noopOpen;
+      }
+    } catch (_) {}
+
+    function isMainPlayerIframe(ifr) {
+      if (!ifr || ifr.tagName !== 'IFRAME') return false;
+      const src = String(ifr.getAttribute('src') || '');
+      if (/cloudflare|turnstile|hcaptcha|recaptcha|challenge|verify/i.test(src)) return true;
+      const r = ifr.getBoundingClientRect();
+      if (r.width >= Math.max(220, innerWidth * 0.72) && r.height >= Math.max(140, innerHeight * 0.65)) return true;
+      return false;
+    }
+
+    function ownsProtectedIframe(el) {
+      if (!el || el.tagName === 'IFRAME') return false;
+      const frames = el.querySelectorAll('iframe');
+      if (!frames.length) return false;
+      for (let i = 0; i < frames.length; i++) {
+        const f = frames[i];
+        const src = String(f.getAttribute('src') || '');
+        if (/cloudflare|turnstile|hcaptcha|recaptcha|challenge|verify/i.test(src)) return true;
+        // Protect unknown iframes unless clearly tiny/banner-sized while a real player exists.
+        const r = f.getBoundingClientRect();
+        const hasMainMedia = !!document.querySelector('video') || Array.prototype.some.call(document.querySelectorAll('iframe'), isMainPlayerIframe);
+        if (!hasMainMedia || r.height > 190 || r.height === 0) return true;
+      }
+      return false;
+    }
+
+    function protectedNode(el) {
+      if (!el || el.nodeType !== 1 || /^(HTML|BODY|HEAD|STYLE|SCRIPT|VIDEO|AUDIO|SOURCE|TRACK|CANVAS)$/.test(el.tagName)) return true;
+      try {
+        if (el.matches(controls) || el.closest(controls) || el.closest(verification)) return true;
+        if (el.querySelector(verification) || el.querySelector(controls)) return true;
+      } catch (_) {
+        return true;
+      }
+      if (el.tagName === 'IFRAME' && isMainPlayerIframe(el)) return true;
+      if (ownsProtectedIframe(el)) return true;
+      return false;
+    }
+
+    function hide(el) {
+      if (protectedNode(el)) return false;
+      el.style.setProperty('display', 'none', 'important');
+      el.style.setProperty('visibility', 'hidden', 'important');
+      el.style.setProperty('opacity', '0', 'important');
+      el.style.setProperty('pointer-events', 'none', 'important');
+      el.style.setProperty('max-height', '0px', 'important');
+      el.setAttribute('data-kuro-ad-hidden', '1');
+      return true;
+    }
+
+    function parentAcrossShadow(node) {
+      if (!node) return null;
+      if (node.parentElement) return node.parentElement;
+      const rootNode = typeof node.getRootNode === 'function' ? node.getRootNode() : null;
+      if (rootNode && shadowHosts.has(rootNode)) return shadowHosts.get(rootNode);
+      if (rootNode && rootNode.host) return rootNode.host;
+      return null;
+    }
+
+    function notifyParentIfEntireFrameIsAd() {
+      try {
+        if (window === window.top) return;
+        if (document.querySelector('video,audio,canvas') || verificationActive()) return;
+        if (innerHeight > 0 && innerHeight <= 210 && innerWidth >= 140) {
+          document.documentElement.style.setProperty('background', 'transparent', 'important');
+          document.documentElement.style.setProperty('display', 'none', 'important');
+          if (document.body) document.body.style.setProperty('display', 'none', 'important');
+          window.parent.postMessage('__kuro_ad_frame_154__', '*');
+        }
+      } catch (_) {}
+    }
+
+    function closeCue(el) {
+      if (el.querySelector('button[aria-label*="Close" i],button[title*="Close" i],[data-close],[class*="close" i],[id*="close" i]')) return true;
+      const children = el.querySelectorAll('button,span,a,div,i,b');
+      for (let i = 0; i < Math.min(children.length, 60); i++) {
+        if (/^(?:×|✕|✖|⨯|╳|x|close)$/i.test((children[i].textContent || '').trim())) return true;
+      }
+      // SVG close icon in top-right/right corner of a floating notification banner
+      const svgs = el.querySelectorAll('svg');
+      if (svgs.length > 0 && svgs.length <= 6) {
+        const er = el.getBoundingClientRect();
+        for (let i = 0; i < svgs.length; i++) {
+          const sr = svgs[i].getBoundingClientRect();
+          if (sr.width >= 6 && sr.width <= 32 && sr.height >= 6 && sr.height <= 32 && sr.left >= er.left + er.width * 0.65) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    function inspectBadge(badge) {
+      const text = (badge.textContent || '').trim();
+      if (!/^(?:ad|ads|advertisement|sponsored|adchoices|ad\s*choices)$/i.test(text)) return;
+      if (badge.children && badge.children.length > 2) return;
+      if (protectedNode(badge)) return;
+
+      let el = parentAcrossShadow(badge);
+      let bestTarget = null;
+      for (let depth = 0; el && depth < 12; depth++, el = parentAcrossShadow(el)) {
+        if (el === document.body || el === document.documentElement) break;
+        if (protectedNode(el)) break;
+        const css = getComputedStyle(el), r = el.getBoundingClientRect();
+        if (!/^(?:absolute|fixed|sticky)$/.test(css.position)) continue;
+        if (r.width < 80 || r.height < 22 || r.height > Math.max(340, innerHeight * 0.78)) continue;
+        // Any non-protected floating overlay card explicitly carrying a standalone
+        // "Ad" / "Sponsored" badge (including Adsterra Social Bar & ExoClick IPP) is an ad.
+        const br = badge.getBoundingClientRect();
+        const badgeStyled = getComputedStyle(badge).backgroundColor !== 'rgba(0, 0, 0, 0)' || (br.width > 0 && br.width <= 76 && br.height <= 36);
+        const copy = (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 1200);
+        if (badgeStyled || closeCue(el) || /\b(?:message\s+from|secret\s+video|xxx|\[720p\]|\[1080p\]|\.mp4)\b/i.test(copy)) {
+          bestTarget = el;
+        }
+      }
+
+      if (bestTarget) {
+        hide(bestTarget);
+        notifyParentIfEntireFrameIsAd();
+        return;
+      }
+
+      // If the entire small iframe IS the ad banner and the badge sits on a static wrapper inside it
+      if (window !== window.top && innerHeight > 0 && innerHeight <= 200 && !document.querySelector('video')) {
+        let wrap = parentAcrossShadow(badge);
+        while (wrap && wrap !== document.body && wrap !== document.documentElement && !protectedNode(wrap)) {
+          hide(wrap);
+          wrap = parentAcrossShadow(wrap);
+        }
+        notifyParentIfEntireFrameIsAd();
+        return;
+      }
+
+      if (!retriedBadges.has(badge)) {
+        retriedBadges.add(badge);
+        setTimeout(() => { if (badge.isConnected && !verificationActive()) inspectBadge(badge); }, 550);
+      }
+    }
+
+    function inspectSuspiciousOverlay(el) {
+      if (!el || el.nodeType !== 1 || protectedNode(el)) return;
+      const css = getComputedStyle(el);
+      if (!/^(?:absolute|fixed)$/.test(css.position)) return;
+      const r = el.getBoundingClientRect();
+      // 1. Transparent full-screen click-hijack <a target="_blank"> overlay over the video
+      if (el.tagName === 'A' && el.getAttribute('target') === '_blank' && r.width >= innerWidth * 0.5 && r.height >= innerHeight * 0.5) {
+        if ((parseFloat(css.opacity) || 1) < 0.08 || !(el.textContent || '').trim()) {
+          hide(el);
+          return;
+        }
+      }
+      // 2. Unbadged In-Page Push / adult fake-video notification strip
+      if (r.width >= 150 && r.height >= 34 && r.height <= 170) {
+        const copy = (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 600);
+        if (/\b(?:1\s+message\s+from|secret\s+videos?\s*xxx|live\s*jasmin|stripchat|chaturbate|jerkmate|hookup\s+tonight|hot\s+girls?\s+near)\b/i.test(copy) && (closeCue(el) || el.querySelector('img'))) {
+          hide(el);
+          notifyParentIfEntireFrameIsAd();
+        }
+      }
+    }
+
+    function scan(root) {
+      if (!root || (root.nodeType !== 1 && root.nodeType !== 11)) return;
+      if (verificationActive()) { if (observer) observer.disconnect(); pending.clear(); return; }
+      if (root.nodeType === 1) {
+        if (root.matches(selectors)) { hide(root); notifyParentIfEntireFrameIsAd(); }
+        inspectSuspiciousOverlay(root);
+        if (/^(SPAN|SMALL|B|STRONG|LABEL|DIV|I|EM|SUP)$/.test(root.tagName) && root.textContent && root.textContent.length <= 24) {
+          inspectBadge(root);
+        }
+        if (root.shadowRoot) observeShadow(root.shadowRoot, root);
+      }
+      const marked = root.querySelectorAll ? root.querySelectorAll(selectors) : [];
+      for (let i = 0; i < Math.min(marked.length, 300); i++) {
+        hide(marked[i]);
+        notifyParentIfEntireFrameIsAd();
+      }
+      const nodes = root.querySelectorAll ? root.querySelectorAll('span,small,b,strong,label,div,i,em,sup,a') : [];
+      for (let i = 0; i < Math.min(nodes.length, 1800); i++) {
+        const n = nodes[i];
+        if (n.shadowRoot) observeShadow(n.shadowRoot, n);
+        if (n.textContent && n.textContent.length <= 24) inspectBadge(n);
+        if (n.tagName === 'DIV' || n.tagName === 'A') inspectSuspiciousOverlay(n);
+      }
+      // Inspect accessible same-origin / about:blank / srcdoc banner iframes
+      const iframes = root.querySelectorAll ? root.querySelectorAll('iframe') : [];
+      for (let i = 0; i < Math.min(iframes.length, 24); i++) {
+        const ifr = iframes[i];
+        if (isMainPlayerIframe(ifr)) continue;
+        try {
+          const doc = ifr.contentDocument;
+          if (doc && doc.documentElement) scan(doc.documentElement);
+        } catch (_) {}
+      }
+    }
+
+    function flush() {
+      timer = 0;
+      const batch = Array.from(pending); pending.clear();
+      for (const node of batch) scan(node);
+    }
+
+    function enqueue(node) {
+      if (!node) return;
+      if (node.nodeType === 3) node = node.parentElement;
+      if (!node || (node.nodeType !== 1 && node.nodeType !== 11)) return;
+      pending.add(node);
+      if (!timer) timer = setTimeout(flush, 80);
+    }
+
+    function observeShadow(sr, host) {
+      if (!sr || observedRoots.has(sr)) return;
+      observedRoots.add(sr);
+      if (host) shadowHosts.set(sr, host);
+      try {
+        const mo = new MutationObserver(records => {
+          for (const rec of records) {
+            if (rec.type === 'characterData') enqueue(rec.target);
+            else for (const n of rec.addedNodes) enqueue(n);
+          }
+        });
+        mo.observe(sr, { childList: true, subtree: true, characterData: true });
+        enqueue(sr);
+      } catch (_) {}
+    }
+
+    // Hook attachShadow at document-start so closed & open Shadow DOM ad widgets are caught too.
+    try {
+      const origAttachShadow = Element.prototype.attachShadow;
+      if (typeof origAttachShadow === 'function') {
+        Element.prototype.attachShadow = function (init) {
+          const sr = origAttachShadow.call(this, init);
+          observeShadow(sr, this);
+          return sr;
+        };
+      }
+    } catch (_) {}
+
+    // Child ad-frame -> parent iframe hider
+    window.addEventListener('message', function (ev) {
+      if (!ev || ev.data !== '__kuro_ad_frame_154__' || verificationActive()) return;
+      const frames = document.querySelectorAll('iframe');
+      for (let i = 0; i < frames.length; i++) {
+        if (frames[i].contentWindow === ev.source && !isMainPlayerIframe(frames[i])) {
+          hide(frames[i]);
+        }
+      }
+    });
+
+    observer = new MutationObserver(records => {
+      for (const record of records) {
+        if (record.type === 'characterData') enqueue(record.target);
+        else for (const node of record.addedNodes) enqueue(node);
+      }
+    });
+    observer.observe(document, { childList: true, subtree: true, characterData: true });
+
+    window.__kuroAdGuardScan154 = function () {
+      if (document.documentElement) enqueue(document.documentElement);
+    };
+    if (document.documentElement) enqueue(document.documentElement);
+    document.addEventListener('DOMContentLoaded', () => enqueue(document.documentElement), { once: true });
+    window.addEventListener('load', () => enqueue(document.documentElement), { once: true });
+  } catch (_) { /* Cosmetic filtering must never interrupt playback. */ }
+})();
+"""
+
+
+def patch_player_ad_blocker(root: pathlib.Path) -> None:
+    # 1. Expand PlayerAdBlocker.java NETWORKS with In-Page-Push / SocialBar / Monetag / AdSpyglass networks
+    ab_path = root / "src/app/lovelycrxshx/kuro/PlayerAdBlocker.java"
+    ab_text = ab_path.read_text(encoding="utf-8")
+    extra_networks = (
+        '"onclicka.com","onclickperformance.com","trafficstars.com","clickadu.com","trafficfactory.biz",'
+        '"adsterratech.com","profitablecpmrate.com","profitableratecpm.com","highperformanceformat.com","topcreativeformat.com",'
+        '"cloudatacdn.com","wpadmngr.com","wpncdn.com","tsyndicate.com","twinrdsrv.com","twinred.com",'
+        '"adcash.com","acscdn.com","ufpcdn.com","sufrcdn.com","onclasrv.com",'
+        '"monetag.com","alwingulla.com","gizokraijaw.net","glizauvo.net","upskittyan.com","ptauxofi.net","darnob.com","thaudray.com",'
+        '"galaksion.com","pushame.com","hilltopads.net","hilltopads.com","htlbid.com",'
+        '"adspyglass.com","asgcdn.com","sbbrdy.com","mondiad.com","mndsrv.com",'
+        '"clickaine.com","rollerads.com","richads.com","evadav.com","push.house",'
+        '"ero-advertising.com","plugrush.com","yllix.com","adtng.com","adskeeper.com","adskeeper.co.uk",'
+        '"mgid.com","taboola.com","outbrain.com","revcontent.com","bidvertiser.com","bidgear.com","pubfuture.com","acint.net","rtmark.net"));'
+    )
+    ab_text = patch_once(
+        ab_text,
+        '"profitablecpmrate.com"',
+        '"onclicka.com","onclickperformance.com","trafficstars.com","clickadu.com","trafficfactory.biz"));',
+        extra_networks,
+        "PlayerAdBlocker NETWORKS expansion",
+    )
+    ab_path.write_text(ab_text, encoding="utf-8")
+
+    # 2. Replace assets/player-ad-guard541.js with hardened 1.5.4 multi-layer guard
+    guard_path = root / "assets/player-ad-guard541.js"
+    guard_path.write_text(PLAYER_AD_GUARD_154_JS, encoding="utf-8")
+
+
+def patch_js_hooks(root: pathlib.Path) -> None:
+    # 1. settings560.js: sync data-site-view + custom event + clearer Site view subtitle
+    s_path = root / "assets/settings560.js"
+    s_text = s_path.read_text(encoding="utf-8")
+    s_text = patch_once(
+        s_text,
+        "kuro-settings560-changed",
+        "function apply(){document.documentElement.dataset.kuroTheme=state.theme;",
+        "function apply(){document.documentElement.dataset.kuroTheme=state.theme;document.documentElement.dataset.siteView=state.siteView;",
+        "settings560.js dataset.siteView",
+    )
+    s_text = patch_once(
+        s_text,
+        "CustomEvent('kuro-settings560-changed'",
+        "try{if(native())KuroNative.applySettings560(JSON.stringify(state))}catch(_){}}",
+        "try{if(native())KuroNative.applySettings560(JSON.stringify(state))}catch(_){}try{window.dispatchEvent(new CustomEvent('kuro-settings560-changed',{detail:Object.assign({},state)}))}catch(_){}}",
+        "settings560.js dispatchEvent",
+    )
+    s_text = patch_once(
+        s_text,
+        "widescreen left-rail UI",
+        "select('siteView','Site view','Changes the player website view on the next player.',['Mobile','Desktop'])",
+        "select('siteView','Site view','Desktop enables the widescreen left-rail UI, DPAD focus, and desktop player view.',['Mobile','Desktop'])",
+        "settings560.js siteView description",
+    )
+    s_path.write_text(s_text, encoding="utf-8")
+
+    # 2. app.js & unified-episodes533.js: capture HiAnime ssl-item-filler flag
+    app_path = root / "assets/app.js"
+    app_text = app_path.read_text(encoding="utf-8")
+    app_text = patch_once(
+        app_text,
+        "ssl-item-filler",
+        "episodes=Array.from(ed.querySelectorAll('.ep-item')).map(x=>({number:x.getAttribute('data-number')||x.textContent.trim(),name:(x.querySelector('.ep-name')?.getAttribute('title')||x.querySelector('.ep-name')?.textContent||x.getAttribute('title')||'').trim(),url:validUrl(abs(x.getAttribute('href'),'dk'))})).filter(x=>x.url)",
+        "episodes=Array.from(ed.querySelectorAll('.ep-item')).map(x=>({number:x.getAttribute('data-number')||x.textContent.trim(),name:(x.querySelector('.ep-name')?.getAttribute('title')||x.querySelector('.ep-name')?.textContent||x.getAttribute('title')||'').trim(),filler:x.classList.contains('ssl-item-filler')||x.getAttribute('data-filler')==='true',url:validUrl(abs(x.getAttribute('href'),'dk'))})).filter(x=>x.url)",
+        "app.js dk ssl-item-filler",
+    )
+    app_path.write_text(app_text, encoding="utf-8")
+
+    ue_path = root / "assets/unified-episodes533.js"
+    ue_text = ue_path.read_text(encoding="utf-8")
+    ue_text = patch_once(
+        ue_text,
+        "ssl-item-filler",
+        "rows=[...epdoc.querySelectorAll('.ep-item[data-number][href]')].map(x=>({number:x.getAttribute('data-number'),name:(x.querySelector('.ep-name')?.getAttribute('title')||x.querySelector('.ep-name')?.textContent||x.getAttribute('title')||'').trim(),url:validUrl(abs(x.getAttribute('href'),s))}));",
+        "rows=[...epdoc.querySelectorAll('.ep-item[data-number][href]')].map(x=>({number:x.getAttribute('data-number'),name:(x.querySelector('.ep-name')?.getAttribute('title')||x.querySelector('.ep-name')?.textContent||x.getAttribute('title')||'').trim(),filler:x.classList.contains('ssl-item-filler')||x.getAttribute('data-filler')==='true',url:validUrl(abs(x.getAttribute('href'),s))}));",
+        "unified-episodes533.js ssl-item-filler",
+    )
+    ue_text = patch_once(
+        ue_text,
+        "ex154.filler=true",
+        "for(const ep of found.episodes){if(already.has(ep.number))continue;",
+        "for(const ep of found.episodes){if(already.has(ep.number)){if(ep.filler){const ex154=episodes.find(z=>String(z.number)===String(ep.number));if(ex154)ex154.filler=true;}continue;}",
+        "unified-episodes533.js merge filler",
+    )
+    ue_path.write_text(ue_text, encoding="utf-8")
+
+    # 3. failover531.js: pass filler154 + skipFiller154 into KuroNative.play payload
+    f_path = root / "assets/failover531.js"
+    f_text = f_path.read_text(encoding="utf-8")
+    f_text = patch_once(
+        f_text,
+        "filler154",
+        "let e=episodes.map(x=>({number:String(x.number).slice(0,20),name:String(x.name||'').slice(0,160)}));",
+        "let e=episodes.map(x=>({number:String(x.number).slice(0,20),name:String(x.name||'').slice(0,160),filler154:Boolean(window.kuroIsEpisodeSkipped154&&window.kuroIsEpisodeSkipped154(selected,x))}));",
+        "failover531.js episodes filler154",
+    )
+    f_text = patch_once(
+        f_text,
+        "skipFiller154:",
+        "let payload={session:chain.id,",
+        "let payload={session:chain.id,skipFiller154:Boolean(window.kuroShouldSkipFiller154&&window.kuroShouldSkipFiller154(selected)),",
+        "failover531.js payload skipFiller154",
+    )
+    f_path.write_text(f_text, encoding="utf-8")
+
+
+KURO_TV_BANNER_XML = """<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path
+        android:fillColor="#0A0710"
+        android:pathData="M0,0h320v180h-320z" />
+    <path
+        android:fillColor="#160E23"
+        android:pathData="M10,10h300v160h-300z" />
+    <path
+        android:strokeColor="#3D2659"
+        android:strokeWidth="2"
+        android:pathData="M10,10h300v160h-300z" />
+    <path
+        android:fillColor="#A65BE4"
+        android:fillAlpha="0.18"
+        android:pathData="M86,90m-44,0a44,44 0,1 1,88 0a44,44 0,1 1,-88 0" />
+    <path
+        android:fillColor="#B478EE"
+        android:pathData="M72,62h10v24l20,-24h13l-21,25l23,31h-13l-17,-23l-5,6v17h-10z" />
+    <path
+        android:fillColor="#F4F1FA"
+        android:pathData="M148,70h9v17l15,-17h11l-16,18l17,22h-11l-12,-16l-4,4v12h-9z" />
+    <path
+        android:fillColor="#F4F1FA"
+        android:pathData="M189,70h9v24c0,5 3,8 8,8s8,-3 8,-8v-24h9v24c0,10 -7,17 -17,17s-17,-7 -17,-17z" />
+    <path
+        android:fillColor="#F4F1FA"
+        android:pathData="M231,70h17c9,0 15,5 15,13c0,6 -3,10 -9,12l10,15h-10l-9,-14h-5v14h-9zM240,78v11h7c4,0 6,-2 6,-5.5s-2,-5.5 -6,-5.5z" />
+    <path
+        android:fillColor="#B478EE"
+        android:pathData="M286,70c11,0 19,9 19,20s-8,20 -19,20s-19,-9 -19,-20s8,-20 19,-20zM286,78c-6,0 -10,5 -10,12s4,12 10,12s10,-5 10,-12s-4,-12 -10,-12z" />
+    <path
+        android:fillColor="#A65BE4"
+        android:fillAlpha="0.88"
+        android:pathData="M148,118h96v4h-96z" />
+</vector>
+"""
+
+
+KURO_FAST_NET_154_JAVA = r"""package app.lovelycrxshx.kuro;
+
+import android.app.Activity;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.net.Uri;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.ConnectException;
+import java.net.InetAddress;
+import java.net.SocketTimeoutException;
+import java.net.URI;
+import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import javax.net.ssl.SSLException;
+import okhttp3.ConnectionPool;
+import okhttp3.Dns;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+/**
+ * Kuro 1.5.4 high-speed HTTP/2 connection pool + Encrypted DNS-over-HTTPS (DoH)
+ * ISP unblock resolver (Cloudflare 1.1.1.1 & Google 8.8.8.8 over IP-literal TLS).
+ */
+final class KuroFastNet154 {
+    static final class SourceResult {
+        final byte[] bytes;
+        final String contentType;
+        SourceResult(byte[] bytes, String contentType) {
+            this.bytes = bytes;
+            this.contentType = contentType == null ? "" : contentType;
+        }
+    }
+
+    private static final class DnsEntry {
+        final List<InetAddress> addresses;
+        final long expiresAtMs;
+        DnsEntry(List<InetAddress> addresses, long expiresAtMs) {
+            this.addresses = addresses;
+            this.expiresAtMs = expiresAtMs;
+        }
+    }
+
+    private static final class CatalogCacheEntry {
+        final String body;
+        final long expiresAtMs;
+        CatalogCacheEntry(String body, long expiresAtMs) {
+            this.body = body;
+            this.expiresAtMs = expiresAtMs;
+        }
+    }
+
+    private static final long DNS_TTL_MS = 10L * 60L * 1000L;
+    private static final long CATALOG_TTL_MS = 90L * 1000L;
+    private static final MediaType JSON_MEDIA = MediaType.parse("application/json; charset=utf-8");
+
+    private static volatile String dohMode = "auto"; // "auto" | "always" | "off"
+    private static final ConcurrentHashMap<String, DnsEntry> dnsCache = new ConcurrentHashMap<>();
+    private static final Set<String> poisonedHosts = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+
+    private static final Map<String, CatalogCacheEntry> catalogCache = Collections.synchronizedMap(
+            new LinkedHashMap<String, CatalogCacheEntry>(64, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, CatalogCacheEntry> eldest) {
+                    return size() > 64;
+                }
+            });
+
+    static final ConnectionPool POOL = new ConnectionPool(12, 3, TimeUnit.MINUTES);
+
+    // Bootstrap client hits numeric IP literals (1.1.1.1 / 8.8.8.8 / 1.0.0.1) directly over TLS,
+    // requiring zero system DNS resolution even when carrier DNS is poisoned or offline.
+    private static final OkHttpClient DOH_CLIENT = new OkHttpClient.Builder()
+            .connectionPool(new ConnectionPool(4, 2, TimeUnit.MINUTES))
+            .connectTimeout(4, TimeUnit.SECONDS)
+            .readTimeout(5, TimeUnit.SECONDS)
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .build();
+
+    static final Dns DNS = new Dns() {
+        @Override
+        public List<InetAddress> lookup(String hostname) throws UnknownHostException {
+            if (hostname == null || hostname.isEmpty()) throw new UnknownHostException("Empty host");
+            String host = hostname.trim().toLowerCase(Locale.ROOT);
+            if ("localhost".equals(host) || isNumericIpLiteral(host)) {
+                return Dns.SYSTEM.lookup(hostname);
+            }
+
+            long now = System.currentTimeMillis();
+            DnsEntry cached = dnsCache.get(host);
+            if (cached != null && cached.expiresAtMs > now && !cached.addresses.isEmpty()) {
+                return cached.addresses;
+            }
+
+            String mode = dohMode;
+            if ("off".equals(mode)) {
+                List<InetAddress> sys = Dns.SYSTEM.lookup(hostname);
+                putDnsCache(host, sys, now + DNS_TTL_MS);
+                return sys;
+            }
+
+            boolean forceDoh = "always".equals(mode) || poisonedHosts.contains(host);
+            if (!forceDoh) {
+                try {
+                    List<InetAddress> sys = Dns.SYSTEM.lookup(hostname);
+                    List<InetAddress> clean = filterValidPublicAddresses(sys);
+                    if (!clean.isEmpty()) {
+                        putDnsCache(host, clean, now + DNS_TTL_MS);
+                        return clean;
+                    }
+                    markPoisoned(host);
+                } catch (UnknownHostException ignored) {
+                    // Fall through to encrypted DoH when carrier DNS blocks or fails the domain.
+                }
+            }
+
+            List<InetAddress> doh = resolveViaDoh(host);
+            if (!doh.isEmpty()) {
+                putDnsCache(host, doh, now + DNS_TTL_MS);
+                return doh;
+            }
+
+            // Final fallback to system DNS if DoH endpoints are blocked on a restricted firewall.
+            List<InetAddress> fallback = Dns.SYSTEM.lookup(hostname);
+            if (!fallback.isEmpty()) {
+                putDnsCache(host, fallback, now + 60000L);
+                return fallback;
+            }
+            throw new UnknownHostException("Could not resolve " + hostname);
+        }
+    };
+
+    static final OkHttpClient CLIENT = new OkHttpClient.Builder()
+            .dns(DNS)
+            .connectionPool(POOL)
+            .connectTimeout(8, TimeUnit.SECONDS)
+            .readTimeout(14, TimeUnit.SECONDS)
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .build();
+
+    private KuroFastNet154() {}
+
+    static void setDohMode(String mode) {
+        String normalized = "always".equals(mode) ? "always" : ("off".equals(mode) ? "off" : "auto");
+        if (!normalized.equals(dohMode)) {
+            dohMode = normalized;
+            dnsCache.clear();
+        }
+    }
+
+    static String getDohMode() {
+        return dohMode;
+    }
+
+    static void clearCaches() {
+        dnsCache.clear();
+        poisonedHosts.clear();
+        catalogCache.clear();
+        try {
+            POOL.evictAll();
+        } catch (RuntimeException ignored) {}
+    }
+
+    static void trimMemory(int level) {
+        long now = System.currentTimeMillis();
+        for (Map.Entry<String, DnsEntry> e : dnsCache.entrySet()) {
+            DnsEntry v = e.getValue();
+            if (v == null || v.expiresAtMs <= now) dnsCache.remove(e.getKey());
+        }
+        if (level >= 10) {
+            catalogCache.clear();
+        }
+        if (level >= 15 || level >= 40) {
+            try {
+                POOL.evictAll();
+            } catch (RuntimeException ignored) {}
+        }
+    }
+
+    private static void putDnsCache(String host, List<InetAddress> addrs, long expiresAtMs) {
+        if (host == null || addrs == null || addrs.isEmpty()) return;
+        if (dnsCache.size() > 256) dnsCache.clear();
+        dnsCache.put(host, new DnsEntry(addrs, expiresAtMs));
+    }
+
+    private static void markPoisoned(String host) {
+        if (host == null || host.isEmpty()) return;
+        if (poisonedHosts.size() > 256) poisonedHosts.clear();
+        poisonedHosts.add(host);
+    }
+
+    private static boolean isNumericIpLiteral(String host) {
+        if (host.indexOf(':') >= 0) return true;
+        return host.matches("^[0-9]{1,3}(\\.[0-9]{1,3}){3}$");
+    }
+
+    private static List<InetAddress> filterValidPublicAddresses(List<InetAddress> list) {
+        if (list == null || list.isEmpty()) return Collections.emptyList();
+        List<InetAddress> out = new ArrayList<>(list.size());
+        for (InetAddress a : list) {
+            if (a == null) continue;
+            // Filter carrier DNS sinkholes (0.0.0.0, 127.0.0.1, 10.x.x.x, 192.168.x.x, 169.254.x.x)
+            if (a.isAnyLocalAddress() || a.isLoopbackAddress() || a.isLinkLocalAddress() || a.isSiteLocalAddress()) {
+                continue;
+            }
+            out.add(a);
+        }
+        return out;
+    }
+
+    private static List<InetAddress> resolveViaDoh(String host) {
+        String encoded = Uri.encode(host);
+        String[] endpoints = new String[] {
+            "https://1.1.1.1/dns-query?name=" + encoded + "&type=A",
+            "https://8.8.8.8/resolve?name=" + encoded + "&type=A",
+            "https://1.0.0.1/dns-query?name=" + encoded + "&type=A",
+            "https://9.9.9.9:5053/dns-query?name=" + encoded + "&type=A",
+            "https://1.1.1.1/dns-query?name=" + encoded + "&type=AAAA",
+            "https://8.8.8.8/resolve?name=" + encoded + "&type=AAAA"
+        };
+        for (String url : endpoints) {
+            Request req = new Request.Builder()
+                    .url(url)
+                    .header("Accept", "application/dns-json")
+                    .header("User-Agent", "Kuro.tv/1.5.4")
+                    .get()
+                    .build();
+            try (Response resp = DOH_CLIENT.newCall(req).execute()) {
+                if (resp.code() != 200 || resp.body() == null) continue;
+                byte[] bytes = readCapped(resp.body(), 65536);
+                JSONObject json = new JSONObject(new String(bytes, StandardCharsets.UTF_8));
+                JSONArray answers = json.optJSONArray("Answer");
+                if (answers == null || answers.length() == 0) continue;
+                List<InetAddress> resolved = new ArrayList<>();
+                for (int i = 0; i < answers.length() && resolved.size() < 8; i++) {
+                    JSONObject row = answers.optJSONObject(i);
+                    if (row == null) continue;
+                    int type = row.optInt("type", 0);
+                    if (type != 1 && type != 28) continue;
+                    String data = row.optString("data", "").trim();
+                    if (data.isEmpty() || (!isNumericIpLiteral(data))) continue;
+                    try {
+                        InetAddress parsed = InetAddress.getByName(data);
+                        InetAddress bound = InetAddress.getByAddress(host, parsed.getAddress());
+                        if (!bound.isAnyLocalAddress() && !bound.isLoopbackAddress() && !bound.isSiteLocalAddress()) {
+                            resolved.add(bound);
+                        }
+                    } catch (Exception ignored) {}
+                }
+                if (!resolved.isEmpty()) return resolved;
+            } catch (Exception ignored) {}
+        }
+        return Collections.emptyList();
+    }
+
+    private static byte[] readCapped(ResponseBody body, int maxBytes) throws IOException {
+        try (InputStream in = body.byteStream(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) != -1) {
+                if (n > maxBytes - out.size()) throw new IOException("Response too large");
+                out.write(buf, 0, n);
+            }
+            return out.toByteArray();
+        }
+    }
+
+    private static boolean shouldRetryWithDoh(IOException e, String host) {
+        if (!"auto".equals(dohMode) || host == null || poisonedHosts.contains(host)) return false;
+        return (e instanceof UnknownHostException)
+                || (e instanceof ConnectException)
+                || (e instanceof SocketTimeoutException)
+                || (e instanceof SSLException);
+    }
+
+    static SourceResult fetchSource(URI u, Map<String, String> headers, int maxBytes) throws Exception {
+        String host = u.getHost() == null ? "" : u.getHost().toLowerCase(Locale.ROOT);
+        for (int attempt = 0; attempt < 2; attempt++) {
+            Request.Builder rb = new Request.Builder().url(u.toURL()).get();
+            if (headers != null) {
+                for (Map.Entry<String, String> e : headers.entrySet()) {
+                    if (e.getKey() != null && e.getValue() != null) rb.header(e.getKey(), e.getValue());
+                }
+            }
+            try (Response resp = CLIENT.newCall(rb.build()).execute()) {
+                int code = resp.code();
+                if (code != 200) throw new Exception("Source returned HTTP " + code + " (no verification bypass)");
+                ResponseBody body = resp.body();
+                byte[] bytes = body == null ? new byte[0] : readCapped(body, maxBytes);
+                return new SourceResult(bytes, resp.header("Content-Type", ""));
+            } catch (IOException ioe) {
+                if (attempt == 0 && shouldRetryWithDoh(ioe, host)) {
+                    markPoisoned(host);
+                    dnsCache.remove(host);
+                    continue;
+                }
+                throw ioe;
+            }
+        }
+        throw new IOException("Network error");
+    }
+
+    static byte[] fetchPoster(URI u, int maxBytes) throws IOException {
+        String host = u.getHost() == null ? "" : u.getHost().toLowerCase(Locale.ROOT);
+        for (int attempt = 0; attempt < 2; attempt++) {
+            Request req = new Request.Builder()
+                    .url(u.toURL())
+                    .header("User-Agent", "Mozilla/5.0")
+                    .header("Accept", "image/webp,image/avif,image/*,*/*;q=0.8")
+                    .get()
+                    .build();
+            try (Response resp = CLIENT.newCall(req).execute()) {
+                if (resp.code() != 200 || resp.body() == null) return null;
+                return readCapped(resp.body(), maxBytes);
+            } catch (IOException ioe) {
+                if (attempt == 0 && shouldRetryWithDoh(ioe, host)) {
+                    markPoisoned(host);
+                    dnsCache.remove(host);
+                    continue;
+                }
+                throw ioe;
+            }
+        }
+        return null;
+    }
+
+    static String postAnilistCatalog(String payloadJson, int maxBytes) throws Exception {
+        long now = System.currentTimeMillis();
+        CatalogCacheEntry hit = catalogCache.get(payloadJson);
+        if (hit != null && hit.expiresAtMs > now) {
+            return hit.body;
+        }
+        byte[] raw = payloadJson.getBytes(StandardCharsets.UTF_8);
+        String host = "graphql.anilist.co";
+        for (int attempt = 0; attempt < 2; attempt++) {
+            Request req = new Request.Builder()
+                    .url("https://graphql.anilist.co")
+                    .header("Accept", "application/json")
+                    .header("User-Agent", "Kuro.tv/5.73 (public catalogue)")
+                    .post(RequestBody.create(JSON_MEDIA, raw))
+                    .build();
+            try (Response resp = CLIENT.newCall(req).execute()) {
+                if (resp.code() != 200 || resp.body() == null) throw new IOException("Catalogue unavailable");
+                String result = new String(readCapped(resp.body(), maxBytes), StandardCharsets.UTF_8);
+                JSONObject parsed = new JSONObject(result);
+                if (parsed.has("errors") || parsed.optJSONObject("data") == null) {
+                    throw new IOException("Catalogue unavailable");
+                }
+                catalogCache.put(payloadJson, new CatalogCacheEntry(result, System.currentTimeMillis() + CATALOG_TTL_MS));
+                return result;
+            } catch (IOException ioe) {
+                if (attempt == 0 && shouldRetryWithDoh(ioe, host)) {
+                    markPoisoned(host);
+                    dnsCache.remove(host);
+                    continue;
+                }
+                throw ioe;
+            }
+        }
+        throw new IOException("Catalogue unavailable");
+    }
+
+    private static final MediaType FORM_MEDIA = MediaType.parse("application/x-www-form-urlencoded; charset=utf-8");
+
+    private static final OkHttpClient ACCOUNT_CLIENT = CLIENT.newBuilder()
+            .connectTimeout(12, TimeUnit.SECONDS)
+            .readTimeout(20, TimeUnit.SECONDS)
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .build();
+
+    private static final OkHttpClient PREFLIGHT_CLIENT = CLIENT.newBuilder()
+            .connectTimeout(3, TimeUnit.SECONDS)
+            .readTimeout(4, TimeUnit.SECONDS)
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .build();
+
+    private static volatile String cachedDiscordRedirect154 = null;
+
+    static JSONObject accountRequest(String method, URI u, Map<String, String> headers, String body) throws Exception {
+        String host = u.getHost();
+        if (!"https".equals(u.getScheme()) || host == null || u.getUserInfo() != null || u.getPort() != -1
+                || !(host.equals("myanimelist.net") || host.equals("api.myanimelist.net")
+                || host.equals("discord.com") || host.equals("graphql.anilist.co"))) {
+            throw new AccountError("Blocked an unsafe account request.");
+        }
+        if (!("GET".equals(method) || "POST".equals(method) || "PUT".equals(method))) {
+            throw new AccountError("Blocked an unsupported account request.");
+        }
+        if ("PUT".equals(method) && !("api.myanimelist.net".equals(host)
+                && u.getPath() != null && u.getPath().matches("/v2/anime/[0-9]{1,10}/my_list_status"))) {
+            throw new AccountError("Blocked an unsafe tracker update.");
+        }
+        byte[] rawBody = null;
+        MediaType bodyType = JSON_MEDIA;
+        if (body != null) {
+            rawBody = body.getBytes(StandardCharsets.UTF_8);
+            if (rawBody.length > 30000) throw new AccountError("Request too large.");
+            if (headers != null) {
+                for (Map.Entry<String, String> e : headers.entrySet()) {
+                    if (e.getKey() != null && "content-type".equalsIgnoreCase(e.getKey()) && e.getValue() != null) {
+                        MediaType parsed = MediaType.parse(e.getValue());
+                        if (parsed != null) bodyType = parsed;
+                        break;
+                    }
+                }
+            }
+        }
+        String lowerHost = host.toLowerCase(Locale.ROOT);
+        for (int attempt = 0; attempt < 2; attempt++) {
+            RequestBody reqBody = null;
+            if (rawBody != null) {
+                reqBody = RequestBody.create(bodyType, rawBody);
+            } else if ("POST".equals(method) || "PUT".equals(method)) {
+                reqBody = RequestBody.create((MediaType) null, new byte[0]);
+            }
+            Request.Builder rb = new Request.Builder()
+                    .url(u.toURL())
+                    .method(method, reqBody)
+                    .header("Accept", "application/json")
+                    .header("User-Agent", "Kuro.tv/1.5.4 (Android)");
+            if (headers != null) {
+                for (Map.Entry<String, String> h : headers.entrySet()) {
+                    if (h.getKey() != null && h.getValue() != null) rb.header(h.getKey(), h.getValue());
+                }
+            }
+            try (Response resp = ACCOUNT_CLIENT.newCall(rb.build()).execute()) {
+                int status = resp.code();
+                if (status < 200 || status >= 300) {
+                    if (status == 429) {
+                        long seconds = 60;
+                        try {
+                            seconds = Math.max(1, Math.min(86400, Long.parseLong(resp.header("Retry-After", "60"))));
+                        } catch (Exception ignored) {}
+                        throw new AccountError("Provider rate-limited the request (HTTP 429); retry after " + seconds + " seconds.");
+                    }
+                    if (status == 403) throw new AccountError("Provider blocked the request (HTTP 403). Check access before retrying manually.");
+                    if (status == 401) throw new AccountError("Sign-in was rejected or the session expired (HTTP 401). Check your setup or sign in again.");
+                    if (status >= 300 && status < 400) throw new AccountError("The provider sent an unexpected redirect. No credentials were forwarded.");
+                    throw new AccountError("The provider rejected the request (HTTP " + status + "). Check the account details and provider settings.");
+                }
+                ResponseBody respBody = resp.body();
+                if (respBody == null) return new JSONObject();
+                byte[] bytes;
+                try {
+                    bytes = readCapped(respBody, 3000000);
+                } catch (IOException tooLarge) {
+                    throw new AccountError("Provider response too large.");
+                }
+                String text = new String(bytes, StandardCharsets.UTF_8).trim();
+                return text.isEmpty() ? new JSONObject() : new JSONObject(text);
+            } catch (IOException ioe) {
+                if (attempt == 0 && shouldRetryWithDoh(ioe, lowerHost)) {
+                    markPoisoned(lowerHost);
+                    dnsCache.remove(lowerHost);
+                    continue;
+                }
+                throw new AccountError("Could not reach the provider. Check your connection and setup.");
+            }
+        }
+        throw new AccountError("Could not reach the provider. Check your connection and setup.");
+    }
+
+    static String resolveDiscordRedirect154(String clientId) {
+        if (!"1569077670074122250".equals(clientId)) {
+            return AccountOAuth.DISCORD_REDIRECT;
+        }
+        String hit = cachedDiscordRedirect154;
+        if (hit != null) return hit;
+        String[] candidates = new String[] {
+            KuroDiscordOAuth564.REDIRECT,
+            AccountOAuth.DISCORD_REDIRECT
+        };
+        for (String cand : candidates) {
+            for (int attempt = 0; attempt < 2; attempt++) {
+                try {
+                    String form = "client_id=" + Uri.encode(clientId)
+                            + "&grant_type=authorization_code"
+                            + "&code=kuro_preflight_probe_154"
+                            + "&redirect_uri=" + Uri.encode(cand)
+                            + "&code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
+                    Request req = new Request.Builder()
+                            .url("https://discord.com/api/oauth2/token")
+                            .header("Accept", "application/json")
+                            .header("User-Agent", "Kuro.tv/1.5.4 (Android)")
+                            .post(RequestBody.create(FORM_MEDIA, form.getBytes(StandardCharsets.UTF_8)))
+                            .build();
+                    try (Response resp = PREFLIGHT_CLIENT.newCall(req).execute()) {
+                        ResponseBody rb = resp.body();
+                        String txt = rb == null ? "" : new String(readCapped(rb, 16384), StandardCharsets.UTF_8);
+                        if (txt.contains("invalid_grant")) {
+                            cachedDiscordRedirect154 = cand;
+                            return cand;
+                        }
+                        break;
+                    }
+                } catch (IOException ioe) {
+                    if (attempt == 0 && shouldRetryWithDoh(ioe, "discord.com")) {
+                        markPoisoned("discord.com");
+                        dnsCache.remove("discord.com");
+                        continue;
+                    }
+                    break;
+                } catch (Exception ignored) {
+                    break;
+                }
+            }
+        }
+        return KuroDiscordOAuth564.REDIRECT;
+    }
+
+    private static boolean validBrowserPackage154(String pkg, String selfPkg) {
+        if (pkg == null || pkg.isEmpty()) return false;
+        if (pkg.equals(selfPkg) || "android".equals(pkg) || pkg.startsWith("com.android.internal")) return false;
+        if ("com.discord".equals(pkg) || pkg.startsWith("com.discord.")) return false;
+        return true;
+    }
+
+    static boolean openInBrowser154(Activity a, String target) {
+        if (a == null || target == null || target.isEmpty()) return false;
+        try {
+            Uri uri = Uri.parse(target);
+            Intent browser = new Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE);
+            PackageManager pm = a.getPackageManager();
+            String selfPkg = a.getPackageName();
+            String chosenPkg = null;
+            if (pm != null) {
+                Intent probe = new Intent(Intent.ACTION_VIEW, Uri.parse("https://example.org/")).addCategory(Intent.CATEGORY_BROWSABLE);
+                ResolveInfo def = pm.resolveActivity(probe, PackageManager.MATCH_DEFAULT_ONLY);
+                if (def != null && def.activityInfo != null && validBrowserPackage154(def.activityInfo.packageName, selfPkg)) {
+                    chosenPkg = def.activityInfo.packageName;
+                }
+                if (chosenPkg == null) {
+                    List<ResolveInfo> list = pm.queryIntentActivities(probe, PackageManager.MATCH_ALL);
+                    if (list == null || list.isEmpty()) list = pm.queryIntentActivities(probe, 0);
+                    if (list != null) {
+                        String[] preferred = new String[] {
+                            "com.android.chrome", "com.brave.browser", "com.sec.android.app.sbrowser",
+                            "org.mozilla.firefox", "com.microsoft.emmx", "com.opera.browser",
+                            "com.vivaldi.browser", "com.kiwibrowser.browser"
+                        };
+                        for (String pref : preferred) {
+                            for (ResolveInfo ri : list) {
+                                if (ri != null && ri.activityInfo != null && pref.equals(ri.activityInfo.packageName)) {
+                                    chosenPkg = pref;
+                                    break;
+                                }
+                            }
+                            if (chosenPkg != null) break;
+                        }
+                        if (chosenPkg == null) {
+                            for (ResolveInfo ri : list) {
+                                if (ri != null && ri.activityInfo != null && validBrowserPackage154(ri.activityInfo.packageName, selfPkg)) {
+                                    chosenPkg = ri.activityInfo.packageName;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (chosenPkg != null) {
+                browser.setPackage(chosenPkg);
+                try {
+                    a.startActivity(browser);
+                    return true;
+                } catch (Exception ignored) {
+                    browser.setPackage(null);
+                }
+            }
+            a.startActivity(browser);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+}
+"""
+
+
+def patch_perf_and_compat_154(root: pathlib.Path) -> None:
+    # 1. Write KuroFastNet154.java and TV Leanback banner vector drawable
+    fast_net_path = root / "src/app/lovelycrxshx/kuro/KuroFastNet154.java"
+    fast_net_path.write_text(KURO_FAST_NET_154_JAVA, encoding="utf-8")
+
+    banner_path = root / "res/drawable/kuro_tv_banner.xml"
+    banner_path.parent.mkdir(parents=True, exist_ok=True)
+    banner_path.write_text(KURO_TV_BANNER_XML, encoding="utf-8")
+
+    # 2. AndroidManifest.xml: Android TV / Fire TV Leanback + optional touchscreen + foldable offline configChanges
+    manifest_path = root / "AndroidManifest.xml"
+    m_text = manifest_path.read_text(encoding="utf-8")
+    m_text = patch_once(
+        m_text,
+        "android.software.leanback",
+        '<uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35"/>',
+        '<uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35"/>'
+        '<uses-feature android:name="android.hardware.touchscreen" android:required="false"/>'
+        '<uses-feature android:name="android.software.leanback" android:required="false"/>',
+        "AndroidManifest optional touchscreen & leanback features",
+    )
+    m_text = patch_once(
+        m_text,
+        "@drawable/kuro_tv_banner",
+        'android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher">',
+        'android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:banner="@drawable/kuro_tv_banner">',
+        "AndroidManifest TV banner",
+    )
+    m_text = patch_once(
+        m_text,
+        "LEANBACK_LAUNCHER",
+        '<intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>',
+        '<intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/><category android:name="android.intent.category.LEANBACK_LAUNCHER"/></intent-filter>',
+        "AndroidManifest LEANBACK_LAUNCHER category",
+    )
+    m_text = patch_once(
+        m_text,
+        'KuroOfflineActivity561" android:exported="false" android:resizeableActivity="true" android:supportsPictureInPicture="true" android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode|density|layoutDirection"',
+        'KuroOfflineActivity561" android:exported="false" android:resizeableActivity="true" android:supportsPictureInPicture="true" android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"',
+        'KuroOfflineActivity561" android:exported="false" android:resizeableActivity="true" android:supportsPictureInPicture="true" android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode|density|layoutDirection"',
+        "AndroidManifest KuroOfflineActivity561 foldable/TV configChanges",
+    )
+    manifest_path.write_text(m_text, encoding="utf-8")
+
+    # 3. KuroHttp561.java: share DoH resolver & connection pool for native HLS playback
+    http_path = root / "src/app/lovelycrxshx/kuro/KuroHttp561.java"
+    http_text = http_path.read_text(encoding="utf-8")
+    http_text = patch_once(
+        http_text,
+        "KuroFastNet154.DNS",
+        "private static final OkHttpClient CLIENT=new OkHttpClient.Builder().followRedirects(false).followSslRedirects(false).connectTimeout(15,TimeUnit.SECONDS).readTimeout(20,TimeUnit.SECONDS).addInterceptor(new SameProxy()).build();",
+        "private static final OkHttpClient CLIENT=new OkHttpClient.Builder().dns(KuroFastNet154.DNS).connectionPool(KuroFastNet154.POOL).followRedirects(false).followSslRedirects(false).connectTimeout(12,TimeUnit.SECONDS).readTimeout(20,TimeUnit.SECONDS).addInterceptor(new SameProxy()).build();",
+        "KuroHttp561 DoH & connection pool",
+    )
+    http_path.write_text(http_text, encoding="utf-8")
+
+    # 4. KuroCatalog573.java: pooled HTTP/2 + 90s LRU cache + DoH fallback
+    cat_path = root / "src/app/lovelycrxshx/kuro/KuroCatalog573.java"
+    cat_text = cat_path.read_text(encoding="utf-8")
+    old_lookup = (
+        ' public static String lookup(String action,String input) throws Exception {\n'
+        '  JSONObject data=request(action,input);HttpURLConnection c=(HttpURLConnection)new URL("https://graphql.anilist.co").openConnection();\n'
+        '  c.setInstanceFollowRedirects(false);c.setConnectTimeout(8000);c.setReadTimeout(12000);c.setRequestMethod("POST");c.setDoOutput(true);c.setRequestProperty("Content-Type","application/json; charset=utf-8");c.setRequestProperty("Accept","application/json");c.setRequestProperty("User-Agent","Kuro.tv/5.73 (public catalogue)");\n'
+        '  try{try(OutputStream out=c.getOutputStream()){out.write(data.toString().getBytes(StandardCharsets.UTF_8));}if(c.getResponseCode()!=200)throw new IOException("Catalogue unavailable");try(InputStream in=c.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1){if(out.size()+n>700000)throw new IOException("Response too large");out.write(b,0,n);}String result=out.toString("UTF-8");JSONObject parsed=new JSONObject(result);if(parsed.has("errors")||parsed.optJSONObject("data")==null)throw new IOException("Catalogue unavailable");return result;}}finally{c.disconnect();}\n'
+        ' }'
+    )
+    new_lookup = (
+        ' public static String lookup(String action,String input) throws Exception {\n'
+        '  JSONObject data=request(action,input);\n'
+        '  return KuroFastNet154.postAnilistCatalog(data.toString(),700000);\n'
+        ' }'
+    )
+    cat_text = patch_once(
+        cat_text,
+        "KuroFastNet154.postAnilistCatalog",
+        old_lookup,
+        new_lookup,
+        "KuroCatalog573 pooled HTTP/2 + DoH lookup",
+    )
+    cat_path.write_text(cat_text, encoding="utf-8")
+
+    # 5. KuroNativePlayer561.java & KuroOfflineActivity561.java: automatic hardware -> software codec fallback
+    np_path = root / "src/app/lovelycrxshx/kuro/KuroNativePlayer561.java"
+    np_text = np_path.read_text(encoding="utf-8")
+    np_text = patch_once(
+        np_text,
+        "setEnableDecoderFallback(true)",
+        "engine=new ExoPlayer.Builder(activity).setMediaSourceFactory(media)",
+        "engine=new ExoPlayer.Builder(activity).setRenderersFactory(new androidx.media3.exoplayer.DefaultRenderersFactory(activity).setEnableDecoderFallback(true)).setMediaSourceFactory(media)",
+        "KuroNativePlayer561 decoder fallback",
+    )
+    np_path.write_text(np_text, encoding="utf-8")
+
+    oa_path = root / "src/app/lovelycrxshx/kuro/KuroOfflineActivity561.java"
+    oa_text = oa_path.read_text(encoding="utf-8")
+    oa_text = patch_once(
+        oa_text,
+        "setEnableDecoderFallback(true)",
+        "engine=new ExoPlayer.Builder(this).setMediaSourceFactory(factory)",
+        "engine=new ExoPlayer.Builder(this).setRenderersFactory(new androidx.media3.exoplayer.DefaultRenderersFactory(this).setEnableDecoderFallback(true)).setMediaSourceFactory(factory)",
+        "KuroOfflineActivity561 decoder fallback",
+    )
+    oa_path.write_text(oa_text, encoding="utf-8")
+
+    # 6. MainActivity.java: adaptive multi-core pool, memory trim resilience, WebView crash shield, LruCache posters, DoH & async Perf bridge
+    main_path = root / "src/app/lovelycrxshx/kuro/MainActivity.java"
+    text = main_path.read_text(encoding="utf-8")
+
+    text = patch_once(
+        text,
+        "availableProcessors()*2",
+        "private final ExecutorService pool=Executors.newFixedThreadPool(3);",
+        "private final ExecutorService pool=Executors.newFixedThreadPool(Math.max(6,Math.min(10,Runtime.getRuntime().availableProcessors()*2)));",
+        "MainActivity adaptive multi-core worker pool",
+    )
+
+    text = patch_once(
+        text,
+        "onTrimMemory(int level)",
+        "@Override protected void onDestroy(){",
+        "@Override public void onTrimMemory(int level){super.onTrimMemory(level);KuroFastNet154.trimMemory(level);if(level>=15||level>=60)responses.clear();if(posterMemCache154!=null){if(level>=15||level>=60)posterMemCache154.evictAll();else if(level>=10||level>=20)posterMemCache154.trimToSize(Math.max(1024,posterMemCache154.maxSize()/2));}}@Override public void onLowMemory(){super.onLowMemory();KuroFastNet154.trimMemory(80);responses.clear();if(posterMemCache154!=null)posterMemCache154.evictAll();}@Override protected void onDestroy(){",
+        "MainActivity onTrimMemory and onLowMemory resilience",
+    )
+
+    text = patch_once(
+        text,
+        "onRenderProcessGone(WebView v,RenderProcessGoneDetail detail){if(v!=ui)",
+        "@Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){return true;}",
+        "@Override public boolean onRenderProcessGone(WebView v,RenderProcessGoneDetail detail){if(v!=ui)return true;try{if(root!=null)root.removeView(v);v.destroy();}catch(RuntimeException ignored){}ui=null;uiReady=false;main.post(()->{if(!isFinishing()&&!isDestroyed())recreate();});return true;}@Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){return true;}",
+        "MainActivity ui WebView crash shield",
+    )
+
+    text = patch_once(
+        text,
+        "initPerf154();applyWindowPreferences560();",
+        'applyWindowPreferences560();ui.loadUrl("https://kuro.local/index.html");',
+        'initPerf154();applyWindowPreferences560();ui.loadUrl("https://kuro.local/index.html");',
+        "MainActivity onCreate initPerf154",
+    )
+
+    perf_helpers = """ private android.util.LruCache<String,Bitmap> posterMemCache154;
+ private Boolean cachedIsTv154;
+ private Boolean cachedLowRam154;
+ private Integer cachedRamMb154;
+ private volatile long cachedTempBytes154=-1L;
+ private volatile boolean cacheScanRunning154=false;
+ private android.util.LruCache<String,Bitmap> posterCache154(){
+  if(posterMemCache154!=null)return posterMemCache154;
+  int maxKb=(int)(Runtime.getRuntime().maxMemory()/1024L);
+  int capKb=Math.max(4096,Math.min(12288,maxKb/12));
+  posterMemCache154=new android.util.LruCache<String,Bitmap>(capKb){
+   @Override protected int sizeOf(String key,Bitmap value){return Math.max(1,value.getAllocationByteCount()/1024);}
+  };
+  return posterMemCache154;
+ }
+ private SharedPreferences perfPrefs154(){return getSharedPreferences("kuro-perf-154",MODE_PRIVATE);}
+ private boolean isTelevisionDevice154(){
+  if(cachedIsTv154!=null)return cachedIsTv154;
+  boolean tv=false;
+  try{
+   UiModeManager um=(UiModeManager)getSystemService(UI_MODE_SERVICE);
+   if(um!=null&&um.getCurrentModeType()==android.content.res.Configuration.UI_MODE_TYPE_TELEVISION)tv=true;
+   else{
+    android.content.pm.PackageManager pm=getPackageManager();
+    tv=pm!=null&&(pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)||pm.hasSystemFeature("amazon.hardware.fire_tv"));
+   }
+  }catch(RuntimeException ignored){}
+  cachedIsTv154=tv;
+  return tv;
+ }
+ private int totalRamMb154(){
+  if(cachedRamMb154!=null)return cachedRamMb154;
+  int mb=4096;
+  try{
+   ActivityManager am=(ActivityManager)getSystemService(ACTIVITY_SERVICE);
+   if(am!=null){
+    ActivityManager.MemoryInfo mi=new ActivityManager.MemoryInfo();
+    am.getMemoryInfo(mi);
+    if(mi.totalMem>0)mb=(int)(mi.totalMem/(1024L*1024L));
+   }
+  }catch(RuntimeException ignored){}
+  cachedRamMb154=mb;
+  return mb;
+ }
+ private boolean isLowRamDevice154(){
+  if(cachedLowRam154!=null)return cachedLowRam154;
+  boolean low=false;
+  try{
+   ActivityManager am=(ActivityManager)getSystemService(ACTIVITY_SERVICE);
+   if(am!=null&&am.isLowRamDevice())low=true;
+  }catch(RuntimeException ignored){}
+  if(!low)low=totalRamMb154()<=3900;
+  cachedLowRam154=low;
+  return low;
+ }
+ private void initPerf154(){
+  SharedPreferences sp=perfPrefs154();
+  KuroFastNet154.setDohMode(sp.getString("dohMode","auto"));
+  refreshTempBytesAsync154();
+ }
+ private long folderBytesBounded154(File f,int depth,int[] budget){
+  if(f==null||depth>6||budget[0]<=0||!f.exists())return 0L;
+  budget[0]--;
+  if(f.isFile())return Math.max(0L,f.length());
+  File[] kids=f.listFiles();if(kids==null)return 0L;
+  long sum=0L;
+  for(int i=0;i<kids.length&&budget[0]>0;i++)sum+=folderBytesBounded154(kids[i],depth+1,budget);
+  return sum;
+ }
+ private void refreshTempBytesAsync154(){
+  if(cacheScanRunning154)return;
+  cacheScanRunning154=true;
+  final File dir=getCacheDir();
+  try{
+   pool.execute(()->{
+    try{
+     cachedTempBytes154=folderBytesBounded154(dir,0,new int[]{2500});
+    }catch(RuntimeException ignored){
+     if(cachedTempBytes154<0L)cachedTempBytes154=0L;
+    }finally{
+     cacheScanRunning154=false;
+    }
+   });
+  }catch(RuntimeException ignored){cacheScanRunning154=false;}
+ }
+ private void deleteCacheChildren154(File dir,int depth){
+  if(dir==null||depth>6||!dir.isDirectory())return;
+  File[] kids=dir.listFiles();if(kids==null)return;
+  for(File k:kids){
+   if(k.isDirectory())deleteCacheChildren154(k,depth+1);
+   try{k.delete();}catch(RuntimeException ignored){}
+  }
+ }
+ private String buildPerfStatusJson154(){
+  SharedPreferences sp=perfPrefs154();
+  long bytes=cachedTempBytes154;
+  if(bytes<0L)refreshTempBytesAsync154();
+  double cacheMb=bytes<0L?-1.0:Math.round((bytes/(1024.0*1024.0))*10.0)/10.0;
+  try{
+   return new JSONObject()
+    .put("dohMode",sp.getString("dohMode","auto"))
+    .put("isTv",isTelevisionDevice154())
+    .put("lowRam",isLowRamDevice154())
+    .put("ramMb",totalRamMb154())
+    .put("cacheMb",cacheMb)
+    .toString();
+  }catch(Exception e){return "{}";}
+ }
+"""
+
+    text = patch_once(
+        text,
+        "private android.util.LruCache<String,Bitmap> posterMemCache154;",
+        " private androidx.core.view.WindowInsetsCompat lastWindowInsets154;",
+        perf_helpers + " private androidx.core.view.WindowInsetsCompat lastWindowInsets154;",
+        "MainActivity performance & compatibility helpers",
+    )
+
+    text = patch_once(
+        text,
+        'isTelevisionDevice154()?"desktop":"mobile"',
+        'boolean desktopUi154="desktop".equals(p.getString("siteView","mobile"));',
+        'boolean desktopUi154="desktop".equals(p.getString("siteView",isTelevisionDevice154()?"desktop":"mobile"));',
+        "MainActivity applyWindowPreferences560 TV auto-desktop",
+    )
+
+    old_bridge_get = (
+        '     boolean miruro="www.miruro.cx".equals(u.getHost()),kitsuneEpisodes="kitsunee.moe".equals(u.getHost())&&u.getPath()!=null&&u.getPath().matches("/api/episodes/anikoto/[0-9]{1,8}");int maxBytes=kitsuneEpisodes?6500000:2500000;c=(HttpURLConnection)u.toURL().openConnection();c.setInstanceFollowRedirects(false);c.setConnectTimeout(12000);c.setReadTimeout(15000);c.setRequestProperty("User-Agent",SOURCE_UA);c.setRequestProperty("Accept","text/html,application/json,*/*");c.setRequestProperty("X-Requested-With","XMLHttpRequest");\n'
+        '     if("aniwaves.tv".equals(u.getHost())||"anikoto.cz".equals(u.getHost())) c.setRequestProperty("Referer","https://"+u.getHost()+"/");\n'
+        '     if(miruro){c.setRequestProperty("Origin",MIRURO_ORIGIN);c.setRequestProperty("Referer",MIRURO_ORIGIN+"/");String cookie=android.webkit.CookieManager.getInstance().getCookie(MIRURO_ORIGIN+"/");if(cookie!=null&&!cookie.isEmpty()&&cookie.length()<=8192)c.setRequestProperty("Cookie",cookie);}\n'
+        '     int code=c.getResponseCode();if(code!=200)throw new Exception("Source returned HTTP "+code+" (no verification bypass)");\n'
+        '     byte[] bytes;try(InputStream in=c.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1){if(n>maxBytes-out.size())throw new Exception("Response too large");out.write(b,0,n);}bytes=out.toByteArray();}\n'
+        '     String type=c.getContentType();if(miruro&&u.getPath()!=null&&u.getPath().startsWith("/api/v1/anime")&&type!=null&&type.toLowerCase(Locale.ROOT).contains("application/octet-stream"))bytes=MiruroCatalog.decode(bytes,2500000);'
+    )
+    new_bridge_get = (
+        '     boolean miruro="www.miruro.cx".equals(u.getHost()),kitsuneEpisodes="kitsunee.moe".equals(u.getHost())&&u.getPath()!=null&&u.getPath().matches("/api/episodes/anikoto/[0-9]{1,8}");int maxBytes=kitsuneEpisodes?6500000:2500000;\n'
+        '     Map<String,String> reqHeaders154=new LinkedHashMap<>();reqHeaders154.put("User-Agent",SOURCE_UA);reqHeaders154.put("Accept","text/html,application/json,*/*");reqHeaders154.put("X-Requested-With","XMLHttpRequest");\n'
+        '     if("aniwaves.tv".equals(u.getHost())||"anikoto.cz".equals(u.getHost()))reqHeaders154.put("Referer","https://"+u.getHost()+"/");\n'
+        '     if(miruro){reqHeaders154.put("Origin",MIRURO_ORIGIN);reqHeaders154.put("Referer",MIRURO_ORIGIN+"/");String cookie=android.webkit.CookieManager.getInstance().getCookie(MIRURO_ORIGIN+"/");if(cookie!=null&&!cookie.isEmpty()&&cookie.length()<=8192)reqHeaders154.put("Cookie",cookie);}\n'
+        '     KuroFastNet154.SourceResult net154=KuroFastNet154.fetchSource(u,reqHeaders154,maxBytes);byte[] bytes=net154.bytes;String type=net154.contentType;\n'
+        '     if(miruro&&u.getPath()!=null&&u.getPath().startsWith("/api/v1/anime")&&type!=null&&type.toLowerCase(Locale.ROOT).contains("application/octet-stream"))bytes=MiruroCatalog.decode(bytes,2500000);'
+    )
+    text = patch_once(
+        text,
+        "KuroFastNet154.fetchSource(u,reqHeaders154,maxBytes)",
+        old_bridge_get,
+        new_bridge_get,
+        "MainActivity Bridge.get pooled HTTP/2 + DoH",
+    )
+
+    perf_bridge_methods = (
+        '  @JavascriptInterface public String siteView154(){return settings560().getString("siteView",isTelevisionDevice154()?"desktop":"mobile");}\n'
+        '  @JavascriptInterface public String perfGet154(){return buildPerfStatusJson154();}\n'
+        '  @JavascriptInterface public String perfSet154(String raw){\n'
+        '   if(raw==null||raw.length()>2000)return buildPerfStatusJson154();\n'
+        '   try{\n'
+        '    JSONObject j=new JSONObject(raw);SharedPreferences.Editor ed=perfPrefs154().edit();\n'
+        '    if(j.has("dohMode")){String d=j.optString("dohMode","auto");if("auto".equals(d)||"always".equals(d)||"off".equals(d)){ed.putString("dohMode",d);KuroFastNet154.setDohMode(d);}}\n'
+        '    ed.apply();\n'
+        '   }catch(Exception ignored){}\n'
+        '   return buildPerfStatusJson154();\n'
+        '  }\n'
+        '  @JavascriptInterface public String clearTempCache154(){\n'
+        '   long before=Math.max(0L,cachedTempBytes154);\n'
+        '   cachedTempBytes154=0L;\n'
+        '   responses.clear();KuroFastNet154.clearCaches();\n'
+        '   try{posterCache154().evictAll();}catch(RuntimeException ignored){}\n'
+        '   final File dir=getCacheDir();\n'
+        '   try{pool.execute(()->{deleteCacheChildren154(dir,0);cachedTempBytes154=folderBytesBounded154(dir,0,new int[]{2500});});}catch(RuntimeException ignored){}\n'
+        '   main.post(()->{if(ui!=null&&!isFinishing()&&!isDestroyed())try{ui.clearCache(true);}catch(RuntimeException ignored){}});\n'
+        '   double freedMb=Math.max(0.0,Math.round((before/(1024.0*1024.0))*10.0)/10.0);\n'
+        '   try{return new JSONObject().put("freedMb",freedMb).put("cacheMb",0.0).toString();}catch(Exception e){return "{}";}\n'
+        '  }'
+    )
+    text = patch_once(
+        text,
+        "perfGet154()",
+        '  @JavascriptInterface public String siteView154(){return settings560().getString("siteView","mobile");}',
+        perf_bridge_methods,
+        "MainActivity Bridge perfGet154/perfSet154/clearTempCache154",
+    )
+
+    text = patch_once(
+        text,
+        "onRenderProcessGone(WebView v,RenderProcessGoneDetail detail){if(v!=player)",
+        "@Override public void onReceivedError(WebView v,WebResourceRequest request,WebResourceError error){super.onReceivedError(v,request,error);",
+        "@Override public boolean onRenderProcessGone(WebView v,RenderProcessGoneDetail detail){if(v!=player)return true;lastPlayerIssue573=\"The embedded player ran low on memory; Kuro recovered without crashing.\";try{if(watchPlayerBox!=null)watchPlayerBox.removeView(v);v.destroy();}catch(RuntimeException ignored){}player=null;main.post(()->{if(!isFinishing()&&!isDestroyed()&&playerLayer!=null){Toast.makeText(MainActivity.this,\"Player recovered from low memory. Try another server.\",Toast.LENGTH_LONG).show();closePlayer();}});return true;}@Override public void onReceivedError(WebView v,WebResourceRequest request,WebResourceError error){super.onReceivedError(v,request,error);",
+        "MainActivity player WebView crash shield",
+    )
+
+    old_poster = (
+        ' void loadPoster(ImageView target,String address){pool.execute(()->{try{URI u=new URI(address);String h=u.getHost();if(!"https".equals(u.getScheme())||u.getUserInfo()!=null||u.getPort()!=-1||!("hianime.ms".equals(h)||"hianime.dk".equals(h)||"cdn.hianime.dk".equals(h)||"s4.anilist.co".equals(h)||"cdn.noitatnemucod.net".equals(h)))return;HttpURLConnection c=(HttpURLConnection)u.toURL().openConnection();c.setInstanceFollowRedirects(false);c.setConnectTimeout(10000);c.setReadTimeout(12000);c.setRequestProperty("User-Agent","Mozilla/5.0");if(c.getResponseCode()!=200){c.disconnect();return;}byte[] bytes;try(InputStream in=c.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] buf=new byte[4096];int n;while((n=in.read(buf))!=-1){if(out.size()+n>2000000){c.disconnect();return;}out.write(buf,0,n);}bytes=out.toByteArray();}c.disconnect();android.graphics.BitmapFactory.Options bounds=new android.graphics.BitmapFactory.Options();bounds.inJustDecodeBounds=true;android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.length,bounds);if(bounds.outWidth<=0||bounds.outHeight<=0||bounds.outWidth>6000||bounds.outHeight>6000)return;android.graphics.BitmapFactory.Options opts=new android.graphics.BitmapFactory.Options();opts.inSampleSize=Math.max(1,Math.max(bounds.outWidth/300,bounds.outHeight/450));android.graphics.Bitmap bitmap=android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.length,opts);if(bitmap!=null)main.post(()->{if(target.isAttachedToWindow())target.setImageBitmap(bitmap);});}catch(Exception ignored){}});}'
+    )
+    new_poster = (
+        ' void loadPoster(ImageView target,String address){'
+        'if(target==null||address==null||address.isEmpty())return;'
+        'Bitmap hit154=posterCache154().get(address);if(hit154!=null&&!hit154.isRecycled()){target.setImageBitmap(hit154);return;}'
+        'target.setTag(address);'
+        'pool.execute(()->{try{URI u=new URI(address);String h=u.getHost();if(!"https".equals(u.getScheme())||u.getUserInfo()!=null||u.getPort()!=-1||!("hianime.ms".equals(h)||"hianime.dk".equals(h)||"cdn.hianime.dk".equals(h)||"s4.anilist.co".equals(h)||"cdn.noitatnemucod.net".equals(h)))return;'
+        'byte[] bytes=KuroFastNet154.fetchPoster(u,2000000);if(bytes==null||bytes.length==0)return;'
+        'android.graphics.BitmapFactory.Options bounds=new android.graphics.BitmapFactory.Options();bounds.inJustDecodeBounds=true;android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.length,bounds);if(bounds.outWidth<=0||bounds.outHeight<=0||bounds.outWidth>6000||bounds.outHeight>6000)return;'
+        'android.graphics.BitmapFactory.Options opts=new android.graphics.BitmapFactory.Options();opts.inSampleSize=Math.max(1,Math.max(bounds.outWidth/300,bounds.outHeight/450));opts.inPreferredConfig=Bitmap.Config.RGB_565;'
+        'android.graphics.Bitmap bitmap=android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.length,opts);if(bitmap!=null){posterCache154().put(address,bitmap);main.post(()->{if(target.isAttachedToWindow()&&address.equals(target.getTag()))target.setImageBitmap(bitmap);});}'
+        '}catch(Exception ignored){}});}'
+    )
+    text = patch_once(
+        text,
+        "hit154=posterCache154().get(address)",
+        old_poster,
+        new_poster,
+        "MainActivity loadPoster LruCache + pooled HTTP/2",
+    )
+
+    main_path.write_text(text, encoding="utf-8")
+
+
+PLAYER_ENDED_154_JS = """'use strict';
+(()=>{
+ if(window.__kuroEnded553)return;
+ window.__kuroEnded553=true;
+ let sent154=false,lastCheck154=0;
+ function checkVideo154(v){
+  if(sent154||!(v instanceof HTMLVideoElement))return;
+  if(!Number.isFinite(v.duration)||v.duration<180)return;
+  if(v.ended||v.currentTime>=v.duration*0.85){
+   sent154=true;
+   try{window.KuroFinished553?.postMessage('ended')}catch(_){}
+  }
+ }
+ document.addEventListener('ended',e=>checkVideo154(e.target),true);
+ document.addEventListener('timeupdate',e=>{
+  const now=Date.now();
+  if(now-lastCheck154<2000)return;
+  lastCheck154=now;
+  checkVideo154(e.target);
+ },true);
+})();
+"""
+
+
+def patch_accounts_and_sync_154(root: pathlib.Path) -> None:
+    # 1. AccountHttp.java -> route through KuroFastNet154 (Encrypted DoH + HTTP/2 pool)
+    ah_path = root / "src/app/lovelycrxshx/kuro/AccountHttp.java"
+    ah_text = ah_path.read_text(encoding="utf-8")
+    if "KuroFastNet154.accountRequest" not in ah_text:
+        ah_new = """package app.lovelycrxshx.kuro;
+
+import org.json.JSONObject;
+import java.net.URI;
+import java.util.Map;
+
+interface AccountTransport {
+ JSONObject request(String method,String url,Map<String,String> headers,String body) throws Exception;
+}
+
+/** Authenticated requests never follow redirects and never leave known HTTPS hosts. */
+final class AccountHttp implements AccountTransport {
+ public JSONObject request(String method,String address,Map<String,String> headers,String body) throws Exception {
+  URI u=new URI(address);
+  return KuroFastNet154.accountRequest(method,u,headers,body);
+ }
+}
+"""
+        ah_path.write_text(ah_new, encoding="utf-8")
+
+    # 2. AccountOAuth.java -> support both Social SDK redirect and custom scheme redirect for Discord
+    ao_path = root / "src/app/lovelycrxshx/kuro/AccountOAuth.java"
+    ao_text = ao_path.read_text(encoding="utf-8")
+    ao_text = patch_once(
+        ao_text,
+        "authorizeDiscord154",
+        '  if("discord".equals(provider)){\n'
+        '   if(!publicId(provider,id))throw new AccountError("Add your Discord application ID in Account setup first.");\n'
+        '   return "https://discord.com/oauth2/authorize?"+form(map("response_type","code","client_id",id,"redirect_uri",DISCORD_REDIRECT,"scope","identify","state",state,"code_challenge",challenge(verifier),"code_challenge_method","S256"));\n'
+        '  }',
+        '  if("discord".equals(provider)){\n'
+        '   return authorizeDiscord154(id,DISCORD_REDIRECT,state,verifier);\n'
+        '  }',
+        "AccountOAuth.authorize discord delegate",
+    )
+    ao_text = patch_once(
+        ao_text,
+        "static String authorizeDiscord154(",
+        " static final class Callback {",
+        ' static String authorizeDiscord154(String id,String redirect,String state,String verifier) throws Exception {\n'
+        '  if(!publicId("discord",id))throw new AccountError("Add your Discord application ID in Account setup first.");\n'
+        '  String redir=(redirect==null||redirect.isEmpty())?DISCORD_REDIRECT:redirect;\n'
+        '  return "https://discord.com/oauth2/authorize?"+form(map("response_type","code","client_id",id,"redirect_uri",redir,"scope","identify","state",state,"code_challenge",challenge(verifier),"code_challenge_method","S256"));\n'
+        ' }\n'
+        " static final class Callback {",
+        "AccountOAuth.authorizeDiscord154 helper",
+    )
+    ao_text = patch_once(
+        ao_text,
+        "KuroDiscordOAuth564.SCHEME.equalsIgnoreCase",
+        '  if(!SCHEME.equals(u.getScheme())||!"oauth".equals(u.getHost())||u.getUserInfo()!=null||u.getPort()!=-1||u.getRawFragment()!=null)throw new AccountError("Invalid sign-in return link.");\n'
+        '  String p=u.getPath(),kind;\n'
+        '  if("/mal".equals(p))kind="mal";else if("/discord".equals(p))kind="discord";else throw new AccountError("Invalid sign-in return link.");',
+        '  String p=u.getPath(),kind;\n'
+        '  if(KuroDiscordOAuth564.SCHEME.equalsIgnoreCase(u.getScheme())&&u.getRawAuthority()==null&&"/authorize/callback".equals(p)&&u.getRawFragment()==null)kind="discord";\n'
+        '  else if(SCHEME.equals(u.getScheme())&&"oauth".equals(u.getHost())&&u.getUserInfo()==null&&u.getPort()==-1&&u.getRawFragment()==null){if("/mal".equals(p))kind="mal";else if("/discord".equals(p))kind="discord";else throw new AccountError("Invalid sign-in return link.");}\n'
+        '  else throw new AccountError("Invalid sign-in return link.");',
+        "AccountOAuth.parseCallback dual Discord redirect",
+    )
+    ao_path.write_text(ao_text, encoding="utf-8")
+
+    # 3. KuroAccounts.java -> auto-detect registered Discord redirect URI & preserve it across token exchange
+    ka_path = root / "src/app/lovelycrxshx/kuro/KuroAccounts.java"
+    ka_text = ka_path.read_text(encoding="utf-8")
+    ka_text = patch_once(
+        ka_text,
+        "resolveDiscordRedirect154",
+        '  JSONObject pending=pending(provider,id);\n'
+        '  return AccountOAuth.authorize(provider,id,str(pending,"state"),str(pending,"verifier"));',
+        '  JSONObject pending=pending(provider,id);\n'
+        '  if("discord".equals(provider)){String redirect154=KuroFastNet154.resolveDiscordRedirect154(id);pending.put("redirect",redirect154);write("pending."+provider,pending);return AccountOAuth.authorizeDiscord154(id,redirect154,str(pending,"state"),str(pending,"verifier"));}\n'
+        '  return AccountOAuth.authorize(provider,id,str(pending,"state"),str(pending,"verifier"));',
+        "KuroAccounts.begin discord redirect resolution",
+    )
+    ka_text = patch_once(
+        ka_text,
+        'String redirect154=str(pending,"redirect");',
+        '  }else if("discord".equals(provider))response=token("https://discord.com/api/oauth2/token",formHeaders(""),AccountOAuth.map("client_id",str(pending,"id"),"grant_type","authorization_code","code",cb.code,"redirect_uri",AccountOAuth.DISCORD_REDIRECT,"code_verifier",str(pending,"verifier")));',
+        '  }else if("discord".equals(provider)){String redirect154=str(pending,"redirect");if(redirect154.isEmpty())redirect154=AccountOAuth.DISCORD_REDIRECT;response=token("https://discord.com/api/oauth2/token",formHeaders(""),AccountOAuth.map("client_id",str(pending,"id"),"grant_type","authorization_code","code",cb.code,"redirect_uri",redirect154,"code_verifier",str(pending,"verifier")));}',
+        "KuroAccounts.callback discord redirect exchange",
+    )
+    ka_path.write_text(ka_text, encoding="utf-8")
+
+    # 4. KuroDiscordOAuth564.java -> explicit web browser selection + pending state discriminator
+    kd_path = root / "src/app/lovelycrxshx/kuro/KuroDiscordOAuth564.java"
+    kd_text = kd_path.read_text(encoding="utf-8")
+    kd_text = patch_once(
+        kd_text,
+        "KuroFastNet154.openInBrowser154",
+        '   Intent browser=new Intent(Intent.ACTION_VIEW,uri).addCategory(Intent.CATEGORY_BROWSABLE);\n'
+        '   // Prefer the user\'s default web browser, so they can sign in there as a different account.\n'
+        '   Intent probe=new Intent(Intent.ACTION_VIEW,Uri.parse("https://example.org/")).addCategory(Intent.CATEGORY_BROWSABLE);\n'
+        '   ResolveInfo ri=a.getPackageManager().resolveActivity(probe,PackageManager.MATCH_DEFAULT_ONLY);\n'
+        '   if(ri!=null&&ri.activityInfo!=null&&!a.getPackageName().equals(ri.activityInfo.packageName)&&!"android".equals(ri.activityInfo.packageName))browser.setPackage(ri.activityInfo.packageName);\n'
+        '   a.startActivity(browser);return true;',
+        '   if(!KuroFastNet154.openInBrowser154(a,uri.toString())){KuroDiscordVault564.remove(a,"pending");return false;}\n'
+        '   return true;',
+        "KuroDiscordOAuth564.begin browser bypass",
+    )
+    kd_text = patch_once(
+        kd_text,
+        "hasMatchingPending154",
+        " static Result consume(Context c,Intent intent){",
+        ' static boolean hasMatchingPending154(Context c,Intent intent){\n'
+        '  if(!isCallback(intent))return false;\n'
+        '  try{\n'
+        '   byte[] raw=KuroDiscordVault564.load(c,"pending");if(raw==null)return false;\n'
+        '   String pending=new String(raw,StandardCharsets.UTF_8);Arrays.fill(raw,(byte)0);\n'
+        '   JSONObject p=new JSONObject(pending);String expected=p.optString("state",""),received=one(intent.getData(),"state");\n'
+        '   return !expected.isEmpty()&&!received.isEmpty()&&MessageDigest.isEqual(expected.getBytes(StandardCharsets.US_ASCII),received.getBytes(StandardCharsets.US_ASCII));\n'
+        '  }catch(Exception ignored){return false;}\n'
+        ' }\n'
+        " static Result consume(Context c,Intent intent){",
+        "KuroDiscordOAuth564.hasMatchingPending154",
+    )
+    kd_path.write_text(kd_text, encoding="utf-8")
+
+    # 5. TrackerSync553.java -> fix episode jump progress + automatic AniList/MAL ID resolution
+    ts_path = root / "src/app/lovelycrxshx/kuro/TrackerSync553.java"
+    ts_text = ts_path.read_text(encoding="utf-8")
+    ts_text = patch_once(
+        ts_text,
+        "season$1",
+        '.replaceAll("(?i)\\\\b(?:dub|sub|dubbed|subbed)\\\\b","")',
+        '.replaceAll("(?i)\\\\b(?:dub|sub|dubbed|subbed)\\\\b","")\n   .replaceAll("(?i)\\\\b([2-9])(?:nd|rd|th)\\\\s+season\\\\b","season$1")',
+        "TrackerSync553.normalized season ordinal",
+    )
+    ts_text = patch_once(
+        ts_text,
+        "episodes.length()-1",
+        " private static int nextProgress(int existing,BitSet episodes){int n=existing;while(n<MAX_EPISODE&&episodes.get(n+1))n++;return n;}",
+        " private static int nextProgress(int existing,BitSet episodes){int highest=episodes.length()-1;return Math.max(existing,Math.max(0,Math.min(MAX_EPISODE,highest)));}",
+        "TrackerSync553.nextProgress non-contiguous episode support",
+    )
+    auto_resolve_helper = """ private JSONObject autoResolveIds154(String provider,JSONObject request,String access){
+  String rawTitle=request.optString("title","").trim();
+  String qTitle=rawTitle.replaceAll("(?i)\\\\s*[\\\\(\\\\[]\\\\s*(?:dub|sub|dubbed|subbed)\\\\s*[\\\\)\\\\]]\\\\s*"," ").trim();
+  if(qTitle.length()<2)qTitle=rawTitle;
+  if(qTitle.length()<2||qTitle.length()>160)return null;
+  Set<String> wanted=requestedNames(request);
+  try{
+   String q="query($s:String!){Page(page:1,perPage:10){media(search:$s,type:ANIME,isAdult:false,sort:SEARCH_MATCH){id idMal type format episodes title{english romaji native} synonyms}}}";
+   JSONObject page=graph("",q,new JSONObject().put("s",qTitle)).optJSONObject("Page");
+   JSONArray media=page==null?null:page.optJSONArray("media");
+   if(media!=null){
+    JSONObject first=null;
+    for(int i=0;i<media.length();i++){
+     JSONObject m=media.optJSONObject(i);if(m==null||m.optInt("id",0)<=0)continue;
+     if(first==null)first=m;
+     Set<String> cand=new HashSet<>();metadataNames(cand,m);
+     for(String w:wanted){if(cand.contains(w))return new JSONObject().put("aid",m.optInt("id",0)).put("mid",Math.max(0,m.optInt("idMal",0)));}
+    }
+    if(first!=null){
+     Set<String> cand=new HashSet<>();metadataNames(cand,first);
+     for(String w:wanted)for(String c:cand){if(w.length()>=6&&c.length()>=6&&(w.startsWith(c)||c.startsWith(w)))return new JSONObject().put("aid",first.optInt("id",0)).put("mid",Math.max(0,first.optInt("idMal",0)));}
+    }
+   }
+  }catch(Exception ignored){}
+  if("mal".equals(provider)&&access!=null&&!access.isEmpty()){
+   try{
+    String shortQ=qTitle.length()>64?qTitle.substring(0,64):qTitle;
+    String addr="https://api.myanimelist.net/v2/anime?"+AccountOAuth.form(AccountOAuth.map("q",shortQ,"limit","8","fields","title,alternative_titles,media_type,num_episodes"));
+    JSONObject res=http.request("GET",addr,headers(access,false),null);
+    JSONArray data=res.optJSONArray("data");
+    if(data!=null){
+     for(int i=0;i<data.length();i++){
+      JSONObject row=data.optJSONObject(i);JSONObject node=row==null?null:row.optJSONObject("node");
+      if(node==null||node.optInt("id",0)<=0)continue;
+      Set<String> cand=new HashSet<>();metadataNames(cand,node);
+      for(String w:wanted){
+       if(cand.contains(w))return new JSONObject().put("aid",0).put("mid",node.optInt("id",0));
+       for(String c:cand){if(w.length()>=6&&c.length()>=6&&(w.startsWith(c)||c.startsWith(w)))return new JSONObject().put("aid",0).put("mid",node.optInt("id",0));}
+      }
+     }
+    }
+   }catch(Exception ignored){}
+  }
+  return null;
+ }
+"""
+    ts_text = patch_once(
+        ts_text,
+        "autoResolveIds154(",
+        " JSONObject update(String provider,JSONObject request,String access) throws Exception {\n"
+        '  if(!"mal".equals(provider)&&!"anilist".equals(provider))throw new AccountError("Choose MyAnimeList or AniList to sync.");\n'
+        '  int aid=id(request,"anilistId"),mid=id(request,"malId");if(aid==0&&mid==0)throw new AccountError("MATCH_REQUIRED: Choose the exact anime before syncing.");',
+        auto_resolve_helper
+        + " JSONObject update(String provider,JSONObject request,String access) throws Exception {\n"
+        '  if(!"mal".equals(provider)&&!"anilist".equals(provider))throw new AccountError("Choose MyAnimeList or AniList to sync.");\n'
+        '  int aid=id(request,"anilistId"),mid=id(request,"malId");boolean autoMatched154=false;\n'
+        '  if(aid==0&&mid==0){JSONObject res154=autoResolveIds154(provider,request,access);if(res154!=null){aid=res154.optInt("aid",0);mid=res154.optInt("mid",0);autoMatched154=(aid>0||mid>0);}}\n'
+        '  if(aid==0&&mid==0)throw new AccountError("MATCH_REQUIRED: Choose the exact anime before syncing.");',
+        "TrackerSync553.update autoResolveIds154",
+    )
+    ts_text = patch_once(
+        ts_text,
+        "if(!autoMatched154)verifyNames(request,ani,mal);",
+        "  verifyNames(request,ani,mal);",
+        "  if(!autoMatched154)verifyNames(request,ani,mal);",
+        "TrackerSync553.update autoMatched154 verify bypass",
+    )
+    ts_path.write_text(ts_text, encoding="utf-8")
+
+    # 6. MainActivity.java -> browser bypass, dual Discord OAuth routing, and 85% episode completion sync
+    ma_path = root / "src/app/lovelycrxshx/kuro/MainActivity.java"
+    ma_text = ma_path.read_text(encoding="utf-8")
+    ma_text = patch_once(
+        ma_text,
+        "||KuroDiscordOAuth564.isCallback(intent));}",
+        'private static boolean isAccountIntent(Intent intent){return intent!=null&&Intent.ACTION_VIEW.equals(intent.getAction())&&intent.getData()!=null&&AccountOAuth.SCHEME.equals(intent.getData().getScheme())&&"oauth".equals(intent.getData().getHost());}',
+        'private static boolean isAccountIntent(Intent intent){return intent!=null&&intent.getData()!=null&&((Intent.ACTION_VIEW.equals(intent.getAction())&&AccountOAuth.SCHEME.equals(intent.getData().getScheme())&&"oauth".equals(intent.getData().getHost()))||KuroDiscordOAuth564.isCallback(intent));}',
+        "MainActivity.isAccountIntent Discord callback fallback",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "KuroFastNet154.openInBrowser154(this,target)",
+        ' private void openAccountBrowser(String target){\n'
+        '  try{Intent i=new Intent(Intent.ACTION_VIEW,Uri.parse(target));i.addCategory(Intent.CATEGORY_BROWSABLE);startActivity(i);}catch(Exception e){try{postAccountEvent(new JSONObject().put("error","No browser is available to open the provider sign-in."));}catch(Exception ignored){}}\n'
+        ' }',
+        ' private void openAccountBrowser(String target){\n'
+        '  if(!KuroFastNet154.openInBrowser154(this,target)){try{postAccountEvent(new JSONObject().put("error","No browser is available to open the provider sign-in."));}catch(Exception ignored){}}\n'
+        ' }',
+        "MainActivity.openAccountBrowser explicit browser",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "discordLinkStatus154()",
+        '  @JavascriptInterface public void discordAction564(String action){if(Arrays.asList("clear","current","linked","test","link","unlink").contains(action))main.post(()->{if(!isFinishing()&&!isDestroyed())MainActivity.this.discordAction564(action);});}',
+        '  @JavascriptInterface public void discordAction564(String action){if(Arrays.asList("clear","current","linked","test","link","linkDirect154","unlink").contains(action))main.post(()->{if(!isFinishing()&&!isDestroyed())MainActivity.this.discordAction564(action);});}\n'
+        '  @JavascriptInterface public String discordLinkStatus154(){try{boolean linked=KuroDiscordVault564.hasStored(MainActivity.this,"refresh");boolean appInstalled=false;try{getPackageManager().getPackageInfo("com.discord",0);appInstalled=true;}catch(Exception ignored){}return new JSONObject().put("linked",linked).put("enabled",discordEnabled563()).put("appInstalled",appInstalled).put("status",discordRpc563==null?"":discordRpc563.status()).toString();}catch(Exception e){return "{}";}}',
+        "MainActivity.Bridge discordLinkStatus154 + linkDirect154",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "KuroDiscordOAuth564.hasMatchingPending154(this,intent)",
+        ' private void handleDiscordOAuth564(Intent intent){\n'
+        '  KuroDiscordOAuth564.Result r=KuroDiscordOAuth564.consume(this,intent);if(r==null)return;\n'
+        '  if(!r.error.isEmpty()){Toast.makeText(this,r.error,Toast.LENGTH_LONG).show();return;}\n'
+        '  if(!discordEnabled563()){Toast.makeText(this,"Turn on Discord Rich Presence, then link again.",Toast.LENGTH_LONG).show();return;}\n'
+        '  if(discordRpc563!=null){discordRpc563.start();discordRpc563.exchange(r.code,r.verifier);Toast.makeText(this,"Connecting the linked Discord account…",Toast.LENGTH_LONG).show();}\n'
+        ' }',
+        ' private void handleDiscordOAuth564(Intent intent){\n'
+        '  if(!KuroDiscordOAuth564.hasMatchingPending154(this,intent))return;\n'
+        '  KuroDiscordOAuth564.Result r=KuroDiscordOAuth564.consume(this,intent);if(r==null)return;\n'
+        '  if(!r.error.isEmpty()){Toast.makeText(this,r.error,Toast.LENGTH_LONG).show();return;}\n'
+        '  if(discordPrefs564!=null)discordPrefs564.set("linked","on");\n'
+        '  if(!discordEnabled563()){getSharedPreferences("kuro-discord-rpc563",MODE_PRIVATE).edit().putBoolean("enabled",true).apply();discordEnabledChanged563(true);}\n'
+        '  if(discordRpc563!=null){discordRpc563.start();discordRpc563.exchange(r.code,r.verifier);Toast.makeText(this,"Connecting the linked Discord account…",Toast.LENGTH_LONG).show();Runnable notify154=()->{if(ui!=null&&!isFinishing()&&!isDestroyed())ui.evaluateJavascript("window.dispatchEvent(new CustomEvent(\'kuro-discord-rpc-changed154\'))",null);};main.post(notify154);main.postDelayed(notify154,1800);main.postDelayed(notify154,4500);}\n'
+        ' }',
+        "MainActivity.handleDiscordOAuth564 pending state routing + auto-enable + UI notify",
+    )
+    ma_text = patch_once(
+        ma_text,
+        'if("linkDirect154".equals(action))',
+        '  if(!discordEnabled563()){Toast.makeText(this,"Turn on Discord Rich Presence first.",Toast.LENGTH_SHORT).show();return;}',
+        '  if("linkDirect154".equals(action)){if(discordPrefs564!=null)discordPrefs564.set("linked","on");if(!discordEnabled563()){getSharedPreferences("kuro-discord-rpc563",MODE_PRIVATE).edit().putBoolean("enabled",true).apply();discordEnabledChanged563(true);}if(!KuroDiscordOAuth564.begin(this))Toast.makeText(this,"Could not open secure Discord authorization on this phone.",Toast.LENGTH_LONG).show();return;}\n'
+        '  if(!discordEnabled563()){if("link".equals(action)){getSharedPreferences("kuro-discord-rpc563",MODE_PRIVATE).edit().putBoolean("enabled",true).apply();discordEnabledChanged563(true);}else{Toast.makeText(this,"Turn on Discord Rich Presence first.",Toast.LENGTH_SHORT).show();return;}}',
+        "MainActivity.discordAction564 linkDirect154 + auto-enable on link",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "kuro-discord-rpc-changed154-unlink",
+        'discordRpc563.unlink();Toast.makeText(this,"Linked account disconnected on this phone.",Toast.LENGTH_SHORT).show();',
+        'discordRpc563.unlink();Toast.makeText(this,"Linked account disconnected on this phone.",Toast.LENGTH_SHORT).show();/* kuro-discord-rpc-changed154-unlink */if(ui!=null)ui.evaluateJavascript("window.dispatchEvent(new CustomEvent(\'kuro-discord-rpc-changed154\'))",null);',
+        "MainActivity.discordAction564 unlink UI notify",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "/* k154 iframe+85pct completion */",
+        '   WebViewCompat.addWebMessageListener(view,"KuroFinished553",Collections.singleton("*"),(sender,message,origin,isMainFrame,reply)->{\n'
+        '    if(sender!=player||!isMainFrame||!activityResumed||sent[0]||verification[0]||message.getType()!=WebMessageCompat.TYPE_STRING||!"ended".equals(message.getData())||origin==null||!"https".equals(origin.getScheme())||!playerHost(origin.getHost())||!session.equals(watchSession))return;\n'
+        '    String loaded=sender.getUrl();Uri current=loaded==null?null:Uri.parse(loaded);if(current==null||!"https".equals(current.getScheme())||!origin.getHost().equals(current.getHost()))return;\n'
+        '    long attempt=playerAttempt;String check="(function(){try{var a=document.querySelectorAll(\'video\');if(a.length!==1)return false;var v=a[0];return !!(v.ended&&Number.isFinite(v.duration)&&v.duration>=180&&v.currentTime>=v.duration*.98)}catch(e){return false}})()";\n'
+        '    sender.evaluateJavascript(check,result->{if(!"true".equals(result)||sender!=player||attempt!=playerAttempt||!session.equals(watchSession)||verification[0]||sent[0]||ui==null)return;sent[0]=true;ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(session)+","+JSONObject.quote(number)+")",null);});\n'
+        '   });',
+        '   WebViewCompat.addWebMessageListener(view,"KuroFinished553",Collections.singleton("*"),(sender,message,origin,isMainFrame,reply)->{\n'
+        '    /* k154 iframe+85pct completion */\n'
+        '    if(sender!=player||!activityResumed||sent[0]||verification[0]||message.getType()!=WebMessageCompat.TYPE_STRING||!"ended".equals(message.getData())||origin==null||!"https".equals(origin.getScheme())||!playerHost(origin.getHost())||!session.equals(watchSession))return;\n'
+        '    if(ui==null)return;sent[0]=true;ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(session)+","+JSONObject.quote(number)+")",null);\n'
+        '   });',
+        "MainActivity.setupCompletionFrames iframe + 85pct completion",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "position<duration*.85)return;",
+        "long duration=nativePlayer561.duration(),position=nativePlayer561.position();if(duration<180000||position<duration*.98)return;",
+        "long duration=nativePlayer561.duration(),position=nativePlayer561.position();if(duration<180000||position<duration*.85)return;",
+        "MainActivity.nativeEnded561 85pct threshold",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "dur154>=180000L&&pos154>=dur154*85L/100L",
+        "void closePlayer(){cancelAutoNext573();",
+        'void closePlayer(){cancelAutoNext573();if(nativePlayer561!=null&&watchInfo561!=null&&!watchSession.isEmpty()&&ui!=null){long dur154=nativePlayer561.duration(),pos154=nativePlayer561.position();String ep154=watchInfo561.optString("episode","");if(dur154>=180000L&&pos154>=dur154*85L/100L&&ep154.matches("[1-9][0-9]{0,3}"))ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(watchSession)+","+JSONObject.quote(ep154)+")",null);}',
+        "MainActivity.closePlayer 85pct native watch mark",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "/* k154 stream-player 85pct */",
+        'if(v.optBoolean("ended",false)&&duration>=5000&&position>=duration*.98)KuroPlayback561.completed(MainActivity.this,resumeKey561);else KuroPlayback561.save(MainActivity.this,resumeKey561,position,duration);',
+        '/* k154 stream-player 85pct */ if(duration>=180000&&position>=duration*.85&&watchInfo561!=null&&!watchSession.isEmpty()&&ui!=null){String ep154=watchInfo561.optString("episode","");if(ep154.matches("[1-9][0-9]{0,3}"))ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(watchSession)+","+JSONObject.quote(ep154)+")",null);}if(v.optBoolean("ended",false)&&duration>=5000&&position>=duration*.98)KuroPlayback561.completed(MainActivity.this,resumeKey561);else KuroPlayback561.save(MainActivity.this,resumeKey561,position,duration);',
+        "MainActivity.setupProgress561 85pct direct HLS watch mark",
+    )
+    ma_path.write_text(ma_text, encoding="utf-8")
+
+    # 7. assets/player-ended553.js -> 85% episode completion in top-level & embedded player frames
+    pe_path = root / "assets/player-ended553.js"
+    pe_path.write_text(PLAYER_ENDED_154_JS, encoding="utf-8")
+
+    # 8. assets/tracker-sync553.js -> auto-resolve IDs without premature 'match' trap + live Sync Now API
+    ts_js_path = root / "assets/tracker-sync553.js"
+    ts_js = ts_js_path.read_text(encoding="utf-8")
+    ts_js = patch_once(
+        ts_js,
+        "autoTried154",
+        "if(!state)state={v:1,queue:[],links:{},initialized:{},auto:{anilist:true,mal:true},cooldown:{},seq:0};",
+        "if(!state)state={v:1,queue:[],links:{},initialized:{},auto:{anilist:true,mal:true},cooldown:{},seq:0};\n"
+        " else{for(const j of state.queue){if(j&&j.state==='match'&&!j.autoTried154){j.state='pending';j.error='';j.retryAt=0;j.autoTried154=true}}}",
+        "tracker-sync553.js promote untried match jobs",
+    )
+    ts_js = patch_once(
+        ts_js,
+        "/* k154 native auto-resolve */",
+        "  const ident=identity(item);if(!ident.anilistId&&!ident.malId)job.state='match';\n  job.rev=++state.seq;",
+        "  /* k154 native auto-resolve */ job.autoTried154=true;\n  job.rev=++state.seq;",
+        "tracker-sync553.js upsert allow pending without pre-existing ID",
+    )
+    ts_js = patch_once(
+        ts_js,
+        "/* k154 drain auto-resolve */",
+        "  const ident=identity(job.item);\n  if(!ident.anilistId&&!ident.malId){job.state='match';job.error='Choose the exact anime.';persist();paint();schedule();return}",
+        "  const ident=identity(job.item); /* k154 drain auto-resolve */",
+        "tracker-sync553.js drain delegate ID lookup to TrackerSync553",
+    )
+    ts_js = patch_once(
+        ts_js,
+        "kuro-tracker-last-sync-154",
+        "    if(result.conflict){current.state='conflict';current.error='An existing provider status differs from Kuro.';current.tries=0}\n    else state.queue=state.queue.filter(j=>j!==current);",
+        "    if(result.conflict){current.state='conflict';current.error='An existing provider status differs from Kuro.';current.tries=0}\n    else{state.queue=state.queue.filter(j=>j!==current);try{let m=JSON.parse(localStorage.getItem('kuro-tracker-last-sync-154')||'{}');m[captured.provider]=Date.now();localStorage.setItem('kuro-tracker-last-sync-154',JSON.stringify(m))}catch(_){}}",
+        "tracker-sync553.js record last sync timestamp",
+    )
+    ts_js = patch_once(
+        ts_js,
+        "nextAt=Date.now()+1200;schedule(1200);",
+        "nextAt=Date.now()+6500;schedule(6500);",
+        "nextAt=Date.now()+1200;schedule(1200);",
+        "tracker-sync553.js faster queue drain",
+    )
+    ts_js = patch_once(
+        ts_js,
+        "kuro-tracker-sync-paint154",
+        " window.kuroSyncPaint553=paint;",
+        " const origPaint154=paint;paint=function(){origPaint154();try{window.dispatchEvent(new CustomEvent('kuro-tracker-sync-paint154'))}catch(_){}};\n"
+        " window.kuroSyncPaint553=paint;\n"
+        " window.kuroTrackerSyncNow154=async function(provider){\n"
+        "  if(unreadable)return {ok:false};\n"
+        "  background=false;nextAt=0;\n"
+        "  if(window.kuroTrackerRequest553){try{const s=await window.kuroTrackerRequest553('status',{});connections=s.connections||{}}catch(_){}}\n"
+        "  const targets=provider?[provider]:providers;\n"
+        "  for(const p of targets){\n"
+        "   state.cooldown[p]=0;\n"
+        "   const o=owner(p);\n"
+        "   if(o&&enabled(p)){delete state.initialized[p+'|'+o];backfill(p,o)}\n"
+        "   for(const j of state.queue){if(j&&j.provider===p&&(j.state==='blocked'||j.state==='pending'||(j.state==='match'&&!j.userSkipped154))){j.state='pending';j.retryAt=0;j.error='';j.rev=++state.seq}}\n"
+        "  }\n"
+        "  persist();paint();\n"
+        "  await drain();\n"
+        "  return {ok:true};\n"
+        " };",
+        "tracker-sync553.js kuroTrackerSyncNow154 + paint event",
+    )
+    ts_js_path.write_text(ts_js, encoding="utf-8")
+
+    # 9. assets/accounts542.js -> update existing import progress/status + direct 1-tap Connect & Silent Import APIs
+    ac_path = root / "assets/accounts542.js"
+    ac_text = ac_path.read_text(encoding="utf-8")
+    old_put_imports = (
+        "  let old=readImports(),keys=new Set(old.map(x=>String(x.provider)+':'+String(x.sourceId))),added=0,skipped=0,rows=old.slice();\n"
+        "  for(const x of response.items){\n"
+        "   if(!x||x.provider!==response.provider||!/^[1-9][0-9]{0,18}$/.test(String(x.sourceId))||typeof x.title!=='string'||!x.title.trim())continue;\n"
+        "   let key=x.provider+':'+String(x.sourceId);if(keys.has(key)){skipped++;continue}keys.add(key);\n"
+        "   let image='';try{let u=new URL(String(x.image||''));if(u.protocol==='https:'&&!u.username&&!u.password&&!u.port)image=u.href}catch{}\n"
+        "   rows.push({provider:x.provider,sourceId:String(x.sourceId),malId:Number(x.malId)||0,anilistId:Number(x.anilistId)||0,title:x.title.trim().slice(0,300),image,status:String(x.status||'').slice(0,40),progress:Math.max(0,Math.min(100000,Number(x.progress)||0)),total:Math.max(0,Math.min(100000,Number(x.total)||0)),adult:typeof x.adult==='boolean'?x.adult:null});added++;\n"
+        "  }\n"
+        "  try{localStorage.setItem(IMPORT_KEY,JSON.stringify(rows))}catch{throw Error('Not enough local storage for the import. Existing lists were not changed.')}\n"
+        "  return `${added} added, ${skipped} already present and kept. Open My Lists to see your imports.${response.partial?' Partial import: '+String(response.reason||'some entries could not be read.'):''}`;"
+    )
+    new_put_imports = (
+        "  let old=readImports(),idxMap=new Map(),added=0,updated154=0,skipped=0,rows=old.slice();\n"
+        "  rows.forEach((r,idx)=>{if(r)idxMap.set(String(r.provider)+':'+String(r.sourceId),idx)});\n"
+        "  for(const x of response.items){\n"
+        "   if(!x||x.provider!==response.provider||!/^[1-9][0-9]{0,18}$/.test(String(x.sourceId))||typeof x.title!=='string'||!x.title.trim())continue;\n"
+        "   let key=x.provider+':'+String(x.sourceId);\n"
+        "   let image='';try{let u=new URL(String(x.image||''));if(u.protocol==='https:'&&!u.username&&!u.password&&!u.port)image=u.href}catch{}\n"
+        "   let nextRow={provider:x.provider,sourceId:String(x.sourceId),malId:Number(x.malId)||0,anilistId:Number(x.anilistId)||0,title:x.title.trim().slice(0,300),image,status:String(x.status||'').slice(0,40),progress:Math.max(0,Math.min(100000,Number(x.progress)||0)),total:Math.max(0,Math.min(100000,Number(x.total)||0)),adult:typeof x.adult==='boolean'?x.adult:null};\n"
+        "   if(idxMap.has(key)){\n"
+        "    let pos=idxMap.get(key),prev=rows[pos];\n"
+        "    if(prev&&(prev.status!==nextRow.status||prev.progress!==nextRow.progress||prev.total!==nextRow.total||(!prev.image&&nextRow.image))){rows[pos]=Object.assign({},prev,nextRow,{image:nextRow.image||prev.image});updated154++;}else{skipped++;}\n"
+        "    continue;\n"
+        "   }\n"
+        "   idxMap.set(key,rows.length);rows.push(nextRow);added++;\n"
+        "  }\n"
+        "  try{localStorage.setItem(IMPORT_KEY,JSON.stringify(rows));let m=JSON.parse(localStorage.getItem('kuro-tracker-last-sync-154')||'{}');m[response.provider]=Date.now();localStorage.setItem('kuro-tracker-last-sync-154',JSON.stringify(m))}catch{throw Error('Not enough local storage for the import. Existing lists were not changed.')}\n"
+        "  return `${added} added, ${updated154} updated, ${skipped} unchanged.${response.partial?' Partial import: '+String(response.reason||'some entries could not be read.'):''}`;"
+    )
+    ac_text = patch_once(
+        ac_text,
+        "updated154",
+        old_put_imports,
+        new_put_imports,
+        "accounts542.js putImports live status & progress sync",
+    )
+    ac_text = patch_once(
+        ac_text,
+        "window.kuroSilentImport154?.('anilist')",
+        "try{let r=await request('anilistPin',{token});closeModal();placeholder(r.message);await status();if(view==='profile')profile()}",
+        "try{let r=await request('anilistPin',{token});closeModal();placeholder(r.message);await status();if(view==='profile')profile();window.kuroTrackerSyncNow154?.('anilist');window.kuroSilentImport154?.('anilist')}",
+        "accounts542.js auto-sync on AniList PIN connect",
+    )
+    direct_helpers_js = (
+        " window.kuroDirectConnect154=async provider=>{\n"
+        "  if(!['discord','mal','anilist'].includes(provider))return;\n"
+        "  try{\n"
+        "   let result=await request('begin',{provider});\n"
+        "   if(provider==='anilist'){login('pin');message(result.message)}\n"
+        "   else{placeholder(result.message||'Continue in your browser, then return to Kuro.')}\n"
+        "  }catch(e){placeholder(e.message||'Could not start sign-in.')}\n"
+        " };\n"
+        " window.kuroSilentImport154=async provider=>{\n"
+        "  if(!['mal','anilist'].includes(provider))return null;\n"
+        "  let r=await request('import',{provider});\n"
+        "  let info=putImports(r);\n"
+        "  if(view==='profile')profile();\n"
+        "  else if(view==='library')library();\n"
+        "  return info;\n"
+        " };\n"
+        " window.kuroAccountEvent=async event=>{\n"
+        "  if(event?.error){if(document.querySelector('#account-overlay'))message(event.error,true);else placeholder(event.error);return}\n"
+        "  if(watchAccountMode){if(event?.message)message(event.message)}else if(document.querySelector('#account-overlay'))closeModal();\n"
+        "  if(event?.message&&!watchAccountMode)placeholder(event.message);try{await status()}catch{}if(view==='profile')profile();\n"
+        "  if(event?.kind==='mal'||event?.kind==='anilist'){window.kuroTrackerSyncNow154?.(event.kind);window.kuroSilentImport154?.(event.kind).catch(()=>{})}\n"
+        " };"
+    )
+    ac_text = patch_once(
+        ac_text,
+        "window.kuroDirectConnect154=",
+        " window.kuroAccountEvent=async event=>{\n"
+        "  if(event?.error){message(event.error,true);return}\n"
+        "  if(watchAccountMode){if(event?.message)message(event.message)}else if(document.querySelector('#account-overlay'))closeModal();\n"
+        "  if(event?.message&&!watchAccountMode)placeholder(event.message);try{await status()}catch{}if(view==='profile')profile();\n"
+        " };",
+        direct_helpers_js,
+        "accounts542.js kuroDirectConnect154, kuroSilentImport154 & kuroAccountEvent toast fallback",
+    )
+    ac_path.write_text(ac_text, encoding="utf-8")
+
+
+def patch_watch_ui_154(root: pathlib.Path) -> None:
+    # 1. WatchHeader.java: remove the top circular episodes drawer button
+    wh_path = root / "src/app/lovelycrxshx/kuro/WatchHeader.java"
+    wh_text = wh_path.read_text(encoding="utf-8")
+    wh_text = patch_once(
+        wh_text,
+        "/* k154 watch-episodes header button removed */",
+        '  addView(icon("watch-episodes","Episodes",2,()->{if(this.listener!=null)this.listener.episodes();}),new LinearLayout.LayoutParams(dp(48),dp(48)));\n',
+        '  /* k154 watch-episodes header button removed */\n',
+        "WatchHeader remove watch-episodes button",
+    )
+    wh_path.write_text(wh_text, encoding="utf-8")
+
+    # 2. MainActivity.java:
+    #    - 5 servers per page + "Other servers" page switcher
+    #    - 3-episode YouTube-style scrollable playlist box
+    #    - YouTube-style recommended anime video cards below Anime details
+    #    - Disable right-side KuroEpisodeDrawer581 slider
+    ma_path = root / "src/app/lovelycrxshx/kuro/MainActivity.java"
+    ma_text = ma_path.read_text(encoding="utf-8")
+
+    old_drawer = (
+        ' void openEpisodeDrawer581(){\n'
+        '  JSONObject info=watchInfo561;JSONArray eps=info==null?null:info.optJSONArray("episodes");\n'
+        '  if(eps==null||eps.length()==0){Toast.makeText(this,"No episode list for this title.",Toast.LENGTH_SHORT).show();return;}\n'
+        '  if(playerLayer==null)return;\n'
+        '  if(episodeDrawer581==null)episodeDrawer581=new KuroEpisodeDrawer581(this,root,index->chooseEpisode581(index));episodeDrawer581.setProgress(number->{\n'
+        '    JSONObject wi=watchInfo561;if(wi==null||number==null||number.isEmpty())return "";\n'
+        '    long at=KuroPlayback561.read(this,KuroPlayback561.key(wi.optString("source"),wi.optString("showIdentity"),number));\n'
+        '    if(at<=0)return "";\n'
+        '    long sec=at/1000;return String.format(java.util.Locale.ROOT,"Resume %d:%02d",sec/60,sec%60);\n'
+        '   });\n'
+        '  if(episodeDrawer581.isOpen()){episodeDrawer581.close();return;}\n'
+        '  episodeDrawer581.show(eps,info.optInt("current",0));\n'
+        ' }'
+    )
+    new_drawer = (
+        ' void openEpisodeDrawer581(){\n'
+        '  /* k154 episode slider removed */\n'
+        '  if(episodeDrawer581!=null){episodeDrawer581.close();episodeDrawer581=null;}\n'
+        ' }'
+    )
+    ma_text = patch_once(
+        ma_text,
+        "/* k154 episode slider removed */",
+        old_drawer,
+        new_drawer,
+        "MainActivity disable openEpisodeDrawer581 slider",
+    )
+
+    old_watch_sections = (
+        '  TextView noSub=text("Not available yet",12,KuroTheme12.col(0xff91809f)),noDub=text("Not available yet",12,KuroTheme12.col(0xff91809f));subCol.addView(noSub);dubCol.addView(noDub);\n'
+        '  java.util.function.BiConsumer<Integer,JSONObject> addButton=(pos,opt)->{\n'
+        '   String url=opt.optString("url"),serverRef=opt.optString("referer",ref),kind=opt.optString("type",""),lang=opt.optString("lang","").toLowerCase(Locale.ROOT),note=opt.optString("note","");\n'
+        '   boolean isSub=lang.equals("sub"),isDub=lang.equals("dub");LinearLayout column=isSub?subCol:isDub?dubCol:extraCol;int index=isSub?0:isDub?1:2;int num=++countsByLang[index];if(isSub)noSub.setVisibility(View.GONE);if(isDub)noDub.setVisibility(View.GONE);\n'
+        '   String displayName="Server "+num+(note.isEmpty()?"":" • "+(note.length()>35?note.substring(0,35):note));TextView btn=chip(displayName,pos==chosen);buttons.add(btn);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,0,0,dp(7));column.addView(btn,lp);\n'
+        '   btn.setOnClickListener(v->{verification[0]=false;if(loadPlayerOption561(opt,ref)){if(connectionCover[0]!=null)connectionCover[0].setVisibility(View.GONE);Arrays.fill(tried,false);tried[pos]=true;active[0]=pos;waiting[0]=false;for(int j=0;j<buttons.size();j++){boolean on=j==pos;buttons.get(j).setTextColor(on?KuroTheme12.col(0xff12081b):KuroTheme12.col(0xffe3dce9));buttons.get(j).setBackground(rounded(on?KuroTheme12.col(0xffae71e7):KuroTheme12.col(0xff281b32),on?0:KuroTheme12.col(0xff4c3a59)));}}});\n'
+        '  };\n'
+        '  for(int i=0;i<options.length();i++)addButton.accept(i,options.getJSONObject(i));\n'
+        '  retryServer[0]=()->{\n'
+        '   if(player==null||playerLayer==null||verification[0])return;\n'
+        '   try{\n'
+        '    if(lookupBlocked[0]){waiting[0]=false;if(connectionText[0]!=null)connectionText[0].setText("Verification is required. Check that library manually.");return;}\n'
+        '    String currentLang=options.getJSONObject(active[0]).optString("lang","");int next=RetrySelector.next(options,tried,currentLang,"dub".equals(settings560().getString("audio","dub"))?KuroPreferences560.preferredServers(MainActivity.this):null);\n'
+        '    if(next<0){waiting[0]=!lookupDone[0];if(connectionText[0]!=null)connectionText[0].setText(waiting[0]?"Connecting to another source…":"No working exact-match source was detected. Try another server.");return;}\n'
+        '    tried[next]=true;JSONObject target=options.getJSONObject(next);if(!loadPlayerOption561(target,ref)){main.post(retryServer[0]);return;}\n'
+        '    active[0]=next;waiting[0]=false;if(connectionCover[0]!=null)connectionCover[0].setVisibility(View.GONE);for(int j=0;j<buttons.size();j++){boolean on=j==next;buttons.get(j).setTextColor(on?KuroTheme12.col(0xff12081b):KuroTheme12.col(0xffe3dce9));buttons.get(j).setBackground(rounded(on?KuroTheme12.col(0xffae71e7):KuroTheme12.col(0xff281b32),on?0:KuroTheme12.col(0xff4c3a59)));}\n'
+        '   }catch(Exception ignored){}\n'
+        '  };\n'
+        '  watchSink=(incomingSession,update)->{\n'
+        '   if(!session.equals(incomingSession)||player==null||playerLayer==null)return;\n'
+        '   JSONArray found=update.optJSONArray("servers");if(found!=null)for(int k=0;k<found.length()&&options.length()<50;k++){\n'
+        '    JSONObject item=found.optJSONObject(k);if(item==null)continue;String url=item.optString("url"),lang=item.optString("lang","");Uri u=Uri.parse(url);if(!"https".equals(u.getScheme())||!playerHost(u.getHost())||u.getUserInfo()!=null||!("sub".equals(lang)||"dub".equals(lang)))continue;\n'
+        '    boolean dup=false;for(int j=0;j<options.length();j++){JSONObject old=options.optJSONObject(j);if(old!=null&&url.equals(old.optString("url"))&&lang.equals(old.optString("lang"))){dup=true;break;}}if(dup)continue;\n'
+        '    int index=options.length();options.put(item);addButton.accept(index,item);\n'
+        '   }\n'
+        '   if(update.optBoolean("blocked",false))lookupBlocked[0]=true;if(update.optBoolean("done",false))lookupDone[0]=true;\n'
+        '   if(waiting[0])retryServer[0].run();\n'
+        '  };\n'
+        '  if(countsByLang[2]>0){addGap(content,8);TextView moreTitle=text("OTHER AUDIO",12,KuroTheme12.col(0xffb37ee4));moreTitle.setTypeface(null,android.graphics.Typeface.BOLD);content.addView(moreTitle);addGap(content,8);content.addView(extraCol);}\n'
+        '  addGap(content,22);TextView epTitle=text("Episodes",16,Color.WHITE);epTitle.setTypeface(null,android.graphics.Typeface.BOLD);content.addView(epTitle);addGap(content,6);TextView epHint=text("Search by number or name • "+eps.length()+" available",12,KuroTheme12.col(0xffa79ab2));content.addView(epHint);addGap(content,10);\n'
+        '  EditText search=new EditText(this);search.setSingleLine(true);search.setTextColor(Color.WHITE);search.setHintTextColor(KuroTheme12.col(0xff907f9d));search.setHint("Search episodes");search.setTextSize(14);search.setPadding(dp(12),0,dp(12),0);search.setBackground(rounded(KuroTheme12.col(0xff24172e),KuroTheme12.col(0xff4f3f5c)));content.addView(search,new LinearLayout.LayoutParams(-1,dp(46)));addGap(content,12);\n'
+        '  LinearLayout pagination=new LinearLayout(this);pagination.setGravity(Gravity.CENTER_VERTICAL);content.addView(pagination);LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);content.addView(list);final int[] page={current/100};final ArrayList<Integer> matches=new ArrayList<>();\n'
+        '  Runnable refresh=()->{matches.clear();String query=search.getText().toString().trim().toLowerCase(Locale.ROOT);for(int i=0;i<eps.length();i++){JSONObject ep=eps.optJSONObject(i);String num=ep!=null?ep.optString("number",""):eps.optString(i,"");String name=ep!=null?ep.optString("name",""):"";if(query.isEmpty()||num.toLowerCase(Locale.ROOT).contains(query)||name.toLowerCase(Locale.ROOT).contains(query))matches.add(i);}int pages=Math.max(1,(matches.size()+99)/100);if(page[0]>=pages)page[0]=pages-1;pagination.removeAllViews();list.removeAllViews();if(matches.size()>100){TextView prev=chip("‹",false),indicator=text("   "+(page[0]+1)+" / "+pages+"   ",12,KuroTheme12.col(0xffb9aac6)),next=chip("›",false);pagination.addView(prev);pagination.addView(indicator);pagination.addView(next);prev.setOnClickListener(v->{if(page[0]>0){page[0]--;pagination.post(()->((Runnable)list.getTag()).run());}});next.setOnClickListener(v->{if(page[0]+1<pages){page[0]++;pagination.post(()->((Runnable)list.getTag()).run());}});addGap(list,10);}if(matches.isEmpty())list.addView(text("No matching episodes.",13,KuroTheme12.col(0xffa79ab2)));for(int k=page[0]*100;k<Math.min((page[0]+1)*100,matches.size());k++){int idx=matches.get(k);JSONObject ep=eps.optJSONObject(idx);String num=ep!=null?ep.optString("number","?"):eps.optString(idx,"?");String name=ep!=null?ep.optString("name","").trim():"";if(num.length()>20)num=num.substring(0,20);if(name.length()>160)name=name.substring(0,160);if(name.isEmpty())name="Episode "+num;LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(12),0,dp(12),0);row.setBackgroundColor(idx==current?KuroTheme12.col(0xff39234b):(k%2==0?KuroTheme12.col(0xff24182d):KuroTheme12.col(0xff1c1124)));TextView number=text(num,14,idx==current?KuroTheme12.col(0xffbf88f2):KuroTheme12.col(0xffb2a6bc));number.setGravity(Gravity.CENTER);row.addView(number,new LinearLayout.LayoutParams(dp(36),-1));TextView titleLabel=text(name,14,idx==current?KuroTheme12.col(0xffcfa2fb):KuroTheme12.col(0xffe6e1eb));titleLabel.setPadding(dp(12),0,0,0);row.addView(titleLabel,new LinearLayout.LayoutParams(0,-2,1));if(idx==current)row.addView(text("▶",14,KuroTheme12.col(0xffae73e5)));list.addView(row,new LinearLayout.LayoutParams(-1,dp(54)));row.setOnClickListener(v->{if(idx==current)return;closePlayer();ui.evaluateJavascript("window.kuroChooseEpisode&&window.kuroChooseEpisode("+idx+")",null);});}};\n'
+        '  list.setTag(refresh);search.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int count,int after){}public void onTextChanged(CharSequence s,int st,int before,int count){page[0]=0;refresh.run();}public void afterTextChanged(android.text.Editable e){}});refresh.run();\n'
+        '  addGap(content,24);JSONObject anime=info.optJSONObject("animeInfo");if(anime==null)anime=new JSONObject();\n'
+        '  TextView detailHeading=text("Anime details",16,KuroTheme12.col(0xfff3eef7));detailHeading.setTypeface(null,android.graphics.Typeface.BOLD);content.addView(detailHeading);addGap(content,10);\n'
+        '  LinearLayout detail=new LinearLayout(this);detail.setOrientation(LinearLayout.HORIZONTAL);detail.setPadding(dp(12),dp(12),dp(12),dp(12));detail.setBackground(rounded(KuroTheme12.col(0xff21142a),KuroTheme12.col(0xff3f2f4c)));content.addView(detail,new LinearLayout.LayoutParams(-1,-2));\n'
+        '  ImageView poster=new ImageView(this);poster.setScaleType(ImageView.ScaleType.CENTER_CROP);poster.setBackgroundColor(KuroTheme12.col(0xff372447));LinearLayout.LayoutParams posterLP=new LinearLayout.LayoutParams(dp(76),dp(114));posterLP.setMargins(0,0,dp(14),0);detail.addView(poster,posterLP);loadPoster(poster,anime.optString("image",""));\n'
+        '  LinearLayout detailText=new LinearLayout(this);detailText.setOrientation(LinearLayout.VERTICAL);detail.addView(detailText,new LinearLayout.LayoutParams(0,-2,1));TextView detailName=text(info.optString("title","Anime"),18,Color.WHITE);detailName.setTypeface(null,android.graphics.Typeface.BOLD);detailText.addView(detailName);addGap(detailText,7);\n'
+        '  JSONObject counts=anime.optJSONObject("counts");StringBuilder facts=new StringBuilder();if(counts!=null){String sub=counts.optString("sub","");String dub=counts.optString("dub","");String total=counts.optString("total","");if(sub.matches("[0-9]{1,5}"))facts.append("CC ").append(sub);if(dub.matches("[0-9]{1,5}")){if(facts.length()>0)facts.append("  •  ");facts.append("DUB ").append(dub);}if(total.matches("[0-9]{1,5}")){if(facts.length()>0)facts.append("  •  ");facts.append(total).append(" EPS");}}String meta=anime.optString("meta","").trim();if(!meta.isEmpty()){if(facts.length()>0)facts.append("  •  ");facts.append(meta.length()>80?meta.substring(0,80):meta);}if(facts.length()>0){detailText.addView(text(facts.toString(),11,KuroTheme12.col(0xffb98ae5)));addGap(detailText,8);}String desc=anime.optString("description","").trim();if(desc.length()>3000)desc=desc.substring(0,3000);TextView synopsis=text(desc.isEmpty()?"Description not available from this source.":desc,13,KuroTheme12.col(0xffdcd5e2));synopsis.setLineSpacing(dp(3),1);detailText.addView(synopsis);addGap(detailText,10);TextView more=chip("View details",false);detailText.addView(more);more.setOnClickListener(v->{closePlayer();ui.evaluateJavascript("window.kuroOpenDetails&&window.kuroOpenDetails()",null);});\n'
+        '  addGap(content,10);TextView note=text("Playback uses a third-party player. Autoplay is best effort; tap play if needed. Use its fullscreen control to expand.",12,KuroTheme12.col(0xffa08fae));content.addView(note);'
+    )
+
+    new_watch_sections = (
+        '  /* k154 5-servers-per-page + 3-row YouTube playlist + YouTube recommended anime */\n'
+        '  TextView noSub=text("Not available yet",12,KuroTheme12.col(0xff91809f)),noDub=text("Not available yet",12,KuroTheme12.col(0xff91809f));subCol.addView(noSub);dubCol.addView(noDub);\n'
+        '  TextView noMoreSub154=text("No more SUB servers",12,KuroTheme12.col(0xff91809f)),noMoreDub154=text("No more DUB servers",12,KuroTheme12.col(0xff91809f));noMoreSub154.setVisibility(View.GONE);noMoreDub154.setVisibility(View.GONE);subCol.addView(noMoreSub154);dubCol.addView(noMoreDub154);\n'
+        '  final ArrayList<TextView> subBtns154=new ArrayList<>(),dubBtns154=new ArrayList<>();final int[] posLang154=new int[50],posSlot154=new int[50],serverPage154={0};final Runnable[] syncServers154={null};\n'
+        '  LinearLayout serverPagerRow154=new LinearLayout(this);serverPagerRow154.setOrientation(LinearLayout.HORIZONTAL);serverPagerRow154.setGravity(Gravity.CENTER_VERTICAL);serverPagerRow154.setTag("server-pager-154");serverPagerRow154.setVisibility(View.GONE);LinearLayout.LayoutParams spRowLp154=new LinearLayout.LayoutParams(-1,-2);spRowLp154.setMargins(0,dp(4),0,0);content.addView(serverPagerRow154,spRowLp154);\n'
+        '  syncServers154[0]=()->{\n'
+        '   int maxSrv=Math.max(subBtns154.size(),dubBtns154.size());int srvPages=Math.max(1,(maxSrv+4)/5);\n'
+        '   if(serverPage154[0]>=srvPages)serverPage154[0]=srvPages-1;if(serverPage154[0]<0)serverPage154[0]=0;\n'
+        '   int pStart=serverPage154[0]*5,pEnd=pStart+5,visSub=0,visDub=0;\n'
+        '   for(int si=0;si<subBtns154.size();si++){boolean vis=si>=pStart&&si<pEnd;subBtns154.get(si).setVisibility(vis?View.VISIBLE:View.GONE);if(vis)visSub++;}\n'
+        '   for(int di=0;di<dubBtns154.size();di++){boolean vis=di>=pStart&&di<pEnd;dubBtns154.get(di).setVisibility(vis?View.VISIBLE:View.GONE);if(vis)visDub++;}\n'
+        '   noMoreSub154.setVisibility(subBtns154.size()>0&&visSub==0?View.VISIBLE:View.GONE);\n'
+        '   noMoreDub154.setVisibility(dubBtns154.size()>0&&visDub==0?View.VISIBLE:View.GONE);\n'
+        '   serverPagerRow154.removeAllViews();\n'
+        '   if(srvPages<=1){serverPagerRow154.setVisibility(View.GONE);return;}\n'
+        '   serverPagerRow154.setVisibility(View.VISIBLE);\n'
+        '   if(serverPage154[0]>0){\n'
+        '    String prevLabel=serverPage154[0]==1?"‹  Servers 1–5":("‹  Servers "+((serverPage154[0]-1)*5+1)+"–"+(serverPage154[0]*5));\n'
+        '    TextView prevBtn=chip(prevLabel,false);prevBtn.setTag("server-prev-154");prevBtn.setMinHeight(dp(44));\n'
+        '    LinearLayout.LayoutParams plp=new LinearLayout.LayoutParams(0,-2,1);if(serverPage154[0]+1<srvPages)plp.setMargins(0,0,dp(6),0);\n'
+        '    prevBtn.setOnClickListener(v->{serverPage154[0]--;syncServers154[0].run();});serverPagerRow154.addView(prevBtn,plp);\n'
+        '   }\n'
+        '   if(serverPage154[0]+1<srvPages){\n'
+        '    TextView otherBtn=chip("Other servers",false);otherBtn.setTag("other-servers-154");otherBtn.setMinHeight(dp(44));\n'
+        '    LinearLayout.LayoutParams nlp=new LinearLayout.LayoutParams(0,-2,1);if(serverPage154[0]>0)nlp.setMargins(dp(6),0,0,0);\n'
+        '    otherBtn.setOnClickListener(v->{serverPage154[0]++;syncServers154[0].run();});serverPagerRow154.addView(otherBtn,nlp);\n'
+        '   }\n'
+        '  };\n'
+        '  java.util.function.BiConsumer<Integer,JSONObject> addButton=(pos,opt)->{\n'
+        '   String url=opt.optString("url"),serverRef=opt.optString("referer",ref),kind=opt.optString("type",""),lang=opt.optString("lang","").toLowerCase(Locale.ROOT),note=opt.optString("note","");\n'
+        '   boolean isSub=lang.equals("sub"),isDub=lang.equals("dub");LinearLayout column=isSub?subCol:isDub?dubCol:extraCol;int index=isSub?0:isDub?1:2;int num=++countsByLang[index];if(isSub)noSub.setVisibility(View.GONE);if(isDub)noDub.setVisibility(View.GONE);\n'
+        '   String displayName="Server "+num+(note.isEmpty()?"":" • "+(note.length()>35?note.substring(0,35):note));TextView btn=chip(displayName,pos==chosen);buttons.add(btn);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,0,0,dp(7));column.addView(btn,lp);\n'
+        '   if(pos>=0&&pos<50){posLang154[pos]=index;posSlot154[pos]=num-1;}if(isSub)subBtns154.add(btn);else if(isDub)dubBtns154.add(btn);\n'
+        '   btn.setOnClickListener(v->{verification[0]=false;if(loadPlayerOption561(opt,ref)){if(connectionCover[0]!=null)connectionCover[0].setVisibility(View.GONE);Arrays.fill(tried,false);tried[pos]=true;active[0]=pos;waiting[0]=false;for(int j=0;j<buttons.size();j++){boolean on=j==pos;buttons.get(j).setTextColor(on?KuroTheme12.col(0xff12081b):KuroTheme12.col(0xffe3dce9));buttons.get(j).setBackground(rounded(on?KuroTheme12.col(0xffae71e7):KuroTheme12.col(0xff281b32),on?0:KuroTheme12.col(0xff4c3a59)));}}});\n'
+        '   if(syncServers154[0]!=null)syncServers154[0].run();\n'
+        '  };\n'
+        '  for(int i=0;i<options.length();i++)addButton.accept(i,options.getJSONObject(i));\n'
+        '  if(chosen>=0&&chosen<50&&posLang154[chosen]<2)serverPage154[0]=posSlot154[chosen]/5;\n'
+        '  syncServers154[0].run();\n'
+        '  retryServer[0]=()->{\n'
+        '   if(player==null||playerLayer==null||verification[0])return;\n'
+        '   try{\n'
+        '    if(lookupBlocked[0]){waiting[0]=false;if(connectionText[0]!=null)connectionText[0].setText("Verification is required. Check that library manually.");return;}\n'
+        '    String currentLang=options.getJSONObject(active[0]).optString("lang","");int next=RetrySelector.next(options,tried,currentLang,"dub".equals(settings560().getString("audio","dub"))?KuroPreferences560.preferredServers(MainActivity.this):null);\n'
+        '    if(next<0){waiting[0]=!lookupDone[0];if(connectionText[0]!=null)connectionText[0].setText(waiting[0]?"Connecting to another source…":"No working exact-match source was detected. Try another server.");return;}\n'
+        '    tried[next]=true;JSONObject target=options.getJSONObject(next);if(!loadPlayerOption561(target,ref)){main.post(retryServer[0]);return;}\n'
+        '    active[0]=next;waiting[0]=false;if(connectionCover[0]!=null)connectionCover[0].setVisibility(View.GONE);for(int j=0;j<buttons.size();j++){boolean on=j==next;buttons.get(j).setTextColor(on?KuroTheme12.col(0xff12081b):KuroTheme12.col(0xffe3dce9));buttons.get(j).setBackground(rounded(on?KuroTheme12.col(0xffae71e7):KuroTheme12.col(0xff281b32),on?0:KuroTheme12.col(0xff4c3a59)));}\n'
+        '    if(next>=0&&next<50&&posLang154[next]<2){serverPage154[0]=posSlot154[next]/5;syncServers154[0].run();}\n'
+        '   }catch(Exception ignored){}\n'
+        '  };\n'
+        '  watchSink=(incomingSession,update)->{\n'
+        '   if(!session.equals(incomingSession)||player==null||playerLayer==null)return;\n'
+        '   JSONArray found=update.optJSONArray("servers");if(found!=null)for(int k=0;k<found.length()&&options.length()<50;k++){\n'
+        '    JSONObject item=found.optJSONObject(k);if(item==null)continue;String url=item.optString("url"),lang=item.optString("lang","");Uri u=Uri.parse(url);if(!"https".equals(u.getScheme())||!playerHost(u.getHost())||u.getUserInfo()!=null||!("sub".equals(lang)||"dub".equals(lang)))continue;\n'
+        '    boolean dup=false;for(int j=0;j<options.length();j++){JSONObject old=options.optJSONObject(j);if(old!=null&&url.equals(old.optString("url"))&&lang.equals(old.optString("lang"))){dup=true;break;}}if(dup)continue;\n'
+        '    int index=options.length();options.put(item);addButton.accept(index,item);\n'
+        '   }\n'
+        '   if(update.optBoolean("blocked",false))lookupBlocked[0]=true;if(update.optBoolean("done",false))lookupDone[0]=true;\n'
+        '   if(waiting[0])retryServer[0].run();\n'
+        '  };\n'
+        '  if(countsByLang[2]>0){addGap(content,8);TextView moreTitle=text("OTHER AUDIO",12,KuroTheme12.col(0xffb37ee4));moreTitle.setTypeface(null,android.graphics.Typeface.BOLD);content.addView(moreTitle);addGap(content,8);content.addView(extraCol);}\n'
+        '  addGap(content,22);\n'
+        '  LinearLayout playlistCard154=new LinearLayout(this);playlistCard154.setOrientation(LinearLayout.VERTICAL);playlistCard154.setPadding(dp(12),dp(12),dp(12),dp(12));playlistCard154.setBackground(watchShape154(KuroTheme12.col(0xff21142a),KuroTheme12.col(0xff3f2f4c),14));content.addView(playlistCard154,new LinearLayout.LayoutParams(-1,-2));\n'
+        '  LinearLayout epTopRow154=new LinearLayout(this);epTopRow154.setOrientation(LinearLayout.HORIZONTAL);epTopRow154.setGravity(Gravity.CENTER_VERTICAL);playlistCard154.addView(epTopRow154,new LinearLayout.LayoutParams(-1,-2));\n'
+        '  LinearLayout epHeadCol154=new LinearLayout(this);epHeadCol154.setOrientation(LinearLayout.VERTICAL);epTopRow154.addView(epHeadCol154,new LinearLayout.LayoutParams(0,-2,1));\n'
+        '  TextView epTitle=text("Episodes",16,Color.WHITE);epTitle.setTypeface(null,android.graphics.Typeface.BOLD);epHeadCol154.addView(epTitle);addGap(epHeadCol154,2);\n'
+        '  TextView epHint=text("Playlist • "+eps.length()+" available • scroll for more",12,KuroTheme12.col(0xffa79ab2));epHeadCol154.addView(epHint);\n'
+        '  TextView epCountPill154=text((Math.min(current+1,Math.max(1,eps.length())))+" / "+Math.max(1,eps.length()),12,KuroTheme12.col(0xffcfa2fb));epCountPill154.setTypeface(null,android.graphics.Typeface.BOLD);epCountPill154.setPadding(dp(10),dp(4),dp(10),dp(4));epCountPill154.setBackground(watchShape154(KuroTheme12.col(0xff281b32),KuroTheme12.col(0xff4c3a59),999));epTopRow154.addView(epCountPill154,new LinearLayout.LayoutParams(-2,-2));\n'
+        '  addGap(playlistCard154,10);\n'
+        '  EditText search=new EditText(this);search.setSingleLine(true);search.setTextColor(Color.WHITE);search.setHintTextColor(KuroTheme12.col(0xff907f9d));search.setHint("Search episodes");search.setTextSize(14);search.setPadding(dp(12),0,dp(12),0);search.setBackground(watchShape154(KuroTheme12.col(0xff24172e),KuroTheme12.col(0xff4f3f5c),8));playlistCard154.addView(search,new LinearLayout.LayoutParams(-1,dp(42)));addGap(playlistCard154,10);\n'
+        '  LinearLayout pagination=new LinearLayout(this);pagination.setGravity(Gravity.CENTER_VERTICAL);playlistCard154.addView(pagination);\n'
+        '  final ScrollView epScroll154=new ScrollView(this){@Override public boolean dispatchTouchEvent(MotionEvent ev){int act=ev.getActionMasked();if((act==MotionEvent.ACTION_DOWN||act==MotionEvent.ACTION_MOVE)&&(canScrollVertically(1)||canScrollVertically(-1))){ViewParent p=getParent();if(p!=null)p.requestDisallowInterceptTouchEvent(true);}return super.dispatchTouchEvent(ev);}};\n'
+        '  epScroll154.setTag("ep-playlist-scroll-154");epScroll154.setVerticalScrollBarEnabled(true);epScroll154.setScrollbarFadingEnabled(false);epScroll154.setBackground(watchShape154(KuroTheme12.col(0xff1c1124),KuroTheme12.col(0xff3f2f4c),10));epScroll154.setClipToOutline(true);epScroll154.setOutlineProvider(ViewOutlineProvider.BACKGROUND);\n'
+        '  LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);epScroll154.addView(list,new FrameLayout.LayoutParams(-1,-2));playlistCard154.addView(epScroll154,new LinearLayout.LayoutParams(-1,-2));\n'
+        '  final int[] page={current/500};final boolean[] firstEpScroll154={true};final ArrayList<Integer> matches=new ArrayList<>();\n'
+        '  Runnable refresh=()->{matches.clear();String query=search.getText().toString().trim().toLowerCase(Locale.ROOT);for(int i=0;i<eps.length();i++){JSONObject ep=eps.optJSONObject(i);String num=ep!=null?ep.optString("number",""):eps.optString(i,"");String name=ep!=null?ep.optString("name",""):"";if(query.isEmpty()||num.toLowerCase(Locale.ROOT).contains(query)||name.toLowerCase(Locale.ROOT).contains(query))matches.add(i);}int pages=Math.max(1,(matches.size()+499)/500);if(page[0]>=pages)page[0]=pages-1;pagination.removeAllViews();list.removeAllViews();if(matches.size()>500){TextView prev=chip("‹",false),indicator=text("   "+(page[0]+1)+" / "+pages+"   ",12,KuroTheme12.col(0xffb9aac6)),next=chip("›",false);pagination.addView(prev);pagination.addView(indicator);pagination.addView(next);prev.setOnClickListener(v->{if(page[0]>0){page[0]--;pagination.post(()->((Runnable)list.getTag()).run());}});next.setOnClickListener(v->{if(page[0]+1<pages){page[0]++;pagination.post(()->((Runnable)list.getTag()).run());}});addGap(pagination,8);}if(matches.isEmpty()){TextView emptyEp=text("No matching episodes.",13,KuroTheme12.col(0xffa79ab2));emptyEp.setPadding(dp(12),dp(14),dp(12),dp(14));list.addView(emptyEp);}int activeInSlice=-1,sliceCount=0;for(int k=page[0]*500;k<Math.min((page[0]+1)*500,matches.size());k++){int idx=matches.get(k);JSONObject ep=eps.optJSONObject(idx);String num=ep!=null?ep.optString("number","?"):eps.optString(idx,"?");String name=ep!=null?ep.optString("name","").trim():"";if(num.length()>20)num=num.substring(0,20);if(name.length()>160)name=name.substring(0,160);if(name.isEmpty())name="Episode "+num;LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(12),0,dp(12),0);row.setBackgroundColor(idx==current?KuroTheme12.col(0xff39234b):(sliceCount%2==0?KuroTheme12.col(0xff24182d):KuroTheme12.col(0xff1c1124)));TextView number=text(num,14,idx==current?KuroTheme12.col(0xffbf88f2):KuroTheme12.col(0xffb2a6bc));number.setGravity(Gravity.CENTER);row.addView(number,new LinearLayout.LayoutParams(dp(36),-1));TextView titleLabel=text(name,14,idx==current?KuroTheme12.col(0xffcfa2fb):KuroTheme12.col(0xffe6e1eb));titleLabel.setSingleLine(true);titleLabel.setEllipsize(android.text.TextUtils.TruncateAt.END);titleLabel.setPadding(dp(10),0,dp(8),0);row.addView(titleLabel,new LinearLayout.LayoutParams(0,-2,1));if(idx==current){row.addView(text("▶",13,KuroTheme12.col(0xffae73e5)));activeInSlice=sliceCount;}list.addView(row,new LinearLayout.LayoutParams(-1,dp(52)));sliceCount++;row.setOnClickListener(v->{if(idx==current)return;closePlayer();ui.evaluateJavascript("window.kuroChooseEpisode&&window.kuroChooseEpisode("+idx+")",null);});}int wantH=sliceCount>3?dp(156):-2;LinearLayout.LayoutParams curLp=(LinearLayout.LayoutParams)epScroll154.getLayoutParams();if(curLp!=null&&curLp.height!=wantH){curLp.height=wantH;epScroll154.setLayoutParams(curLp);}if(firstEpScroll154[0]&&activeInSlice>=0){firstEpScroll154[0]=false;final int scrollTargetY=Math.max(0,activeInSlice*dp(52)-dp(52));epScroll154.post(()->epScroll154.scrollTo(0,scrollTargetY));}else if(!query.isEmpty()){epScroll154.post(()->epScroll154.scrollTo(0,0));}};\n'
+        '  list.setTag(refresh);search.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int count,int after){}public void onTextChanged(CharSequence s,int st,int before,int count){page[0]=0;refresh.run();}public void afterTextChanged(android.text.Editable e){}});refresh.run();\n'
+        '  addGap(content,24);JSONObject anime=info.optJSONObject("animeInfo");if(anime==null)anime=new JSONObject();\n'
+        '  TextView detailHeading=text("Anime details",16,KuroTheme12.col(0xfff3eef7));detailHeading.setTypeface(null,android.graphics.Typeface.BOLD);content.addView(detailHeading);addGap(content,10);\n'
+        '  LinearLayout detail=new LinearLayout(this);detail.setOrientation(LinearLayout.HORIZONTAL);detail.setPadding(dp(12),dp(12),dp(12),dp(12));detail.setBackground(rounded(KuroTheme12.col(0xff21142a),KuroTheme12.col(0xff3f2f4c)));content.addView(detail,new LinearLayout.LayoutParams(-1,-2));\n'
+        '  ImageView poster=new ImageView(this);poster.setScaleType(ImageView.ScaleType.CENTER_CROP);poster.setBackgroundColor(KuroTheme12.col(0xff372447));LinearLayout.LayoutParams posterLP=new LinearLayout.LayoutParams(dp(76),dp(114));posterLP.setMargins(0,0,dp(14),0);detail.addView(poster,posterLP);loadPoster(poster,anime.optString("image",""));\n'
+        '  LinearLayout detailText=new LinearLayout(this);detailText.setOrientation(LinearLayout.VERTICAL);detail.addView(detailText,new LinearLayout.LayoutParams(0,-2,1));TextView detailName=text(info.optString("title","Anime"),18,Color.WHITE);detailName.setTypeface(null,android.graphics.Typeface.BOLD);detailText.addView(detailName);addGap(detailText,7);\n'
+        '  JSONObject counts=anime.optJSONObject("counts");StringBuilder facts=new StringBuilder();if(counts!=null){String sub=counts.optString("sub","");String dub=counts.optString("dub","");String total=counts.optString("total","");if(sub.matches("[0-9]{1,5}"))facts.append("CC ").append(sub);if(dub.matches("[0-9]{1,5}")){if(facts.length()>0)facts.append("  •  ");facts.append("DUB ").append(dub);}if(total.matches("[0-9]{1,5}")){if(facts.length()>0)facts.append("  •  ");facts.append(total).append(" EPS");}}String meta=anime.optString("meta","").trim();if(!meta.isEmpty()){if(facts.length()>0)facts.append("  •  ");facts.append(meta.length()>80?meta.substring(0,80):meta);}if(facts.length()>0){detailText.addView(text(facts.toString(),11,KuroTheme12.col(0xffb98ae5)));addGap(detailText,8);}String desc=anime.optString("description","").trim();if(desc.length()>3000)desc=desc.substring(0,3000);TextView synopsis=text(desc.isEmpty()?"Description not available from this source.":desc,13,KuroTheme12.col(0xffdcd5e2));synopsis.setLineSpacing(dp(3),1);detailText.addView(synopsis);addGap(detailText,10);TextView more=chip("View details",false);detailText.addView(more);more.setOnClickListener(v->{closePlayer();ui.evaluateJavascript("window.kuroOpenDetails&&window.kuroOpenDetails()",null);});\n'
+        '  addGap(content,24);content.setClipToPadding(false);\n'
+        '  LinearLayout recHdrRow154=new LinearLayout(this);recHdrRow154.setOrientation(LinearLayout.HORIZONTAL);recHdrRow154.setGravity(Gravity.CENTER_VERTICAL);\n'
+        '  LinearLayout recTitleCol154=new LinearLayout(this);recTitleCol154.setOrientation(LinearLayout.VERTICAL);\n'
+        '  TextView recHeading154=text("More anime",16,KuroTheme12.col(0xfff3eef7));recHeading154.setTypeface(null,android.graphics.Typeface.BOLD);recTitleCol154.addView(recHeading154);addGap(recTitleCol154,2);\n'
+        '  TextView recSub154=text("Recommended • swipe left / right",12,KuroTheme12.col(0xffa79ab2));recTitleCol154.addView(recSub154);\n'
+        '  recHdrRow154.addView(recTitleCol154,new LinearLayout.LayoutParams(0,-2,1));\n'
+        '  TextView recLeftBtn154=text("‹",18,KuroTheme12.col(0xffe6e1eb));recLeftBtn154.setTypeface(null,android.graphics.Typeface.BOLD);recLeftBtn154.setGravity(Gravity.CENTER);recLeftBtn154.setBackground(watchShape154(KuroTheme12.col(0xff261830),KuroTheme12.col(0xff4c3a59),999));recLeftBtn154.setContentDescription("Scroll recommendations left");\n'
+        '  LinearLayout.LayoutParams rlLp154=new LinearLayout.LayoutParams(dp(34),dp(34));rlLp154.setMargins(dp(8),0,dp(6),0);recHdrRow154.addView(recLeftBtn154,rlLp154);\n'
+        '  TextView recRightBtn154=text("›",18,KuroTheme12.col(0xffe6e1eb));recRightBtn154.setTypeface(null,android.graphics.Typeface.BOLD);recRightBtn154.setGravity(Gravity.CENTER);recRightBtn154.setBackground(watchShape154(KuroTheme12.col(0xff261830),KuroTheme12.col(0xff4c3a59),999));recRightBtn154.setContentDescription("Scroll recommendations right");\n'
+        '  recHdrRow154.addView(recRightBtn154,new LinearLayout.LayoutParams(dp(34),dp(34)));\n'
+        '  content.addView(recHdrRow154,new LinearLayout.LayoutParams(-1,-2));addGap(content,12);\n'
+        '  final HorizontalScrollView recHScroll154=new HorizontalScrollView(this){private float startX,startY;@Override public boolean dispatchTouchEvent(MotionEvent ev){int act=ev.getActionMasked();if(act==MotionEvent.ACTION_DOWN){startX=ev.getX();startY=ev.getY();}else if(act==MotionEvent.ACTION_MOVE){float dx=Math.abs(ev.getX()-startX),dy=Math.abs(ev.getY()-startY);if(dx>dy&&(canScrollHorizontally(1)||canScrollHorizontally(-1))){ViewParent p=getParent();if(p!=null)p.requestDisallowInterceptTouchEvent(true);}}return super.dispatchTouchEvent(ev);}};\n'
+        '  recHScroll154.setTag("watch-rec-hscroll-154");recHScroll154.setHorizontalScrollBarEnabled(false);recHScroll154.setClipToPadding(false);recHScroll154.setPadding(dp(18),dp(2),dp(18),dp(4));\n'
+        '  LinearLayout.LayoutParams hScrollLp154=new LinearLayout.LayoutParams(-1,-2);hScrollLp154.setMargins(-dp(18),0,-dp(18),0);\n'
+        '  LinearLayout recFeed154=new LinearLayout(this);recFeed154.setOrientation(LinearLayout.HORIZONTAL);recFeed154.setTag("watch-rec-feed-154");\n'
+        '  recHScroll154.addView(recFeed154,new FrameLayout.LayoutParams(-2,-2));content.addView(recHScroll154,hScrollLp154);\n'
+        '  recLeftBtn154.setOnClickListener(v->recHScroll154.smoothScrollBy(-dp(268),0));\n'
+        '  recRightBtn154.setOnClickListener(v->recHScroll154.smoothScrollBy(dp(268),0));\n'
+        '  populateWatchRecommendations154(session,info,anime,recFeed154,recSub154);\n'
+        '  addGap(content,14);TextView note=text("Playback uses a third-party player. Autoplay is best effort; tap play if needed. Use its fullscreen control to expand.",12,KuroTheme12.col(0xffa08fae));content.addView(note);'
+    )
+
+    ma_text = patch_once(
+        ma_text,
+        "/* k154 5-servers-per-page + 3-row YouTube playlist + YouTube recommended anime */",
+        old_watch_sections,
+        new_watch_sections,
+        "MainActivity 5-server pager + 3-row YouTube playlist + YouTube recommended feed",
+    )
+
+    watch_helpers_154 = """ private android.graphics.drawable.GradientDrawable watchShape154(int fill,int stroke,int radiusDp){
+  android.graphics.drawable.GradientDrawable d=new android.graphics.drawable.GradientDrawable();
+  d.setColor(fill);d.setCornerRadius(dp(radiusDp));
+  if(stroke!=0)d.setStroke(dp(1),stroke);
+  return d;
+ }
+ private static boolean allowedArtworkHost154(String h){
+  return "s4.anilist.co".equals(h)||"s3.anilist.co".equals(h)||"s2.anilist.co".equals(h)||"s1.anilist.co".equals(h)||"cdn.myanimelist.net".equals(h)||"media.kitsu.app".equals(h)||"media.kitsu.io".equals(h)||"hianime.ms".equals(h)||"hianime.dk".equals(h)||"cdn.hianime.dk".equals(h)||"cdn.noitatnemucod.net".equals(h);
+ }
+ private void loadThumb154(ImageView target,String address,int reqW,int reqH){
+  if(target==null||address==null||address.isEmpty())return;
+  final String cacheKey=reqW+"x"+reqH+"|"+address;
+  Bitmap hit=posterCache154().get(cacheKey);
+  if(hit!=null&&!hit.isRecycled()){target.setImageBitmap(hit);return;}
+  target.setTag(cacheKey);
+  pool.execute(()->{
+   try{
+    URI u=new URI(address);String h=u.getHost();
+    if(!"https".equals(u.getScheme())||u.getUserInfo()!=null||u.getPort()!=-1||h==null||!allowedArtworkHost154(h.toLowerCase(Locale.ROOT)))return;
+    byte[] bytes=KuroFastNet154.fetchPoster(u,3200000);if(bytes==null||bytes.length==0)return;
+    BitmapFactory.Options bounds=new BitmapFactory.Options();bounds.inJustDecodeBounds=true;
+    BitmapFactory.decodeByteArray(bytes,0,bytes.length,bounds);
+    if(bounds.outWidth<=0||bounds.outHeight<=0||bounds.outWidth>8000||bounds.outHeight>8000)return;
+    BitmapFactory.Options opts=new BitmapFactory.Options();
+    opts.inSampleSize=Math.max(1,Math.min(bounds.outWidth/Math.max(64,reqW),bounds.outHeight/Math.max(64,reqH)));
+    opts.inPreferredConfig=Bitmap.Config.RGB_565;
+    Bitmap bmp=BitmapFactory.decodeByteArray(bytes,0,bytes.length,opts);
+    if(bmp!=null){
+     posterCache154().put(cacheKey,bmp);
+     main.post(()->{if(target.isAttachedToWindow()&&cacheKey.equals(target.getTag()))target.setImageBitmap(bmp);});
+    }
+   }catch(Exception ignored){}
+  });
+ }
+ private static String normWatchTitle154(String s){
+  if(s==null)return "";
+  String n=java.text.Normalizer.normalize(s,java.text.Normalizer.Form.NFKC).toLowerCase(Locale.ROOT);
+  StringBuilder b=new StringBuilder();
+  for(int i=0;i<n.length();i++){char c=n.charAt(i);if(Character.isLetterOrDigit(c))b.append(c);}
+  return b.toString();
+ }
+ private View buildYoutubeAnimeCard154(JSONObject m){
+  JSONObject tObj=m.optJSONObject("title");
+  String eng=tObj==null?"":tObj.optString("english","").trim();
+  String rom=tObj==null?"":tObj.optString("romaji","").trim();
+  String dispTitle=!eng.isEmpty()?eng:(!rom.isEmpty()?rom:"Anime");
+  JSONObject cov=m.optJSONObject("coverImage");
+  String coverXl=cov==null?"":cov.optString("extraLarge","").trim();
+  String coverLg=cov==null?"":cov.optString("large","").trim();
+  String coverUrl=!coverLg.isEmpty()?coverLg:coverXl;
+  String bannerUrl=m.optString("bannerImage","").trim();
+  String thumbUrl=!bannerUrl.isEmpty()?bannerUrl:(!coverXl.isEmpty()?coverXl:coverLg);
+  int epsCount=m.optInt("episodes",0);
+  int score=m.optInt("averageScore",0);
+  int year=m.optInt("seasonYear",0);
+  String fmt=m.optString("format","").replace('_',' ').trim();
+  String studio="";
+  JSONObject stObj=m.optJSONObject("studios");JSONArray stNodes=stObj==null?null:stObj.optJSONArray("nodes");
+  if(stNodes!=null&&stNodes.length()>0){JSONObject s0=stNodes.optJSONObject(0);if(s0!=null)studio=s0.optString("name","").trim();}
+  StringBuilder subLine=new StringBuilder();
+  if(!studio.isEmpty())subLine.append(studio);
+  if(!fmt.isEmpty()){if(subLine.length()>0)subLine.append("  •  ");subLine.append(fmt);}
+  if(year>=1950){if(subLine.length()>0)subLine.append("  •  ");subLine.append(year);}
+  JSONArray genres=m.optJSONArray("genres");
+  if(genres!=null&&genres.length()>0){
+   StringBuilder gb=new StringBuilder();
+   for(int gi=0;gi<Math.min(2,genres.length());gi++){String g=genres.optString(gi,"").trim();if(!g.isEmpty()){if(gb.length()>0)gb.append(", ");gb.append(g);}}
+   if(gb.length()>0){if(subLine.length()>0)subLine.append("  •  ");subLine.append(gb);}
+  }
+  String badgeRight=epsCount>0?(epsCount+(epsCount==1?" EP":" EPS")):(!fmt.isEmpty()?fmt:"ANIME");
+
+  LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
+  card.setBackground(watchShape154(KuroTheme12.col(0xff21142a),KuroTheme12.col(0xff3f2f4c),14));
+  card.setClipToOutline(true);card.setOutlineProvider(ViewOutlineProvider.BACKGROUND);
+  card.setClickable(true);card.setFocusable(true);
+  card.setForeground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(Color.argb(46,255,255,255)),null,null));
+
+  FrameLayout videoThumbBox=new FrameLayout(this);
+  videoThumbBox.setBackgroundColor(KuroTheme12.col(0xff24172e));
+  ImageView thumbImg=new ImageView(this);thumbImg.setScaleType(ImageView.ScaleType.CENTER_CROP);
+  videoThumbBox.addView(thumbImg,new FrameLayout.LayoutParams(-1,-1));
+  loadThumb154(thumbImg,thumbUrl,640,360);
+
+  TextView durBadge=text(badgeRight,10,Color.WHITE);durBadge.setTypeface(null,android.graphics.Typeface.BOLD);
+  durBadge.setPadding(dp(7),dp(2),dp(7),dp(2));durBadge.setBackground(watchShape154(Color.argb(224,8,8,12),0,6));
+  FrameLayout.LayoutParams durLp=new FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM|Gravity.END);
+  durLp.setMargins(dp(8),dp(8),dp(8),dp(8));
+  videoThumbBox.addView(durBadge,durLp);
+
+  if(score>0){
+   String scStr=String.format(Locale.ROOT,"★ %.1f",score/10.0);
+   TextView scBadge=text(scStr,10,KuroTheme12.col(0xffcfa2fb));scBadge.setTypeface(null,android.graphics.Typeface.BOLD);
+   scBadge.setPadding(dp(7),dp(2),dp(7),dp(2));scBadge.setBackground(watchShape154(Color.argb(220,12,10,18),KuroTheme12.col(0xff4c3a59),6));
+   FrameLayout.LayoutParams scLp=new FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM|Gravity.START);
+   scLp.setMargins(dp(8),dp(8),dp(8),dp(8));
+   videoThumbBox.addView(scBadge,scLp);
+  }
+  card.addView(videoThumbBox,new LinearLayout.LayoutParams(-1,dp(144)));
+
+  LinearLayout metaRow=new LinearLayout(this);metaRow.setOrientation(LinearLayout.HORIZONTAL);
+  metaRow.setGravity(Gravity.TOP);metaRow.setPadding(dp(11),dp(10),dp(11),dp(12));
+  ImageView avatar=new ImageView(this);avatar.setScaleType(ImageView.ScaleType.CENTER_CROP);
+  avatar.setBackground(watchShape154(KuroTheme12.col(0xff372447),KuroTheme12.col(0xff4c3a59),999));
+  avatar.setClipToOutline(true);avatar.setOutlineProvider(ViewOutlineProvider.BACKGROUND);
+  LinearLayout.LayoutParams avLp=new LinearLayout.LayoutParams(dp(34),dp(34));avLp.setMargins(0,dp(1),dp(10),0);
+  metaRow.addView(avatar,avLp);
+  loadThumb154(avatar,coverUrl,128,128);
+
+  LinearLayout textCol=new LinearLayout(this);textCol.setOrientation(LinearLayout.VERTICAL);
+  TextView tView=text(dispTitle,14,Color.WHITE);tView.setTypeface(null,android.graphics.Typeface.BOLD);
+  tView.setLines(2);tView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+  textCol.addView(tView);
+  addGap(textCol,3);
+  TextView sView=text(subLine.length()>0?subLine.toString():"Anime",12,KuroTheme12.col(0xffa79ab2));
+  sView.setSingleLine(true);sView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+  textCol.addView(sView);
+  metaRow.addView(textCol,new LinearLayout.LayoutParams(0,-2,1));
+  card.addView(metaRow,new LinearLayout.LayoutParams(-1,-2));
+
+  final long recAid=m.optLong("id",0),recMid=m.optLong("idMal",0);
+  final String clickTitle=dispTitle,clickRom=rom,clickImg=coverUrl;
+  card.setOnClickListener(v->{
+   try{
+    JSONObject p=new JSONObject().put("title",clickTitle).put("romaji",clickRom).put("anilistId",recAid).put("malId",recMid).put("img",clickImg);
+    closePlayer();
+    if(ui!=null)ui.evaluateJavascript("window.kuroOpenRecommended154&&window.kuroOpenRecommended154("+JSONObject.quote(p.toString())+")",null);
+   }catch(Exception ignored){}
+  });
+  return card;
+ }
+ private void populateWatchRecommendations154(String session,JSONObject info,JSONObject anime,LinearLayout feed,TextView subLabel){
+  if(feed==null||info==null)return;
+  TextView loading=text("Loading similar anime…",13,KuroTheme12.col(0xffa79ab2));
+  loading.setPadding(0,dp(4),0,dp(8));
+  feed.addView(loading);
+  final String curTitle=info.optString("title","").trim();
+  final String curNorm=normWatchTitle154(curTitle);
+  final long curAid=anime==null?0L:anime.optLong("anilistId",0L);
+  pool.execute(()->{
+   try{
+    JSONObject req=new JSONObject();
+    if(curAid>0)req.put("id",curAid);
+    if(!curTitle.isEmpty())req.put("search",curTitle.length()>120?curTitle.substring(0,120):curTitle);
+    String raw=KuroCatalog573.lookup("watchFeed154",req.toString());
+    JSONObject data=new JSONObject(raw).optJSONObject("data");
+    final ArrayList<JSONObject> cards=new ArrayList<>();
+    final HashSet<Long> seen=new HashSet<>();
+    if(curAid>0)seen.add(curAid);
+    if(data!=null){
+     JSONObject media=data.optJSONObject("Media");
+     if(media!=null){
+      long resolvedId=media.optLong("id",0);if(resolvedId>0)seen.add(resolvedId);
+      JSONObject recs=media.optJSONObject("recommendations");
+      JSONArray nodes=recs==null?null:recs.optJSONArray("nodes");
+      if(nodes!=null){
+       for(int i=0;i<nodes.length()&&cards.size()<12;i++){
+        JSONObject n=nodes.optJSONObject(i);
+        JSONObject mr=n==null?null:n.optJSONObject("mediaRecommendation");
+        if(mr==null||mr.optBoolean("isAdult",false))continue;
+        long id=mr.optLong("id",0);
+        if(id<=0||seen.contains(id))continue;
+        JSONObject tt=mr.optJSONObject("title");
+        String te=tt==null?"":tt.optString("english","");
+        String tr=tt==null?"":tt.optString("romaji","");
+        if(!curNorm.isEmpty()&&(curNorm.equals(normWatchTitle154(te))||curNorm.equals(normWatchTitle154(tr))))continue;
+        seen.add(id);cards.add(mr);
+       }
+      }
+     }
+     JSONObject fb=data.optJSONObject("fallback");
+     JSONArray fbMedia=fb==null?null:fb.optJSONArray("media");
+     if(fbMedia!=null){
+      for(int j=0;j<fbMedia.length()&&cards.size()<12;j++){
+       JSONObject mr=fbMedia.optJSONObject(j);
+       if(mr==null||mr.optBoolean("isAdult",false))continue;
+       long id=mr.optLong("id",0);
+       if(id<=0||seen.contains(id))continue;
+       JSONObject tt=mr.optJSONObject("title");
+       String te=tt==null?"":tt.optString("english","");
+       String tr=tt==null?"":tt.optString("romaji","");
+       if(!curNorm.isEmpty()&&(curNorm.equals(normWatchTitle154(te))||curNorm.equals(normWatchTitle154(tr))))continue;
+       seen.add(id);cards.add(mr);
+      }
+     }
+    }
+    main.post(()->{
+     if(!session.equals(watchSession)||playerLayer==null||!feed.isAttachedToWindow())return;
+     feed.removeAllViews();
+     if(cards.isEmpty()){
+      feed.addView(text("No recommendations available right now.",13,KuroTheme12.col(0xffa79ab2)));
+      return;
+     }
+     if(subLabel!=null&&!curTitle.isEmpty())subLabel.setText("Recommended for "+curTitle+" • swipe left / right");
+     for(int i=0;i<cards.size();i++){
+      View cardView=buildYoutubeAnimeCard154(cards.get(i));
+      LinearLayout.LayoutParams clp=new LinearLayout.LayoutParams(dp(256),-2);
+      clp.setMargins(0,0,i+1<cards.size()?dp(12):0,0);
+      feed.addView(cardView,clp);
+     }
+    });
+   }catch(Exception e){
+    main.post(()->{
+     if(!session.equals(watchSession)||playerLayer==null||!feed.isAttachedToWindow())return;
+     feed.removeAllViews();
+     feed.addView(text("Recommendations unavailable offline.",13,KuroTheme12.col(0xffa79ab2)));
+    });
+   }
+  });
+ }
+"""
+    ma_text = patch_once(
+        ma_text,
+        "private View buildYoutubeAnimeCard154(JSONObject m){",
+        " void loadPoster(ImageView target,String address){",
+        watch_helpers_154 + " void loadPoster(ImageView target,String address){",
+        "MainActivity YouTube anime card & artwork helpers",
+    )
+
+    ma_path.write_text(ma_text, encoding="utf-8")
+
+
+def main() -> None:
+    if len(sys.argv) != 2:
+        raise SystemExit("usage: ui_1.5.4.py <kuro-source-dir>")
+    root = pathlib.Path(sys.argv[1]).resolve()
+    patch_manifest(root)
+    patch_updater(root)
+    patch_catalog(root)
+    patch_offline(root)
+    patch_main_activity(root)
+    patch_offline_activity_insets(root)
+    patch_player_ad_blocker(root)
+    patch_js_hooks(root)
+    patch_perf_and_compat_154(root)
+    patch_accounts_and_sync_154(root)
+    patch_watch_ui_154(root)
+    print("Applied Kuro 1.5.4 Detail v2, Desktop-Site Left-Rail Leanback, WindowInsets, Ad-Guard, Performance & Compatibility, Tracker Sync & Discord OAuth, Watch UI v2, and Smart Browse/Voice patches.")
+
+
+if __name__ == "__main__":
+    main()

@@ -5,7 +5,7 @@ name: publish Kuro release
 # this runner with the pinned CN=Kuro Anime release key), and this job only publishes
 # when the SHA-256 matches the exact build that was signed.
 #
-# Trigger: manual dispatch, or a commit whose message contains "[release 1.5.3]".
+# Trigger: manual dispatch, or a commit whose message contains "[release 1.5.4]".
 
 on:
   push:
@@ -13,13 +13,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version (e.g. 1.5.3)"
+        description: "Release version (e.g. 1.5.4)"
         required: false
-        default: "1.5.3"
+        default: "1.5.4"
       version_code:
-        description: "Android versionCode (e.g. 95)"
+        description: "Android versionCode (e.g. 96)"
         required: false
-        default: "95"
+        default: "96"
 
 permissions:
   contents: write
@@ -29,18 +29,18 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  VERSION: ${{ inputs.version || '1.5.3' }}
-  VERSION_CODE: ${{ inputs.version_code || '95' }}
-  TAG: v${{ inputs.version || '1.5.3' }}
-  APK_NAME: Kuro-tv-${{ inputs.version || '1.5.3' }}
-  APK_SHA256: "67b31dccf24945d18d457efd9cbf2b063edd2f0879faaf6592db127d4870d3f7"
+  VERSION: ${{ inputs.version || '1.5.4' }}
+  VERSION_CODE: ${{ inputs.version_code || '96' }}
+  TAG: v${{ inputs.version || '1.5.4' }}
+  APK_NAME: Kuro-tv-${{ inputs.version || '1.5.4' }}
+  APK_SHA256: "25ae918de0105f2120588842b0f9cc8b87b176d817e2efbca06159ec02881f46"
   SIGNER_SHA256: "1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e"
-  UNSIGNED_SHA256: "f931aec25230560ac3468ea0d8618d60ee64e03e4df282efd7ecaf06e6122be6"
+  UNSIGNED_SHA256: "bdeba8c43bb95d3fe92ba79d7137d46827c3b85c9ef07115e8f8949e8e766421"
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
 
 jobs:
   release:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release 1.5.3]')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release 1.5.4]')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -98,11 +98,13 @@ jobs:
                   "beta-motion-1.5.css", "beta-motion-1.5.js", "theme-rich-1.5.css",
                   "beta-extras-1.5.css", "beta-extras-1.5.js", "beta-continue-1.5.js",
                   "beta-whatsnew-1.5.js", "beta-downloads-1.5.js",
-                  "beta-polish-1.5.2.css", "beta-polish-1.5.2.js", "intro/animation.mp4",
+                  "beta-polish-1.5.2.css", "beta-polish-1.5.2.js",
+                  "beta-ui-1.5.4.css", "beta-ui-1.5.4.js", "intro/animation.mp4",
               ):
                   assert f"assets/{f}" in names, f"assets/{f} is missing from the APK"
                   assert any(f"/{f}".encode() in d for d in dex), f"{f} is packed but the WebView would drop it"
               assert b"ic_stat_kuro" in z.read("resources.arsc"), "resources.arsc missing ic_stat_kuro"
+              assert b"kuro_tv_banner" in z.read("resources.arsc"), "resources.arsc missing kuro_tv_banner"
               wn = z.read("assets/beta-whatsnew-1.5.js").decode("utf-8")
               assert f"var STAMP = '{version}';" in wn, f"beta-whatsnew-1.5.js stamp is not {version}"
               skin = z.read("assets/player-skin.js").decode("utf-8")
@@ -114,6 +116,10 @@ jobs:
                   f"releases/download/v{version}/Kuro-tv-{version}.apk",
                   "KuroPlayerUi153",
                   "KuroPlayerAction153",
+                  "KuroFastNet154",
+                  "other-servers-154",
+                  "ep-playlist-scroll-154",
+                  "watch-rec-hscroll-154",
               ):
                   assert any(tok.encode() in d for d in dex), f"dex is missing {tok}"
           PY
@@ -133,6 +139,7 @@ jobs:
           unzip -q "$RUNNER_TEMP/src.zip" -d "$WORK"
           PROJECT=$(dirname "$(find "$WORK" -maxdepth 3 -name settings.gradle -print -quit)")
           [ -n "$PROJECT" ] || { echo "::error::no settings.gradle in the source zip"; exit 1; }
+          rm -f "$PROJECT/assets/profile-art/pfp/art-"*.webp "$PROJECT/assets/profile-art/banner/art-"*.webp
           ( cd assets-1.1 && find . -type f -print0 ) | while IFS= read -r -d '' f; do
             mkdir -p "$PROJECT/assets/$(dirname "$f")"
             cp -f "assets-1.1/$f" "$PROJECT/assets/$f"
@@ -152,6 +159,7 @@ jobs:
           python3 tools/offline_beta_1.5.py "$PROJECT"
           python3 tools/polish_1.5.2.py "$PROJECT"
           python3 tools/player_1.5.3.py "$PROJECT"
+          python3 tools/ui_1.5.4.py "$PROJECT"
           cp -f design/native-src/tests/native-panel/src/test/java/app/lovelycrxshx/kuro/KuroUpdater572Test.java \
             "$PROJECT/tests/native-panel/src/test/java/app/lovelycrxshx/kuro/KuroUpdater572Test.java"
 
@@ -160,8 +168,8 @@ jobs:
 
           SRC_SIZE=$(stat -c%s "$GITHUB_WORKSPACE/dist/$APK_NAME-Source.zip")
           echo "Source.zip size: $SRC_SIZE bytes"
-          if [ "$SRC_SIZE" -lt 1000000 ] || [ "$SRC_SIZE" -gt 40000000 ]; then
-            echo "::error::Source.zip size ($SRC_SIZE bytes) out of expected 1..40 MB range (check PROJECT root)"
+          if [ "$SRC_SIZE" -lt 1000000 ] || [ "$SRC_SIZE" -gt 50000000 ]; then
+            echo "::error::Source.zip size ($SRC_SIZE bytes) out of expected 1..50 MB range (check PROJECT root)"
             exit 1
           fi
           python3 - "dist/$APK_NAME-Source.zip" <<'PY'
@@ -175,6 +183,10 @@ jobs:
               assert ud and b"notifBanner152" in z.read(ud[0]), "Source.zip missing notifBanner152"
               pu = [n for n in names if n.endswith("KuroPlayerUi153.java")]
               assert pu and b"buildAutoNextDialog" in z.read(pu[0]), "Source.zip missing KuroPlayerUi153.java"
+              fn = [n for n in names if n.endswith("KuroFastNet154.java")]
+              assert fn and b"KuroFastNet154" in z.read(fn[0]), "Source.zip missing KuroFastNet154.java"
+              ui = [n for n in names if n.endswith("assets/beta-ui-1.5.4.js")]
+              assert ui and b"kuroOpenRecommended154" in z.read(ui[0]), "Source.zip missing assets/beta-ui-1.5.4.js"
               ps = [n for n in names if n.endswith("assets/player-skin.js")]
               assert ps and b"kuro-oled-hud153" in z.read(ps[0]), "Source.zip missing assets/player-skin.js"
           PY

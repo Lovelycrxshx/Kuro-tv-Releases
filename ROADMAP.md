@@ -19,6 +19,13 @@ every install by the updater.
 
 ## Shipped
 
+- **1.5.4** — Cinematic Title Detail v2 (banner hero, franchise watch-order strip, filler
+  badges & Skip Filler, batch offline downloads), YouTube-style Watch page (5 servers per page +
+  Other servers switcher, 3-row scrollable episode playlist, YouTube Desktop horizontal
+  recommended anime shelf), Smart Multi-Filter Browse & native Android Voice Search, Desktop-site
+  Left-Rail & Android TV / Fire TV Leanback DPAD UI, Encrypted DNS (DoH) + 8-lane catalog engine
+  + Multi-layer Ad-Guard, 40 curated anime & manga Profile Art sets (`art-11`–`art-50`), and
+  Two-Way AniList / MyAnimeList Sync & Discord Hub.
 - **1.5.3** — Universal OLED Segmented Chapters & Pills player skin across all server embeds,
   HLS, native Media3 and offline players, fullscreen bottom swipe-up Up Next & Episodes drawer,
   non-blocking App-UI Auto-Next floating card, and direct GitHub Releases `.apk` downloads across

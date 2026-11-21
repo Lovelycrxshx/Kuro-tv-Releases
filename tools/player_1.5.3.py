@@ -978,14 +978,6 @@ final class KuroPlayerUi153 {
         });
         bar.addView(speedPill);
 
-        if (onEpisodes != null) {
-            Space s1 = new Space(activity);
-            bar.addView(s1, new LinearLayout.LayoutParams(dp(activity, 6), 1));
-            TextView epPill = makePill(activity, "Episodes", false);
-            epPill.setOnClickListener(v -> onEpisodes.run());
-            bar.addView(epPill);
-        }
-
         if (onFullscreen != null) {
             Space s2 = new Space(activity);
             bar.addView(s2, new LinearLayout.LayoutParams(dp(activity, 6), 1));
@@ -1087,14 +1079,6 @@ final class KuroPlayerUi153 {
         JSONArray eps = info == null ? null : info.optJSONArray("episodes");
         int cur = info == null ? -1 : info.optInt("current", -1);
         boolean hasNext = eps != null && cur >= 0 && cur + 1 < eps.length();
-
-        TextView epBtn = makePill(activity, "Episodes", false);
-        epBtn.setMinHeight(dp(activity, 40));
-        epBtn.setOnClickListener(v -> openFullscreenSheet(activity, playerBox, actions));
-        LinearLayout.LayoutParams lp1 = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp1.setMargins(0, 0, dp(activity, 6), 0);
-        toolbar.addView(epBtn, 0, lp1);
 
         if (hasNext) {
             JSONObject nextObj = eps.optJSONObject(cur + 1);

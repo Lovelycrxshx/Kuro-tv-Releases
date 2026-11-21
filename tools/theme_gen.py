@@ -26,8 +26,8 @@ import sys
 # which keeps the depth of the palette without any hue at all.
 ACCENTS = {
     # signature
-    "teal":     (174, 0.50, 1.0),   # default
-    "violet":   (272, 0.63, 1.0),   # the 1.0 look, kept as an escape hatch
+    "violet":   (272, 0.63, 1.0),   # default (signature Kuro violet)
+    "teal":     (174, 0.50, 1.0),   # signature teal
     "plum":     (292, 0.55, 1.0),   # 1.5: deep orchid, between violet and magenta
     "graphite": (272, 0.60, 0.0),   # neutral: no hue, same depth
     # cool
@@ -49,7 +49,7 @@ ACCENTS = {
     "crimson":  (348, 0.58, 1.0),
     "magenta":  (312, 0.60, 1.0),
 }
-DEFAULT = "teal"
+DEFAULT = "violet"
 
 # Files whose purple literals form the app's chrome.
 SOURCES = ["style.css", "accounts542.css", "profile-art-arm.css",

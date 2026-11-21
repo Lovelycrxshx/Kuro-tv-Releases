@@ -61,73 +61,73 @@ Note: Recompile with -Xlint:deprecation for details.
 
 > Task :generateReleaseLintVitalReportModel
 > Task :dexBuilderRelease
-> Task :desugarReleaseFileDependencies
-> Task :mergeReleaseStartupProfile
 > Task :lintVitalAnalyzeRelease
 > Task :lintVitalReportRelease
 > Task :lintVitalRelease
+> Task :mergeReleaseStartupProfile
 > Task :mergeReleaseArtProfile
-> Task :mergeExtDexRelease
-> Task :mergeReleaseGlobalSynthetics
 > Task :mergeReleaseShaders
 > Task :compileReleaseShaders NO-SOURCE
 > Task :generateReleaseAssets UP-TO-DATE
 > Task :mergeReleaseAssets
-> Task :mergeDexRelease
 > Task :compressReleaseAssets
 > Task :extractReleaseVersionControlInfo
 > Task :processReleaseJavaRes NO-SOURCE
-> Task :compileReleaseArtProfile
+> Task :desugarReleaseFileDependencies
+> Task :mergeReleaseJavaResource
+> Task :mergeReleaseGlobalSynthetics
+> Task :mergeExtDexRelease
 > Task :optimizeReleaseResources
 > Task :collectReleaseDependencies
 > Task :sdkReleaseDependencyData
 > Task :writeReleaseAppMetadata
 > Task :writeReleaseSigningConfigVersions
-> Task :mergeReleaseJavaResource
+> Task :mergeDexRelease
+> Task :compileReleaseArtProfile
 > Task :packageRelease
 > Task :createReleaseApkListingFileRedirect
 > Task :assembleRelease
 
-BUILD SUCCESSFUL in 1m 16s
+BUILD SUCCESSFUL in 1m 34s
 45 actionable tasks: 45 executed
 === outputs ===
 build/outputs:
 total 12
-drwxr-xr-x 3 runner runner 4096 Nov 21 11:31 apk
-drwxr-xr-x 2 runner runner 4096 Nov 21 11:30 logs
-drwxr-xr-x 3 runner runner 4096 Nov 21 11:31 sdk-dependencies
+drwxr-xr-x 3 runner runner 4096 Nov 21 21:30 apk
+drwxr-xr-x 2 runner runner 4096 Nov 21 21:29 logs
+drwxr-xr-x 3 runner runner 4096 Nov 21 21:30 sdk-dependencies
 
 build/outputs/apk:
 total 4
-drwxr-xr-x 3 runner runner 4096 Nov 21 11:31 release
+drwxr-xr-x 3 runner runner 4096 Nov 21 21:30 release
 
 build/outputs/apk/release:
-total 47604
--rw-r--r-- 1 runner runner 48735412 Nov 21 11:31 Kuro-tv-release-unsigned.apk
-drwxr-xr-x 4 runner runner     4096 Nov 21 11:31 baselineProfiles
--rw-r--r-- 1 runner runner      751 Nov 21 11:31 output-metadata.json
+total 51848
+-rw-r--r-- 1 runner runner 53083349 Nov 21 21:30 Kuro-tv-release-unsigned.apk
+drwxr-xr-x 4 runner runner     4096 Nov 21 21:30 baselineProfiles
+-rw-r--r-- 1 runner runner      751 Nov 21 21:30 output-metadata.json
 
 build/outputs/apk/release/baselineProfiles:
 total 8
-drwxr-xr-x 2 runner runner 4096 Nov 21 11:31 0
-drwxr-xr-x 2 runner runner 4096 Nov 21 11:31 1
+drwxr-xr-x 2 runner runner 4096 Nov 21 21:30 0
+drwxr-xr-x 2 runner runner 4096 Nov 21 21:30 1
 
 build/outputs/apk/release/baselineProfiles/0:
 total 4
--rw-r--r-- 1 runner runner 3816 Nov 21 11:31 Kuro-tv-release-unsigned.dm
+-rw-r--r-- 1 runner runner 3816 Nov 21 21:30 Kuro-tv-release-unsigned.dm
 
 build/outputs/apk/release/baselineProfiles/1:
 total 4
--rw-r--r-- 1 runner runner 3753 Nov 21 11:31 Kuro-tv-release-unsigned.dm
+-rw-r--r-- 1 runner runner 3751 Nov 21 21:30 Kuro-tv-release-unsigned.dm
 
 build/outputs/logs:
 total 64
--rw-r--r-- 1 runner runner 61808 Nov 21 11:30 manifest-merger-release-report.txt
+-rw-r--r-- 1 runner runner 63619 Nov 21 21:29 manifest-merger-release-report.txt
 
 build/outputs/sdk-dependencies:
 total 4
-drwxr-xr-x 2 runner runner 4096 Nov 21 11:31 release
+drwxr-xr-x 2 runner runner 4096 Nov 21 21:30 release
 
 build/outputs/sdk-dependencies/release:
 total 28
--rw-r--r-- 1 runner runner 26121 Nov 21 11:31 sdkDependencies.txt
+-rw-r--r-- 1 runner runner 26121 Nov 21 21:30 sdkDependencies.txt

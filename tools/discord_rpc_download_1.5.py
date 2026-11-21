@@ -14,7 +14,7 @@ import re
 import sys
 
 REPO = "Lovelycrxshx/Kuro-tv-Releases"
-DEFAULT_VERSION = "1.5.3"
+DEFAULT_VERSION = "1.5.4"
 ANY_PINNED_DL_RE = re.compile(
     r"https://(?:lovelycrxshx\.github\.io/Kuro-tv-Releases/|github\.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v[0-9.]+/Kuro-tv-[0-9.]+\.apk)"
 )
@@ -26,7 +26,9 @@ def detect_download_url(root: pathlib.Path) -> str:
     if gradle.exists():
         m = re.search(r"versionName\s+'([^']+)'", gradle.read_text(encoding="utf-8"))
         if m:
-            ver = m.group(1).strip()
+            cand = m.group(1).strip()
+            if cand and "-" not in cand:
+                ver = cand
     return f"https://github.com/{REPO}/releases/download/v{ver}/Kuro-tv-{ver}.apk"
 
 

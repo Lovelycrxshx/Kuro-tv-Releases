@@ -120,6 +120,8 @@ jobs:
           [ "$(strip "$PROJECT/assets/index.html")" = "$(strip "$OVERLAY/index.html")" ] \
             || { echo "::error::assets/index.html in the source zip differs from the one the 1.1 overlay was cut from. Regenerate assets-1.1/index.html first."; exit 1; }
 
+          rm -f "$PROJECT/assets/profile-art/pfp/art-"*.webp "$PROJECT/assets/profile-art/banner/art-"*.webp
+
           ( cd "$OVERLAY" && find . -type f -print0 ) | while IFS= read -r -d '' f; do
             mkdir -p "$PROJECT/assets/$(dirname "$f")"
             cp -f "$OVERLAY/$f" "$PROJECT/assets/$f"
@@ -134,9 +136,9 @@ jobs:
             || { echo "::error::the accent stylesheet is not linked."; exit 1; }
           grep -qF 'theme-accent-1.1.js' "$PROJECT/assets/index.html" \
             || { echo "::error::the accent picker script is not linked."; exit 1; }
-          grep -qF "'art-10'" "$PROJECT/assets/profile-art-arm.js" \
-            || { echo "::error::the profile art registry does not list art-10."; exit 1; }
-          for n in 06 07 08 09 10; do
+          grep -qF "'art-34'" "$PROJECT/assets/profile-art-arm.js" \
+            || { echo "::error::the profile art registry does not list art-34."; exit 1; }
+          for n in $(seq -w 11 34); do
             test -s "$PROJECT/assets/profile-art/pfp/art-$n.webp"    || { echo "::error::pfp art-$n.webp missing."; exit 1; }
             test -s "$PROJECT/assets/profile-art/banner/art-$n.webp" || { echo "::error::banner art-$n.webp missing."; exit 1; }
           done

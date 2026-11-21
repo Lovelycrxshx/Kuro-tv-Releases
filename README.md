@@ -2,10 +2,10 @@
 
 An open-source media client designed for Android TV, Fire TV, and mobile devices.
 
-[![Latest Release](https://img.shields.io/badge/Latest_Version-1.5.3-blue)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)
+[![Latest Release](https://img.shields.io/badge/Latest_Version-1.5.4-blue)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green.svg)](LICENSE)
 
-**Current release: 1.5.3** (`versionCode` 95) — release notes in [RELEASE-1.5.3.md](RELEASE-1.5.3.md).
+**Current release: 1.5.4** (`versionCode` 96) — release notes in [RELEASE-1.5.4.md](RELEASE-1.5.4.md).
 Notes for every earlier cut are in [archive/1.x/](archive/1.x/), and the same text is on the
 [releases page](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases).
 
@@ -13,9 +13,9 @@ Notes for every earlier cut are in [archive/1.x/](archive/1.x/), and the same te
 
 ## 📥 Download
 
-[![Download](design/download-button.svg)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.3/Kuro-tv-1.5.3.apk)
+[![Download](design/download-button.svg)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.4/Kuro-tv-1.5.4.apk)
 
-* **[Direct APK download](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.3/Kuro-tv-1.5.3.apk)** — signed APK (`Kuro-tv-1.5.3.apk`, 46.5 MiB) straight from GitHub Releases.
+* **[Direct APK download](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.4/Kuro-tv-1.5.4.apk)** — signed APK (`Kuro-tv-1.5.4.apk`, 50.6 MiB) straight from GitHub Releases.
 * **[Download page](https://lovelycrxshx.github.io/Kuro-tv-Releases/)** — direct GitHub APK download,
   SHA-256 checksum and install steps.
 * **[Latest release](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)** — APK,
@@ -47,8 +47,23 @@ Kuro is a player / front-end and hosts no media. The catalogue comes from these 
 
 ## 📺 Features
 
-* Optimized for stability and performance with integrated Discord Rich Presence (Social SDK 1.11.24259),
-  including a **Download** button on your presence card for direct APK download from GitHub Releases (with Show / Hide in Settings)
+* **Cinematic Title Detail v2** — full-bleed banner header, ★ score & studio pills, interactive
+  **Franchise & Watch-Order** strip, Canon / Filler / Recap badges, **Skip Filler** switch, and
+  batch offline downloads
+* **Streamlined YouTube-style Watch page** — 5 servers per page with an **Other servers** switcher,
+  3-row scrollable episode playlist card, and a **YouTube Desktop horizontal "More anime" shelf**
+  right below Anime details
+* **Smart Multi-Filter Browse & Voice Search** — combinable OLED filter pills (**Dub Available**,
+  **★ 8.0+**, Airing / Completed, Genre, Format, Year), native Android Voice Search mic pill, and
+  SUB | DUB poster pills
+* **Desktop-site Left-Rail & Android TV / Fire TV Leanback UI** — frosted-OLED left navigation rail,
+  widescreen hero & shelves, and glowing accent DPAD spatial focus
+* **Encrypted DNS (DoH) + 8-lane catalog engine + Multi-layer Ad-Guard** — built-in `1.1.1.1` /
+  `8.8.8.8` DoH resolver to unblock carrier-restricted mirrors without a VPN, HLS codec fallback,
+  low-RAM WebView crash recovery, and zero-popup player ad blocking
+* **40 Anime & Manga Profile Art sets + Two-way AniList / MAL Sync** — 40 curated face avatars and
+  matching `16:9` banners (`art-11`–`art-50`), live AniList & MyAnimeList sync cards, and integrated
+  Discord Rich Presence (Social SDK 1.11.24259) with a direct GitHub Releases **Download** button
 * Native Media3 / ExoPlayer playback, offline downloads and picture-in-picture
 * **OLED Segmented Chapters & Pills player skin** across all server embeds, the built-in HLS player,
   native Media3 playback, and offline downloads — with segmented OP / ED chapter markers and accent-lit pills
@@ -62,7 +77,7 @@ Kuro is a player / front-end and hosts no media. The catalogue comes from these 
   and one tap back to the right episode
 * **Long press a poster** — Open, add or remove from My List, or hide it from Home (with a
   **Hidden titles** manager in Settings → Privacy and links)
-* **Twenty accents + Pure black (OLED)** chosen in Settings, with the native dialogs, bars and
+* **Twenty accents + Pure black (OLED)** chosen in Settings (defaulting to **Signature Violet**), with the native dialogs, bars and
   player following
 * **Shimmer loading skeletons** on Home and Browse so catalogues never jump when artwork arrives
 * **Local `.json` Backup & restore** — lists, history, episode resume checkpoints, profile art,
@@ -96,7 +111,7 @@ Kuro TV is purely a media player / front-end interface. It does not host, upload
 
 What's next for the 1.x line — an update channel with a real beta ring, the DPAD/focus
 overhaul, the airing calendar and custom themes — lives in
-**[ROADMAP.md](ROADMAP.md)**. The 5.x line is closed, and 1.0–1.5.2 are history: both are in
+**[ROADMAP.md](ROADMAP.md)**. The 5.x line is closed, and 1.0–1.5.3 are history: both are in
 **[archive/](archive/)**.
 
 ---

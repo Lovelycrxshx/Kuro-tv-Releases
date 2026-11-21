@@ -142,17 +142,27 @@ function later() {
   retry = setTimeout(function () { retry = null; armAll(); }, 420);
 }
 
+var CARD_UNARMED = '.card:not([data-km-anim]), .history-card:not([data-km-anim])';
+
+function clearRevealClass(ev) {
+  var el = ev && ev.currentTarget;
+  if (!el || !el.classList) return;
+  el.classList.remove('km-reveal', 'km-d1', 'km-d2', 'km-d3', 'km-d4', 'km-d5', 'km-d6');
+}
+
 function armAll() {
   if (reduced) return;
   var nodes, now = Date.now();
-  try { nodes = document.querySelectorAll(CARD); } catch (e) { return; }
+  try { nodes = document.querySelectorAll(CARD_UNARMED); } catch (e) { return; }
+  if (!nodes.length) return;
   for (var i = 0; i < nodes.length; i++) {
    var el = nodes[i];
-   if (el.getAttribute('data-km-anim')) continue;
    if (!el.getAttribute('data-km-born')) { el.setAttribute('data-km-born', String(now)); }
    if (ready(el)) {
+    var step = 'km-d' + ((seq++ % 6) + 1);
     el.setAttribute('data-km-anim', 'done');
-    el.classList.add('km-reveal', 'km-d' + ((seq++ % 6) + 1));
+    el.classList.add('km-reveal', step);
+    el.addEventListener('animationend', clearRevealClass, { once: true });
    } else if (now - Number(el.getAttribute('data-km-born')) > SETTLE) {
     /* image still not decoded: never animate it, so it can never look stuck */
     el.setAttribute('data-km-anim', 'skipped');
@@ -184,102 +194,25 @@ function armAll() {
 
  
 
-/* ------------------------------------------------------- scroll-linked motion
- * One rAF loop, driven by the scroll position.  Cards sit slightly small at
- * the edges of the screen and come up to full size in the middle; banner art
- * drifts inside its frame; headings travel at their own rate; a hairline under
- * the header shows how far down you are; the header condenses once you move.
- *
- * Only transform is written, nothing is hidden, and elements far off screen
- * are skipped entirely, so this stays cheap on a TV box.
+/* ------------------------------------------------------- header scroll state
+ * Mid-scroll poster/banner shifting is intentionally disabled so touch flings
+ * run directly on the native display compositor at full screen smoothness.
+ * Only the header's condensed shadow class toggles when crossing 18px.
  */
-var parEls = null;
-var parFrame = 0;
-var barEl = null;
 var scrolled = false;
 
-function collectPar() {
-  if (reduced) return;
-  var out = [];
-  try {
-   var sel = '.shelf .poster, .grid .poster, .spotlight > img, .hero-slide img, ' +
-             '.home-rail-heading, .heading, .discover-head';
-   var list = document.querySelectorAll(sel);
-   for (var i = 0; i < list.length && out.length < 90; i++) out.push(list[i]);
-  } catch (e) {}
-  parEls = out;
-}
-
-function paintPar() {
-  parFrame = 0;
-  if (reduced) return;
-  var vh = window.innerHeight || 640;
-  var se = document.scrollingElement || document.documentElement;
-  var y = window.pageYOffset || se.scrollTop || 0;
-
-  if (barEl) {
-   var max = (se.scrollHeight || 0) - vh;
-   var p = max > 8 ? Math.min(1, y / max) : 0;
-   barEl.style.transform = 'scaleX(' + p.toFixed(4) + ')';
-   if (p > 0.004) barEl.classList.remove('km-idle');
-   else { barEl.classList.add('km-idle'); barEl.style.transform = 'scaleX(0)'; }
-  }
-
-  var nowScrolled = y > 18;
+function syncScrolledHeader() {
+  var nowScrolled = (window.pageYOffset || 0) > 18;
   if (nowScrolled !== scrolled) {
    scrolled = nowScrolled;
    if (document.body) document.body.classList.toggle('km-scrolled', scrolled);
   }
-
-  if (!parEls) return;
-  for (var i = 0; i < parEls.length; i++) {
-   var el = parEls[i], r;
-   try { r = el.getBoundingClientRect(); } catch (e) { continue; }
-   if (!r.height) continue;
-   if (r.bottom < -140 || r.top > vh + 140) continue;
-   var d = ((r.top + r.height / 2) - vh / 2) / (vh / 2);
-   if (d < -1) d = -1;
-   if (d > 1) d = 1;
-   if (el.tagName === 'IMG') {
-    el.style.transform = 'translate3d(0,' + (d * 11).toFixed(2) + 'px,0) scale(1.07)';
-   } else if (el.classList && el.classList.contains('poster')) {
-    /* rails get the reel's focus-scale; grid posters only drift, because a
-     * scaled poster next to an unscaled one reads as a broken grid */
-    var inRail = el.parentNode && el.parentNode.parentNode &&
-      el.parentNode.parentNode.parentNode &&
-      el.parentNode.parentNode.parentNode.closest &&
-      el.parentNode.parentNode.parentNode.closest('.shelf');
-    if (inRail) {
-     el.style.transform = 'translate3d(0,' + (d * 4).toFixed(2) + 'px,0) scale(' +
-       (1 - Math.abs(d) * 0.05).toFixed(3) + ')';
-    } else {
-     el.style.transform = 'translate3d(0,' + (d * 3).toFixed(2) + 'px,0)';
-    }
-   } else {
-    el.style.transform = 'translate3d(0,' + (d * -13).toFixed(2) + 'px,0)';
-   }
-  }
-}
-
-function queuePar() {
-  if (parFrame) return;
-  parFrame = window.requestAnimationFrame ? window.requestAnimationFrame(paintPar)
-                                          : setTimeout(paintPar, 16);
 }
 
 function bindScroll() {
   if (reduced) return;
-  if (!barEl && document.body) {
-   barEl = document.createElement('div');
-   barEl.id = 'km-scrollbar-15';
-   barEl.className = 'km-idle';
-   barEl.setAttribute('aria-hidden', 'true');
-   document.body.appendChild(barEl);
-  }
-  collectPar();
-  window.addEventListener('scroll', queuePar, { passive: true });
-  window.addEventListener('resize', function () { collectPar(); queuePar(); });
-  queuePar();
+  window.addEventListener('scroll', syncScrolledHeader, { passive: true });
+  syncScrolledHeader();
 }
 
 /* ------------------------------------------------------- update button ---
@@ -354,16 +287,29 @@ function dropPrivateCard() {
    }, 200);
   }
   if (window.MutationObserver && document.body) {
-   new MutationObserver(function () {
+   new MutationObserver(function (records) {
     if (queued) return;
+    var hasAdded = false;
+    for (var r = 0; r < records.length; r++) {
+     var added = records[r].addedNodes;
+     if (!added || !added.length) continue;
+     for (var a = 0; a < added.length; a++) {
+      var nd = added[a];
+      if (!nd || nd.nodeType !== 1) continue;
+      if (nd.id === 'km-sweep-15' || nd.id === 'km-intro-15' || nd.id === 'kb-whatsnew') continue;
+      if (nd.classList && (nd.classList.contains('k154-poster-split') || nd.classList.contains('km-toast-15'))) continue;
+      hasAdded = true;
+      break;
+     }
+     if (hasAdded) break;
+    }
+    if (!hasAdded) return;
     queued = true;
     setTimeout(function () {
      queued = false;
      armAll();
-     dropPrivateCard();
-     updateButton();
-     collectPar();
-     queuePar();
+     if (document.querySelector('.profile-private547')) dropPrivateCard();
+     if (!document.getElementById('km-update-15')) updateButton();
     }, 110);
    }).observe(document.body, { childList: true, subtree: true });
 

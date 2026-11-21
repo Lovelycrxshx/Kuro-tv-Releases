@@ -1,0 +1,54 @@
+Kuro 1.5.4-beta (Signed Beta Build — NOT Published on GitHub)
+================================================================
+
+Package:        app.lovelycrxshx.kuro
+Version Name:   1.5.4-beta
+Version Code:   96
+Size:           53,085,278 bytes (50.6 MB)
+SHA-256:        e0d8b0ed14262c190f7ea207c9b5d05c930e77b62205b4a038e6b2ff008ad73b
+MD5:            07dc945f5ddca3aee7c018ad4f1e4659
+Signer:         CN=Kuro Anime
+Signer SHA-256: 1D:37:C3:CA:28:ED:80:CC:48:46:01:A7:A7:90:7D:5C:43:97:0A:5D:57:D5:1A:A4:E9:14:75:A6:07:03:E9:3E
+Google Drive:   https://drive.google.com/file/d/16TQ88D9757XL9DIB3aGQp8Uf5HnA2iSs/view
+Direct DL:      https://drive.google.com/uc?id=16TQ88D9757XL9DIB3aGQp8Uf5HnA2iSs&export=download
+
+Note:
+- Signed with the production Kuro Anime release certificate so it installs cleanly
+  as an in-place upgrade over v1.5.3 / earlier 1.5.4-beta without wiping history.
+- GitHub Releases and main branch remain on v1.5.3 (official public release).
+
+What's Included & Fixed in 1.5.4-beta:
+1. Watch Page v2 Overhaul (YouTube-Style Layout & Controls):
+   - 5-Servers-Per-Page Switcher ("Other servers"): `Servers & audio` now shows
+     at most 5 servers per page (`Server 1`–`Server 5`) in both SUB and DUB
+     columns, with an `"Other servers"` button underneath that flips cleanly to
+     the next 5 (`Server 6`–`Server 10`, plus `"‹  Servers 1–5"` to flip back),
+     automatically opening on whichever page holds the currently active server.
+   - 3-Row YouTube-Style Episode Playlist Card: `Episodes` now displays at most
+     3 visible episode rows (`3 × 52dp`) inside a nested-scroll playlist card
+     that scrolls smoothly inside itself like a YouTube playlist tab and
+     auto-scrolls the currently playing episode into view.
+   - YouTube Desktop Left-to-Right Horizontal Anime Shelf After `Anime details`:
+     Directly below `Anime details`, `"More anime"` renders a YouTube Desktop
+     horizontal left-to-right scrolling shelf (`HorizontalScrollView` + `‹` /
+     `›` step buttons) of 12 widescreen `16:9` (`256×144dp`) anime video cards
+     (banner/cover thumbnail, `★ score` & `X EPS` badges, circular avatar,
+     uniform 2-line title, and `Studio • Format • Year` metadata) powered by
+     AniList recommendations + popular fallback (`watchFeed154`).
+   - Removed Episode Slide-Over Drawer & Header Button: Removed the top-right
+     circular 3-line episode drawer button from `WatchHeader`, disabled the
+     right-side `"Episodes · X episodes · tap to play"` slide-over panel, and
+     removed redundant `"Episodes"` drawer triggers from fullscreen controls.
+
+2. 40 Anime & Manga Profile Art Sets (PFPs + Matching 16:9 Banners):
+   - Expanded Profile Art from 24 to 40 character pairs (art-11 .. art-50),
+     keeping all 24 existing sets and adding 16 iconic anime character PFPs +
+     matching 16:9 banners: Monkey D. Luffy (Gear 5), Roronoa Zoro, Itachi
+     Uchiha, Naruto Uzumaki, Sasuke Uchiha, Tanjiro Kamado, Kyojuro Rengoku,
+     Killua Zoldyck, Ken Kaneki, Thorfinn, Guts, Lelouch Lamperouge, Power,
+     Okarun (Turbo Granny), Zero Two, and Spike Spiegel.
+
+3. Fixed Theme Colours Picker (All 20 Accents), MyAnimeList & AniList Two-Way
+   Sync, Discord Login & Rich Presence Account Linking, Smooth Native
+   Scrolling, Compact SUB | DUB Pills, Signature Violet Default, Smart DoH +
+   Decoder Fallback, Multi-Layer Ad Guard, and Android 15 Edge-to-Edge Insets.
