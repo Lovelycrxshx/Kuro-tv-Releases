@@ -41,7 +41,7 @@ updates**.
   Kuro updates surface a one-tap **Allow notifications** prompt instead of failing
   silently in the background.
 - **Slimmer source archive.** `Kuro-tv-1.5.2-Source.zip` packages only the clean
-  Gradle source tree (~11 MiB) instead of bundling historical build outputs.
+  Gradle source tree (11.4 MiB) instead of bundling historical build outputs.
 
 ## Carried forward from 1.5.1 & 1.5
 
