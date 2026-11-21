@@ -395,6 +395,16 @@ jobs:
             || { echo "::error::KuroCatalog573 missing detail154."; exit 1; }
           grep -Fq 'RECOGNIZE_SPEECH' "$PROJECT/AndroidManifest.xml" \
             || { echo "::error::AndroidManifest missing RECOGNIZE_SPEECH query."; exit 1; }
+          grep -Fq 'LEANBACK_LAUNCHER' "$PROJECT/AndroidManifest.xml" \
+            || { echo "::error::AndroidManifest missing LEANBACK_LAUNCHER category."; exit 1; }
+          test -s "$PROJECT/res/drawable/kuro_tv_banner.xml" \
+            || { echo "::error::res/drawable/kuro_tv_banner.xml missing."; exit 1; }
+          test -s "$PKG/KuroFastNet154.java" \
+            || { echo "::error::KuroFastNet154.java missing."; exit 1; }
+          grep -Fq 'setEnableDecoderFallback(true)' "$PKG/KuroNativePlayer561.java" \
+            || { echo "::error::KuroNativePlayer561 missing software decoder fallback."; exit 1; }
+          grep -Fq 'onRenderProcessGone' "$PKG/MainActivity.java" \
+            || { echo "::error::MainActivity missing WebView onRenderProcessGone crash shield."; exit 1; }
           grep -Fq 'setupEdgeToEdgeInsets154' "$PKG/MainActivity.java" \
             || { echo "::error::MainActivity missing setupEdgeToEdgeInsets154."; exit 1; }
           grep -Fq '__kuro_ad_frame_154__' "$PROJECT/assets/player-ad-guard541.js" \
@@ -645,6 +655,10 @@ jobs:
               assert any(b"voiceSearch154" in d for d in dex_blobs), "dex missing voiceSearch154"
               assert any(b"confirmBatchDownload154" in d for d in dex_blobs), "dex missing confirmBatchDownload154"
               assert any(b"detail154" in d for d in dex_blobs), "dex missing detail154"
+              assert any(b"KuroFastNet154" in d for d in dex_blobs), "dex missing KuroFastNet154"
+              assert any(b"perfGet154" in d for d in dex_blobs), "dex missing perfGet154"
+              assert any(b"onRenderProcessGone" in d for d in dex_blobs), "dex missing onRenderProcessGone"
+              assert b"kuro_tv_banner" in z.read("resources.arsc"), "resources.arsc missing kuro_tv_banner"
               wn_js = z.read("assets/beta-whatsnew-1.5.js").decode("utf-8")
               assert "var STAMP = '1.5.4-beta';" in wn_js, "beta-whatsnew-1.5.js STAMP is not 1.5.4-beta"
               motion_js = z.read("assets/beta-motion-1.5.js").decode("utf-8")

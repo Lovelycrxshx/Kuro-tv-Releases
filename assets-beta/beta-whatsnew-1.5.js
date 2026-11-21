@@ -10,8 +10,9 @@
   try { if (localStorage.getItem(KEY) === STAMP) return; } catch (_) { return; }
 
   var ITEMS = [
+    ['Speed, 120Hz & Device Compatibility', 'Unlocks 90Hz/120Hz smooth scrolling (auto battery-saver in fullscreen video), built-in Encrypted DNS (1.1.1.1 / 8.8.8.8) to unblock carrier-restricted sources without a VPN, faster 8-lane HTTP/2 catalog loading, software video decoder fallback, WebView low-RAM crash protection, and native Android TV / Fire TV / foldable support.'],
     ['Cinematic Title Detail v2', 'Full-bleed banner header with ★ score, studio & runtime pills, interactive Franchise & Watch-Order strip, Canon / Filler / Recap badges, Skip Filler switch (also skips fillers on Auto-Next), 16:9 episode rows, and ⬇ Batch Offline Download.'],
-    ['Desktop-Site Left-Rail & DPAD UI', 'Turn on Settings → Site view → Desktop to unlock the frosted-OLED left navigation rail, widescreen hero & multi-column shelves, glowing accent DPAD focus halo, and remote/keyboard spatial navigation (standard mobile view stays untouched).'],
+    ['Desktop-Site Left-Rail & DPAD UI', 'Turn on Settings → Site view → Desktop (or launch on Android TV / Fire TV) to unlock the frosted-OLED left navigation rail, widescreen hero & multi-column shelves, glowing accent DPAD focus halo, and remote spatial navigation.'],
     ['Smart Multi-Filter Browse & Voice Search', 'Combinable OLED filter pills on Browse (Dub Available, ★ 8.0+, Airing/Completed, Genre, Format, Year), native Android Voice Search mic pill, and richer SUB | DUB + ★ rating poster badges.'],
     ['Trackers, Discord Hub & 24 Manga Profile Sets', 'Upgraded Account tab with 24 real manga face avatars & matching 16:9 manga banners, live AniList & MyAnimeList sync cards, Two-Way Auto-Sync switches, and an interactive Discord Rich Presence preview.']
   ];

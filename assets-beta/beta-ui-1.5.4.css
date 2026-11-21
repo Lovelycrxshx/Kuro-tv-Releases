@@ -1548,6 +1548,90 @@ html[data-site-view="desktop"] .k154-dpad-focus {
   box-shadow: 0 0 0 5px var(--accent-soft, rgba(127, 216, 209, 0.26)), 0 12px 28px rgba(0, 0, 0, 0.52) !important;
 }
 
+/* ==========================================================================
+   PERFORMANCE & COMPATIBILITY (1.5.4-BETA):
+   - Offscreen viewport virtualization for huge grids & 500+ episode lists
+   - Auto / Manual Lite-GPU mode (replaces costly multi-pass backdrop blur)
+   - Device capability status pill in Settings
+   ========================================================================== */
+.grid > .card,
+.shelf .card {
+  content-visibility: auto;
+  contain-intrinsic-size: 160px 268px;
+}
+
+.episodeList.episodes > .episode-row,
+.episodes > .episode-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 74px;
+}
+
+.k154-perf-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--k154-border, rgba(255, 255, 255, 0.09));
+}
+
+.k154-perf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fg, #eef2fa);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.k154-perf-chip.is-accent {
+  background: var(--accent-soft, rgba(127, 216, 209, 0.16));
+  color: var(--accent, #7fd8d1);
+  border-color: var(--accent-line, rgba(127, 216, 209, 0.36));
+}
+
+/* Lite-GPU smooth mode: eliminates heavy multi-layer backdrop-filter blurs & deep shadows
+   on low-RAM phones, tablets, and Android TV / Fire TV sticks for locked 60/120fps scroll */
+html[data-k154-lite-gpu="1"] *,
+html[data-k154-lite-gpu="1"] *::before,
+html[data-k154-lite-gpu="1"] *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+html[data-k154-lite-gpu="1"] header,
+html[data-k154-lite-gpu="1"] .bottom-dock,
+html[data-k154-lite-gpu="1"] #k154-left-rail,
+html[data-k154-lite-gpu="1"] .k154-sheet-card,
+html[data-k154-lite-gpu="1"] .settings-panel560,
+html[data-k154-lite-gpu="1"] .choice-panel567 {
+  background: rgba(10, 12, 18, 0.97) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+}
+
+html[data-pure-black="1"][data-k154-lite-gpu="1"] header,
+html[data-pure-black="1"][data-k154-lite-gpu="1"] .bottom-dock,
+html[data-pure-black="1"][data-k154-lite-gpu="1"] #k154-left-rail,
+html[data-pure-black="1"][data-k154-lite-gpu="1"] .k154-sheet-card,
+html[data-pure-black="1"][data-k154-lite-gpu="1"] .settings-panel560,
+html[data-pure-black="1"][data-k154-lite-gpu="1"] .choice-panel567 {
+  background: #040507 !important;
+}
+
+html[data-k154-lite-gpu="1"] .k154-hub-card,
+html[data-k154-lite-gpu="1"] .card,
+html[data-k154-lite-gpu="1"] .episode-row {
+  box-shadow: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .k154-franchise-pill,
   .k154-skip-filler-btn,

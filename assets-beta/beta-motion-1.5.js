@@ -213,6 +213,8 @@ function collectPar() {
 function paintPar() {
   parFrame = 0;
   if (reduced) return;
+  var liteGpu = false;
+  try { liteGpu = document.documentElement && document.documentElement.dataset.k154LiteGpu === '1'; } catch (e) {}
   var vh = window.innerHeight || 640;
   var se = document.scrollingElement || document.documentElement;
   var y = window.pageYOffset || se.scrollTop || 0;
@@ -231,7 +233,7 @@ function paintPar() {
    if (document.body) document.body.classList.toggle('km-scrolled', scrolled);
   }
 
-  if (!parEls) return;
+  if (liteGpu || !parEls) return;
   for (var i = 0; i < parEls.length; i++) {
    var el = parEls[i], r;
    try { r = el.getBoundingClientRect(); } catch (e) { continue; }
@@ -384,9 +386,18 @@ function dropPrivateCard() {
 
  function boot() {
   var seen = false;
+  var fastBoot = false;
   try { seen = sessionStorage.getItem(SEEN) === '1'; } catch (e) {}
+  try {
+   var rawPerf = localStorage.getItem('kuro-perf-154');
+   if (rawPerf && JSON.parse(rawPerf).fastBoot === true) fastBoot = true;
+   else if (window.KuroNative && typeof window.KuroNative.perfGet154 === 'function') {
+    var nativePerf = JSON.parse(window.KuroNative.perfGet154() || '{}');
+    if (nativePerf && nativePerf.fastBoot === true) fastBoot = true;
+   }
+  } catch (e) {}
 
-  if (!reduced && !seen) {
+  if (!reduced && !seen && !fastBoot) {
    try { sessionStorage.setItem(SEEN, '1'); } catch (e) {}
    introEl = buildIntro();
    body().appendChild(introEl);

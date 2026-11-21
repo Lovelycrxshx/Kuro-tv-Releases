@@ -899,6 +899,792 @@ def patch_js_hooks(root: pathlib.Path) -> None:
     f_path.write_text(f_text, encoding="utf-8")
 
 
+KURO_TV_BANNER_XML = """<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path
+        android:fillColor="#080A10"
+        android:pathData="M0,0h320v180h-320z" />
+    <path
+        android:fillColor="#111726"
+        android:pathData="M10,10h300v160h-300z" />
+    <path
+        android:strokeColor="#2B3A55"
+        android:strokeWidth="2"
+        android:pathData="M10,10h300v160h-300z" />
+    <path
+        android:fillColor="#7FD8D1"
+        android:fillAlpha="0.16"
+        android:pathData="M86,90m-44,0a44,44 0,1 1,88 0a44,44 0,1 1,-88 0" />
+    <path
+        android:fillColor="#7FD8D1"
+        android:pathData="M72,62h10v24l20,-24h13l-21,25l23,31h-13l-17,-23l-5,6v17h-10z" />
+    <path
+        android:fillColor="#F4F6FB"
+        android:pathData="M148,70h9v17l15,-17h11l-16,18l17,22h-11l-12,-16l-4,4v12h-9z" />
+    <path
+        android:fillColor="#F4F6FB"
+        android:pathData="M189,70h9v24c0,5 3,8 8,8s8,-3 8,-8v-24h9v24c0,10 -7,17 -17,17s-17,-7 -17,-17z" />
+    <path
+        android:fillColor="#F4F6FB"
+        android:pathData="M231,70h17c9,0 15,5 15,13c0,6 -3,10 -9,12l10,15h-10l-9,-14h-5v14h-9zM240,78v11h7c4,0 6,-2 6,-5.5s-2,-5.5 -6,-5.5z" />
+    <path
+        android:fillColor="#7FD8D1"
+        android:pathData="M286,70c11,0 19,9 19,20s-8,20 -19,20s-19,-9 -19,-20s8,-20 19,-20zM286,78c-6,0 -10,5 -10,12s4,12 10,12s10,-5 10,-12s-4,-12 -10,-12z" />
+    <path
+        android:fillColor="#7FD8D1"
+        android:fillAlpha="0.85"
+        android:pathData="M148,118h96v4h-96z" />
+</vector>
+"""
+
+
+KURO_FAST_NET_154_JAVA = r"""package app.lovelycrxshx.kuro;
+
+import android.net.Uri;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.ConnectException;
+import java.net.InetAddress;
+import java.net.SocketTimeoutException;
+import java.net.URI;
+import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import javax.net.ssl.SSLException;
+import okhttp3.ConnectionPool;
+import okhttp3.Dns;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+/**
+ * Kuro 1.5.4 high-speed HTTP/2 connection pool + Encrypted DNS-over-HTTPS (DoH)
+ * ISP unblock resolver (Cloudflare 1.1.1.1 & Google 8.8.8.8 over IP-literal TLS).
+ */
+final class KuroFastNet154 {
+    static final class SourceResult {
+        final byte[] bytes;
+        final String contentType;
+        SourceResult(byte[] bytes, String contentType) {
+            this.bytes = bytes;
+            this.contentType = contentType == null ? "" : contentType;
+        }
+    }
+
+    private static final class DnsEntry {
+        final List<InetAddress> addresses;
+        final long expiresAtMs;
+        DnsEntry(List<InetAddress> addresses, long expiresAtMs) {
+            this.addresses = addresses;
+            this.expiresAtMs = expiresAtMs;
+        }
+    }
+
+    private static final class CatalogCacheEntry {
+        final String body;
+        final long expiresAtMs;
+        CatalogCacheEntry(String body, long expiresAtMs) {
+            this.body = body;
+            this.expiresAtMs = expiresAtMs;
+        }
+    }
+
+    private static final long DNS_TTL_MS = 10L * 60L * 1000L;
+    private static final long CATALOG_TTL_MS = 90L * 1000L;
+    private static final MediaType JSON_MEDIA = MediaType.parse("application/json; charset=utf-8");
+
+    private static volatile String dohMode = "auto"; // "auto" | "always" | "off"
+    private static final ConcurrentHashMap<String, DnsEntry> dnsCache = new ConcurrentHashMap<>();
+    private static final Set<String> poisonedHosts = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+
+    private static final Map<String, CatalogCacheEntry> catalogCache = Collections.synchronizedMap(
+            new LinkedHashMap<String, CatalogCacheEntry>(64, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, CatalogCacheEntry> eldest) {
+                    return size() > 64;
+                }
+            });
+
+    static final ConnectionPool POOL = new ConnectionPool(12, 3, TimeUnit.MINUTES);
+
+    // Bootstrap client hits numeric IP literals (1.1.1.1 / 8.8.8.8 / 1.0.0.1) directly over TLS,
+    // requiring zero system DNS resolution even when carrier DNS is poisoned or offline.
+    private static final OkHttpClient DOH_CLIENT = new OkHttpClient.Builder()
+            .connectionPool(new ConnectionPool(4, 2, TimeUnit.MINUTES))
+            .connectTimeout(4, TimeUnit.SECONDS)
+            .readTimeout(5, TimeUnit.SECONDS)
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .build();
+
+    static final Dns DNS = new Dns() {
+        @Override
+        public List<InetAddress> lookup(String hostname) throws UnknownHostException {
+            if (hostname == null || hostname.isEmpty()) throw new UnknownHostException("Empty host");
+            String host = hostname.trim().toLowerCase(Locale.ROOT);
+            if ("localhost".equals(host) || isNumericIpLiteral(host)) {
+                return Dns.SYSTEM.lookup(hostname);
+            }
+
+            long now = System.currentTimeMillis();
+            DnsEntry cached = dnsCache.get(host);
+            if (cached != null && cached.expiresAtMs > now && !cached.addresses.isEmpty()) {
+                return cached.addresses;
+            }
+
+            String mode = dohMode;
+            if ("off".equals(mode)) {
+                List<InetAddress> sys = Dns.SYSTEM.lookup(hostname);
+                dnsCache.put(host, new DnsEntry(sys, now + DNS_TTL_MS));
+                return sys;
+            }
+
+            boolean forceDoh = "always".equals(mode) || poisonedHosts.contains(host);
+            if (!forceDoh) {
+                try {
+                    List<InetAddress> sys = Dns.SYSTEM.lookup(hostname);
+                    List<InetAddress> clean = filterValidPublicAddresses(sys);
+                    if (!clean.isEmpty()) {
+                        dnsCache.put(host, new DnsEntry(clean, now + DNS_TTL_MS));
+                        return clean;
+                    }
+                    poisonedHosts.add(host);
+                } catch (UnknownHostException ignored) {
+                    // Fall through to encrypted DoH when carrier DNS blocks or fails the domain.
+                }
+            }
+
+            List<InetAddress> doh = resolveViaDoh(host);
+            if (!doh.isEmpty()) {
+                dnsCache.put(host, new DnsEntry(doh, now + DNS_TTL_MS));
+                return doh;
+            }
+
+            // Final fallback to system DNS if DoH endpoints are blocked on a restricted firewall.
+            List<InetAddress> fallback = Dns.SYSTEM.lookup(hostname);
+            if (!fallback.isEmpty()) {
+                dnsCache.put(host, new DnsEntry(fallback, now + 60000L));
+                return fallback;
+            }
+            throw new UnknownHostException("Could not resolve " + hostname);
+        }
+    };
+
+    static final OkHttpClient CLIENT = new OkHttpClient.Builder()
+            .dns(DNS)
+            .connectionPool(POOL)
+            .connectTimeout(8, TimeUnit.SECONDS)
+            .readTimeout(14, TimeUnit.SECONDS)
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .build();
+
+    private KuroFastNet154() {}
+
+    static void setDohMode(String mode) {
+        String normalized = "always".equals(mode) ? "always" : ("off".equals(mode) ? "off" : "auto");
+        if (!normalized.equals(dohMode)) {
+            dohMode = normalized;
+            dnsCache.clear();
+        }
+    }
+
+    static String getDohMode() {
+        return dohMode;
+    }
+
+    static void clearCaches() {
+        dnsCache.clear();
+        poisonedHosts.clear();
+        catalogCache.clear();
+        try {
+            POOL.evictAll();
+        } catch (RuntimeException ignored) {}
+    }
+
+    private static boolean isNumericIpLiteral(String host) {
+        if (host.indexOf(':') >= 0) return true;
+        return host.matches("^[0-9]{1,3}(\\.[0-9]{1,3}){3}$");
+    }
+
+    private static List<InetAddress> filterValidPublicAddresses(List<InetAddress> list) {
+        if (list == null || list.isEmpty()) return Collections.emptyList();
+        List<InetAddress> out = new ArrayList<>(list.size());
+        for (InetAddress a : list) {
+            if (a == null) continue;
+            // Filter carrier DNS sinkholes (0.0.0.0, 127.0.0.1, 10.x.x.x, 192.168.x.x, 169.254.x.x)
+            if (a.isAnyLocalAddress() || a.isLoopbackAddress() || a.isLinkLocalAddress() || a.isSiteLocalAddress()) {
+                continue;
+            }
+            out.add(a);
+        }
+        return out;
+    }
+
+    private static List<InetAddress> resolveViaDoh(String host) {
+        String encoded = Uri.encode(host);
+        String[] endpoints = new String[] {
+            "https://1.1.1.1/dns-query?name=" + encoded + "&type=A",
+            "https://8.8.8.8/resolve?name=" + encoded + "&type=A",
+            "https://1.0.0.1/dns-query?name=" + encoded + "&type=A"
+        };
+        for (String url : endpoints) {
+            Request req = new Request.Builder()
+                    .url(url)
+                    .header("Accept", "application/dns-json")
+                    .header("User-Agent", "Kuro.tv/1.5.4")
+                    .get()
+                    .build();
+            try (Response resp = DOH_CLIENT.newCall(req).execute()) {
+                if (resp.code() != 200 || resp.body() == null) continue;
+                byte[] bytes = readCapped(resp.body(), 65536);
+                JSONObject json = new JSONObject(new String(bytes, StandardCharsets.UTF_8));
+                JSONArray answers = json.optJSONArray("Answer");
+                if (answers == null || answers.length() == 0) continue;
+                List<InetAddress> resolved = new ArrayList<>();
+                for (int i = 0; i < answers.length() && resolved.size() < 8; i++) {
+                    JSONObject row = answers.optJSONObject(i);
+                    if (row == null) continue;
+                    int type = row.optInt("type", 0);
+                    if (type != 1 && type != 28) continue;
+                    String data = row.optString("data", "").trim();
+                    if (data.isEmpty() || (!isNumericIpLiteral(data))) continue;
+                    try {
+                        InetAddress parsed = InetAddress.getByName(data);
+                        InetAddress bound = InetAddress.getByAddress(host, parsed.getAddress());
+                        if (!bound.isAnyLocalAddress() && !bound.isLoopbackAddress() && !bound.isSiteLocalAddress()) {
+                            resolved.add(bound);
+                        }
+                    } catch (Exception ignored) {}
+                }
+                if (!resolved.isEmpty()) return resolved;
+            } catch (Exception ignored) {}
+        }
+        return Collections.emptyList();
+    }
+
+    private static byte[] readCapped(ResponseBody body, int maxBytes) throws IOException {
+        try (InputStream in = body.byteStream(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) != -1) {
+                if (n > maxBytes - out.size()) throw new IOException("Response too large");
+                out.write(buf, 0, n);
+            }
+            return out.toByteArray();
+        }
+    }
+
+    private static boolean shouldRetryWithDoh(IOException e, String host) {
+        if (!"auto".equals(dohMode) || host == null || poisonedHosts.contains(host)) return false;
+        return (e instanceof UnknownHostException)
+                || (e instanceof ConnectException)
+                || (e instanceof SocketTimeoutException)
+                || (e instanceof SSLException);
+    }
+
+    static SourceResult fetchSource(URI u, Map<String, String> headers, int maxBytes) throws Exception {
+        String host = u.getHost() == null ? "" : u.getHost().toLowerCase(Locale.ROOT);
+        for (int attempt = 0; attempt < 2; attempt++) {
+            Request.Builder rb = new Request.Builder().url(u.toURL()).get();
+            if (headers != null) {
+                for (Map.Entry<String, String> e : headers.entrySet()) {
+                    if (e.getKey() != null && e.getValue() != null) rb.header(e.getKey(), e.getValue());
+                }
+            }
+            try (Response resp = CLIENT.newCall(rb.build()).execute()) {
+                int code = resp.code();
+                if (code != 200) throw new Exception("Source returned HTTP " + code + " (no verification bypass)");
+                ResponseBody body = resp.body();
+                byte[] bytes = body == null ? new byte[0] : readCapped(body, maxBytes);
+                return new SourceResult(bytes, resp.header("Content-Type", ""));
+            } catch (IOException ioe) {
+                if (attempt == 0 && shouldRetryWithDoh(ioe, host)) {
+                    poisonedHosts.add(host);
+                    dnsCache.remove(host);
+                    continue;
+                }
+                throw ioe;
+            }
+        }
+        throw new IOException("Network error");
+    }
+
+    static byte[] fetchPoster(URI u, int maxBytes) throws IOException {
+        String host = u.getHost() == null ? "" : u.getHost().toLowerCase(Locale.ROOT);
+        for (int attempt = 0; attempt < 2; attempt++) {
+            Request req = new Request.Builder()
+                    .url(u.toURL())
+                    .header("User-Agent", "Mozilla/5.0")
+                    .header("Accept", "image/webp,image/avif,image/*,*/*;q=0.8")
+                    .get()
+                    .build();
+            try (Response resp = CLIENT.newCall(req).execute()) {
+                if (resp.code() != 200 || resp.body() == null) return null;
+                return readCapped(resp.body(), maxBytes);
+            } catch (IOException ioe) {
+                if (attempt == 0 && shouldRetryWithDoh(ioe, host)) {
+                    poisonedHosts.add(host);
+                    dnsCache.remove(host);
+                    continue;
+                }
+                throw ioe;
+            }
+        }
+        return null;
+    }
+
+    static String postAnilistCatalog(String payloadJson, int maxBytes) throws Exception {
+        long now = System.currentTimeMillis();
+        CatalogCacheEntry hit = catalogCache.get(payloadJson);
+        if (hit != null && hit.expiresAtMs > now) {
+            return hit.body;
+        }
+        byte[] raw = payloadJson.getBytes(StandardCharsets.UTF_8);
+        String host = "graphql.anilist.co";
+        for (int attempt = 0; attempt < 2; attempt++) {
+            Request req = new Request.Builder()
+                    .url("https://graphql.anilist.co")
+                    .header("Accept", "application/json")
+                    .header("User-Agent", "Kuro.tv/5.73 (public catalogue)")
+                    .post(RequestBody.create(JSON_MEDIA, raw))
+                    .build();
+            try (Response resp = CLIENT.newCall(req).execute()) {
+                if (resp.code() != 200 || resp.body() == null) throw new IOException("Catalogue unavailable");
+                String result = new String(readCapped(resp.body(), maxBytes), StandardCharsets.UTF_8);
+                JSONObject parsed = new JSONObject(result);
+                if (parsed.has("errors") || parsed.optJSONObject("data") == null) {
+                    throw new IOException("Catalogue unavailable");
+                }
+                catalogCache.put(payloadJson, new CatalogCacheEntry(result, System.currentTimeMillis() + CATALOG_TTL_MS));
+                return result;
+            } catch (IOException ioe) {
+                if (attempt == 0 && shouldRetryWithDoh(ioe, host)) {
+                    poisonedHosts.add(host);
+                    dnsCache.remove(host);
+                    continue;
+                }
+                throw ioe;
+            }
+        }
+        throw new IOException("Catalogue unavailable");
+    }
+}
+"""
+
+
+def patch_perf_and_compat_154(root: pathlib.Path) -> None:
+    # 1. Write KuroFastNet154.java and TV Leanback banner vector drawable
+    fast_net_path = root / "src/app/lovelycrxshx/kuro/KuroFastNet154.java"
+    fast_net_path.write_text(KURO_FAST_NET_154_JAVA, encoding="utf-8")
+
+    banner_path = root / "res/drawable/kuro_tv_banner.xml"
+    banner_path.parent.mkdir(parents=True, exist_ok=True)
+    banner_path.write_text(KURO_TV_BANNER_XML, encoding="utf-8")
+
+    # 2. AndroidManifest.xml: Android TV / Fire TV Leanback + optional touchscreen + foldable offline configChanges
+    manifest_path = root / "AndroidManifest.xml"
+    m_text = manifest_path.read_text(encoding="utf-8")
+    m_text = patch_once(
+        m_text,
+        "android.software.leanback",
+        '<uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35"/>',
+        '<uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35"/>'
+        '<uses-feature android:name="android.hardware.touchscreen" android:required="false"/>'
+        '<uses-feature android:name="android.software.leanback" android:required="false"/>',
+        "AndroidManifest optional touchscreen & leanback features",
+    )
+    m_text = patch_once(
+        m_text,
+        "@drawable/kuro_tv_banner",
+        'android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher">',
+        'android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:banner="@drawable/kuro_tv_banner">',
+        "AndroidManifest TV banner",
+    )
+    m_text = patch_once(
+        m_text,
+        "LEANBACK_LAUNCHER",
+        '<intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>',
+        '<intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/><category android:name="android.intent.category.LEANBACK_LAUNCHER"/></intent-filter>',
+        "AndroidManifest LEANBACK_LAUNCHER category",
+    )
+    m_text = patch_once(
+        m_text,
+        'KuroOfflineActivity561" android:exported="false" android:resizeableActivity="true" android:supportsPictureInPicture="true" android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode|density|layoutDirection"',
+        'KuroOfflineActivity561" android:exported="false" android:resizeableActivity="true" android:supportsPictureInPicture="true" android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"',
+        'KuroOfflineActivity561" android:exported="false" android:resizeableActivity="true" android:supportsPictureInPicture="true" android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode|density|layoutDirection"',
+        "AndroidManifest KuroOfflineActivity561 foldable/TV configChanges",
+    )
+    manifest_path.write_text(m_text, encoding="utf-8")
+
+    # 3. KuroHttp561.java: share DoH resolver & connection pool for native HLS playback
+    http_path = root / "src/app/lovelycrxshx/kuro/KuroHttp561.java"
+    http_text = http_path.read_text(encoding="utf-8")
+    http_text = patch_once(
+        http_text,
+        "KuroFastNet154.DNS",
+        "private static final OkHttpClient CLIENT=new OkHttpClient.Builder().followRedirects(false).followSslRedirects(false).connectTimeout(15,TimeUnit.SECONDS).readTimeout(20,TimeUnit.SECONDS).addInterceptor(new SameProxy()).build();",
+        "private static final OkHttpClient CLIENT=new OkHttpClient.Builder().dns(KuroFastNet154.DNS).connectionPool(KuroFastNet154.POOL).followRedirects(false).followSslRedirects(false).connectTimeout(12,TimeUnit.SECONDS).readTimeout(20,TimeUnit.SECONDS).addInterceptor(new SameProxy()).build();",
+        "KuroHttp561 DoH & connection pool",
+    )
+    http_path.write_text(http_text, encoding="utf-8")
+
+    # 4. KuroCatalog573.java: pooled HTTP/2 + 90s LRU cache + DoH fallback
+    cat_path = root / "src/app/lovelycrxshx/kuro/KuroCatalog573.java"
+    cat_text = cat_path.read_text(encoding="utf-8")
+    old_lookup = (
+        ' public static String lookup(String action,String input) throws Exception {\n'
+        '  JSONObject data=request(action,input);HttpURLConnection c=(HttpURLConnection)new URL("https://graphql.anilist.co").openConnection();\n'
+        '  c.setInstanceFollowRedirects(false);c.setConnectTimeout(8000);c.setReadTimeout(12000);c.setRequestMethod("POST");c.setDoOutput(true);c.setRequestProperty("Content-Type","application/json; charset=utf-8");c.setRequestProperty("Accept","application/json");c.setRequestProperty("User-Agent","Kuro.tv/5.73 (public catalogue)");\n'
+        '  try{try(OutputStream out=c.getOutputStream()){out.write(data.toString().getBytes(StandardCharsets.UTF_8));}if(c.getResponseCode()!=200)throw new IOException("Catalogue unavailable");try(InputStream in=c.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1){if(out.size()+n>700000)throw new IOException("Response too large");out.write(b,0,n);}String result=out.toString("UTF-8");JSONObject parsed=new JSONObject(result);if(parsed.has("errors")||parsed.optJSONObject("data")==null)throw new IOException("Catalogue unavailable");return result;}}finally{c.disconnect();}\n'
+        ' }'
+    )
+    new_lookup = (
+        ' public static String lookup(String action,String input) throws Exception {\n'
+        '  JSONObject data=request(action,input);\n'
+        '  return KuroFastNet154.postAnilistCatalog(data.toString(),700000);\n'
+        ' }'
+    )
+    cat_text = patch_once(
+        cat_text,
+        "KuroFastNet154.postAnilistCatalog",
+        old_lookup,
+        new_lookup,
+        "KuroCatalog573 pooled HTTP/2 + DoH lookup",
+    )
+    cat_path.write_text(cat_text, encoding="utf-8")
+
+    # 5. KuroNativePlayer561.java & KuroOfflineActivity561.java: automatic hardware -> software codec fallback
+    np_path = root / "src/app/lovelycrxshx/kuro/KuroNativePlayer561.java"
+    np_text = np_path.read_text(encoding="utf-8")
+    np_text = patch_once(
+        np_text,
+        "setEnableDecoderFallback(true)",
+        "engine=new ExoPlayer.Builder(activity).setMediaSourceFactory(media)",
+        "engine=new ExoPlayer.Builder(activity).setRenderersFactory(new androidx.media3.exoplayer.DefaultRenderersFactory(activity).setEnableDecoderFallback(true)).setMediaSourceFactory(media)",
+        "KuroNativePlayer561 decoder fallback",
+    )
+    np_path.write_text(np_text, encoding="utf-8")
+
+    oa_path = root / "src/app/lovelycrxshx/kuro/KuroOfflineActivity561.java"
+    oa_text = oa_path.read_text(encoding="utf-8")
+    oa_text = patch_once(
+        oa_text,
+        "setEnableDecoderFallback(true)",
+        "engine=new ExoPlayer.Builder(this).setMediaSourceFactory(factory)",
+        "engine=new ExoPlayer.Builder(this).setRenderersFactory(new androidx.media3.exoplayer.DefaultRenderersFactory(this).setEnableDecoderFallback(true)).setMediaSourceFactory(factory)",
+        "KuroOfflineActivity561 decoder fallback",
+    )
+    oa_path.write_text(oa_text, encoding="utf-8")
+
+    # 6. MainActivity.java: 8-thread pool, 90/120Hz unlock, WebView crash shield, LruCache posters, DoH & Perf bridge
+    main_path = root / "src/app/lovelycrxshx/kuro/MainActivity.java"
+    text = main_path.read_text(encoding="utf-8")
+
+    text = patch_once(
+        text,
+        "Executors.newFixedThreadPool(8)",
+        "private final ExecutorService pool=Executors.newFixedThreadPool(3);",
+        "private final ExecutorService pool=Executors.newFixedThreadPool(8);",
+        "MainActivity 8-worker network pool",
+    )
+
+    text = patch_once(
+        text,
+        "onRenderProcessGone(WebView v,RenderProcessGoneDetail detail){if(v!=ui)",
+        "@Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){return true;}",
+        "@Override public boolean onRenderProcessGone(WebView v,RenderProcessGoneDetail detail){if(v!=ui)return true;try{if(root!=null)root.removeView(v);v.destroy();}catch(RuntimeException ignored){}ui=null;uiReady=false;main.post(()->{if(!isFinishing()&&!isDestroyed())recreate();});return true;}@Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){return true;}",
+        "MainActivity ui WebView crash shield",
+    )
+
+    text = patch_once(
+        text,
+        "initPerf154();applyWindowPreferences560();",
+        'applyWindowPreferences560();ui.loadUrl("https://kuro.local/index.html");',
+        'initPerf154();applyWindowPreferences560();ui.loadUrl("https://kuro.local/index.html");',
+        "MainActivity onCreate initPerf154",
+    )
+
+    perf_helpers = """ private android.util.LruCache<String,Bitmap> posterMemCache154;
+ private android.util.LruCache<String,Bitmap> posterCache154(){
+  if(posterMemCache154!=null)return posterMemCache154;
+  int maxKb=(int)(Runtime.getRuntime().maxMemory()/1024L);
+  int capKb=Math.max(4096,Math.min(12288,maxKb/12));
+  posterMemCache154=new android.util.LruCache<String,Bitmap>(capKb){
+   @Override protected int sizeOf(String key,Bitmap value){return Math.max(1,value.getAllocationByteCount()/1024);}
+  };
+  return posterMemCache154;
+ }
+ private SharedPreferences perfPrefs154(){return getSharedPreferences("kuro-perf-154",MODE_PRIVATE);}
+ private boolean isTelevisionDevice154(){
+  try{
+   UiModeManager um=(UiModeManager)getSystemService(UI_MODE_SERVICE);
+   if(um!=null&&um.getCurrentModeType()==android.content.res.Configuration.UI_MODE_TYPE_TELEVISION)return true;
+   android.content.pm.PackageManager pm=getPackageManager();
+   return pm!=null&&(pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)||pm.hasSystemFeature("amazon.hardware.fire_tv"));
+  }catch(RuntimeException e){return false;}
+ }
+ private int totalRamMb154(){
+  try{
+   ActivityManager am=(ActivityManager)getSystemService(ACTIVITY_SERVICE);
+   if(am==null)return 4096;
+   ActivityManager.MemoryInfo mi=new ActivityManager.MemoryInfo();
+   am.getMemoryInfo(mi);
+   return mi.totalMem>0?(int)(mi.totalMem/(1024L*1024L)):4096;
+  }catch(RuntimeException e){return 4096;}
+ }
+ private boolean isLowRamDevice154(){
+  try{
+   ActivityManager am=(ActivityManager)getSystemService(ACTIVITY_SERVICE);
+   if(am!=null&&am.isLowRamDevice())return true;
+  }catch(RuntimeException ignored){}
+  return totalRamMb154()<=3900;
+ }
+ private int maxDisplayHz154(){
+  try{
+   Window w=getWindow();if(w==null)return 60;
+   Display d=w.getWindowManager().getDefaultDisplay();if(d==null)return 60;
+   Display.Mode cur=d.getMode();
+   float best=d.getRefreshRate();
+   Display.Mode[] modes=d.getSupportedModes();
+   if(modes!=null&&cur!=null){
+    for(Display.Mode m:modes){
+     if(m.getPhysicalWidth()==cur.getPhysicalWidth()&&m.getPhysicalHeight()==cur.getPhysicalHeight()&&m.getRefreshRate()>best){
+      best=m.getRefreshRate();
+     }
+    }
+   }
+   return Math.max(60,Math.round(best));
+  }catch(RuntimeException e){return 60;}
+ }
+ private void applyDisplayRefresh154(){
+  try{
+   Window w=getWindow();if(w==null)return;
+   Display d=w.getWindowManager().getDefaultDisplay();if(d==null)return;
+   Display.Mode cur=d.getMode();
+   Display.Mode[] modes=d.getSupportedModes();
+   if(cur==null||modes==null||modes.length<=1)return;
+   String pref=perfPrefs154().getString("refreshMode","auto");
+   boolean videoFs=playerLayer!=null&&(customView!=null||enhancedFullscreen||isInPictureInPictureMode()||nativePlayer561!=null);
+   int wantModeId=0;
+   if("60".equals(pref)){
+    float bestDiff=999f;
+    for(Display.Mode m:modes){
+     if(m.getPhysicalWidth()==cur.getPhysicalWidth()&&m.getPhysicalHeight()==cur.getPhysicalHeight()){
+      float diff=Math.abs(m.getRefreshRate()-60f);
+      if(diff<bestDiff){bestDiff=diff;wantModeId=m.getModeId();}
+     }
+    }
+   }else if("max".equals(pref)||("auto".equals(pref)&&!videoFs)){
+    float bestHz=0f;
+    for(Display.Mode m:modes){
+     if(m.getPhysicalWidth()==cur.getPhysicalWidth()&&m.getPhysicalHeight()==cur.getPhysicalHeight()&&m.getRefreshRate()>bestHz){
+      bestHz=m.getRefreshRate();wantModeId=m.getModeId();
+     }
+    }
+   }
+   WindowManager.LayoutParams lp=w.getAttributes();
+   if(lp.preferredDisplayModeId!=wantModeId){
+    lp.preferredDisplayModeId=wantModeId;
+    w.setAttributes(lp);
+   }
+  }catch(RuntimeException ignored){}
+ }
+ private void initPerf154(){
+  SharedPreferences sp=perfPrefs154();
+  KuroFastNet154.setDohMode(sp.getString("dohMode","auto"));
+  if(ui!=null){
+   WebSettings ws=ui.getSettings();
+   ws.setOffscreenPreRaster(false);
+  }
+  applyDisplayRefresh154();
+ }
+ private long folderBytes154(File f){
+  if(f==null||!f.exists())return 0L;
+  if(f.isFile())return Math.max(0L,f.length());
+  File[] kids=f.listFiles();if(kids==null)return 0L;
+  long sum=0L;for(File k:kids)sum+=folderBytes154(k);
+  return sum;
+ }
+ private void deleteCacheChildren154(File dir){
+  if(dir==null||!dir.isDirectory())return;
+  File[] kids=dir.listFiles();if(kids==null)return;
+  for(File k:kids){
+   if(k.isDirectory())deleteCacheChildren154(k);
+   try{k.delete();}catch(RuntimeException ignored){}
+  }
+ }
+ private String buildPerfStatusJson154(){
+  SharedPreferences sp=perfPrefs154();
+  double cacheMb=Math.round((folderBytes154(getCacheDir())/(1024.0*1024.0))*10.0)/10.0;
+  try{
+   return new JSONObject()
+    .put("refreshMode",sp.getString("refreshMode","auto"))
+    .put("dohMode",sp.getString("dohMode","auto"))
+    .put("gpuMode",sp.getString("gpuMode","auto"))
+    .put("fastBoot",sp.getBoolean("fastBoot",false))
+    .put("isTv",isTelevisionDevice154())
+    .put("lowRam",isLowRamDevice154())
+    .put("ramMb",totalRamMb154())
+    .put("maxHz",maxDisplayHz154())
+    .put("cacheMb",cacheMb)
+    .toString();
+  }catch(Exception e){return "{}";}
+ }
+"""
+
+    text = patch_once(
+        text,
+        "posterMemCache154",
+        " private androidx.core.view.WindowInsetsCompat lastWindowInsets154;",
+        perf_helpers + " private androidx.core.view.WindowInsetsCompat lastWindowInsets154;",
+        "MainActivity performance & compatibility helpers",
+    )
+
+    text = patch_once(
+        text,
+        "applyDisplayRefresh154();applyRootInsets154",
+        "applyRootInsets154(lastWindowInsets154);",
+        "applyDisplayRefresh154();applyRootInsets154(lastWindowInsets154);",
+        "MainActivity syncWindowSystemBars154 display refresh sync",
+    )
+
+    text = patch_once(
+        text,
+        'isTelevisionDevice154()?"desktop":"mobile"',
+        'boolean desktopUi154="desktop".equals(p.getString("siteView","mobile"));',
+        'boolean desktopUi154="desktop".equals(p.getString("siteView",isTelevisionDevice154()?"desktop":"mobile"));',
+        "MainActivity applyWindowPreferences560 TV auto-desktop",
+    )
+
+    old_bridge_get = (
+        '     boolean miruro="www.miruro.cx".equals(u.getHost()),kitsuneEpisodes="kitsunee.moe".equals(u.getHost())&&u.getPath()!=null&&u.getPath().matches("/api/episodes/anikoto/[0-9]{1,8}");int maxBytes=kitsuneEpisodes?6500000:2500000;c=(HttpURLConnection)u.toURL().openConnection();c.setInstanceFollowRedirects(false);c.setConnectTimeout(12000);c.setReadTimeout(15000);c.setRequestProperty("User-Agent",SOURCE_UA);c.setRequestProperty("Accept","text/html,application/json,*/*");c.setRequestProperty("X-Requested-With","XMLHttpRequest");\n'
+        '     if("aniwaves.tv".equals(u.getHost())||"anikoto.cz".equals(u.getHost())) c.setRequestProperty("Referer","https://"+u.getHost()+"/");\n'
+        '     if(miruro){c.setRequestProperty("Origin",MIRURO_ORIGIN);c.setRequestProperty("Referer",MIRURO_ORIGIN+"/");String cookie=android.webkit.CookieManager.getInstance().getCookie(MIRURO_ORIGIN+"/");if(cookie!=null&&!cookie.isEmpty()&&cookie.length()<=8192)c.setRequestProperty("Cookie",cookie);}\n'
+        '     int code=c.getResponseCode();if(code!=200)throw new Exception("Source returned HTTP "+code+" (no verification bypass)");\n'
+        '     byte[] bytes;try(InputStream in=c.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1){if(n>maxBytes-out.size())throw new Exception("Response too large");out.write(b,0,n);}bytes=out.toByteArray();}\n'
+        '     String type=c.getContentType();if(miruro&&u.getPath()!=null&&u.getPath().startsWith("/api/v1/anime")&&type!=null&&type.toLowerCase(Locale.ROOT).contains("application/octet-stream"))bytes=MiruroCatalog.decode(bytes,2500000);'
+    )
+    new_bridge_get = (
+        '     boolean miruro="www.miruro.cx".equals(u.getHost()),kitsuneEpisodes="kitsunee.moe".equals(u.getHost())&&u.getPath()!=null&&u.getPath().matches("/api/episodes/anikoto/[0-9]{1,8}");int maxBytes=kitsuneEpisodes?6500000:2500000;\n'
+        '     Map<String,String> reqHeaders154=new LinkedHashMap<>();reqHeaders154.put("User-Agent",SOURCE_UA);reqHeaders154.put("Accept","text/html,application/json,*/*");reqHeaders154.put("X-Requested-With","XMLHttpRequest");\n'
+        '     if("aniwaves.tv".equals(u.getHost())||"anikoto.cz".equals(u.getHost()))reqHeaders154.put("Referer","https://"+u.getHost()+"/");\n'
+        '     if(miruro){reqHeaders154.put("Origin",MIRURO_ORIGIN);reqHeaders154.put("Referer",MIRURO_ORIGIN+"/");String cookie=android.webkit.CookieManager.getInstance().getCookie(MIRURO_ORIGIN+"/");if(cookie!=null&&!cookie.isEmpty()&&cookie.length()<=8192)reqHeaders154.put("Cookie",cookie);}\n'
+        '     KuroFastNet154.SourceResult net154=KuroFastNet154.fetchSource(u,reqHeaders154,maxBytes);byte[] bytes=net154.bytes;String type=net154.contentType;\n'
+        '     if(miruro&&u.getPath()!=null&&u.getPath().startsWith("/api/v1/anime")&&type!=null&&type.toLowerCase(Locale.ROOT).contains("application/octet-stream"))bytes=MiruroCatalog.decode(bytes,2500000);'
+    )
+    text = patch_once(
+        text,
+        "KuroFastNet154.fetchSource(u,reqHeaders154,maxBytes)",
+        old_bridge_get,
+        new_bridge_get,
+        "MainActivity Bridge.get pooled HTTP/2 + DoH",
+    )
+
+    perf_bridge_methods = (
+        '  @JavascriptInterface public String siteView154(){return settings560().getString("siteView",isTelevisionDevice154()?"desktop":"mobile");}\n'
+        '  @JavascriptInterface public String perfGet154(){return buildPerfStatusJson154();}\n'
+        '  @JavascriptInterface public String perfSet154(String raw){\n'
+        '   if(raw==null||raw.length()>2000)return buildPerfStatusJson154();\n'
+        '   try{\n'
+        '    JSONObject j=new JSONObject(raw);SharedPreferences.Editor ed=perfPrefs154().edit();\n'
+        '    if(j.has("refreshMode")){String r=j.optString("refreshMode","auto");if("auto".equals(r)||"max".equals(r)||"60".equals(r))ed.putString("refreshMode",r);}\n'
+        '    if(j.has("dohMode")){String d=j.optString("dohMode","auto");if("auto".equals(d)||"always".equals(d)||"off".equals(d)){ed.putString("dohMode",d);KuroFastNet154.setDohMode(d);}}\n'
+        '    if(j.has("gpuMode")){String g=j.optString("gpuMode","auto");if("auto".equals(g)||"lite".equals(g)||"full".equals(g))ed.putString("gpuMode",g);}\n'
+        '    if(j.has("fastBoot"))ed.putBoolean("fastBoot",j.optBoolean("fastBoot",false));\n'
+        '    ed.apply();\n'
+        '    main.post(()->{if(!isFinishing()&&!isDestroyed())applyDisplayRefresh154();});\n'
+        '   }catch(Exception ignored){}\n'
+        '   return buildPerfStatusJson154();\n'
+        '  }\n'
+        '  @JavascriptInterface public String clearTempCache154(){\n'
+        '   long before=folderBytes154(getCacheDir());\n'
+        '   responses.clear();KuroFastNet154.clearCaches();\n'
+        '   try{posterCache154().evictAll();}catch(RuntimeException ignored){}\n'
+        '   deleteCacheChildren154(getCacheDir());\n'
+        '   main.post(()->{if(ui!=null&&!isFinishing()&&!isDestroyed())try{ui.clearCache(true);}catch(RuntimeException ignored){}});\n'
+        '   long after=folderBytes154(getCacheDir());\n'
+        '   double freedMb=Math.max(0.0,Math.round(((before-after)/(1024.0*1024.0))*10.0)/10.0);\n'
+        '   double leftMb=Math.round((after/(1024.0*1024.0))*10.0)/10.0;\n'
+        '   try{return new JSONObject().put("freedMb",freedMb).put("cacheMb",leftMb).toString();}catch(Exception e){return "{}";}\n'
+        '  }'
+    )
+    text = patch_once(
+        text,
+        "perfGet154()",
+        '  @JavascriptInterface public String siteView154(){return settings560().getString("siteView","mobile");}',
+        perf_bridge_methods,
+        "MainActivity Bridge perfGet154/perfSet154/clearTempCache154",
+    )
+
+    text = patch_once(
+        text,
+        "onRenderProcessGone(WebView v,RenderProcessGoneDetail detail){if(v!=player)",
+        "@Override public void onReceivedError(WebView v,WebResourceRequest request,WebResourceError error){super.onReceivedError(v,request,error);",
+        "@Override public boolean onRenderProcessGone(WebView v,RenderProcessGoneDetail detail){if(v!=player)return true;lastPlayerIssue573=\"The embedded player ran low on memory; Kuro recovered without crashing.\";try{if(watchPlayerBox!=null)watchPlayerBox.removeView(v);v.destroy();}catch(RuntimeException ignored){}player=null;main.post(()->{if(!isFinishing()&&!isDestroyed()&&playerLayer!=null){Toast.makeText(MainActivity.this,\"Player recovered from low memory. Try another server.\",Toast.LENGTH_LONG).show();closePlayer();}});return true;}@Override public void onReceivedError(WebView v,WebResourceRequest request,WebResourceError error){super.onReceivedError(v,request,error);",
+        "MainActivity player WebView crash shield",
+    )
+
+    text = patch_once(
+        text,
+        "if(resumeFullscreenUntil153>android.os.SystemClock.elapsedRealtime()){resumeFullscreenUntil153=0L;enterEnhancedFullscreen();}applyDisplayRefresh154();",
+        "if(resumeFullscreenUntil153>android.os.SystemClock.elapsedRealtime()){resumeFullscreenUntil153=0L;enterEnhancedFullscreen();}",
+        "if(resumeFullscreenUntil153>android.os.SystemClock.elapsedRealtime()){resumeFullscreenUntil153=0L;enterEnhancedFullscreen();}applyDisplayRefresh154();",
+        "MainActivity openWatch applyDisplayRefresh154",
+    )
+
+    text = patch_once(
+        text,
+        "fxComparing=false;applyDisplayRefresh154();}",
+        "fxConfig=null;fxTopStatus=null;fxComparing=false;}",
+        "fxConfig=null;fxTopStatus=null;fxComparing=false;applyDisplayRefresh154();}",
+        "MainActivity closePlayer applyDisplayRefresh154",
+    )
+
+    old_poster = (
+        ' void loadPoster(ImageView target,String address){pool.execute(()->{try{URI u=new URI(address);String h=u.getHost();if(!"https".equals(u.getScheme())||u.getUserInfo()!=null||u.getPort()!=-1||!("hianime.ms".equals(h)||"hianime.dk".equals(h)||"cdn.hianime.dk".equals(h)||"s4.anilist.co".equals(h)||"cdn.noitatnemucod.net".equals(h)))return;HttpURLConnection c=(HttpURLConnection)u.toURL().openConnection();c.setInstanceFollowRedirects(false);c.setConnectTimeout(10000);c.setReadTimeout(12000);c.setRequestProperty("User-Agent","Mozilla/5.0");if(c.getResponseCode()!=200){c.disconnect();return;}byte[] bytes;try(InputStream in=c.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] buf=new byte[4096];int n;while((n=in.read(buf))!=-1){if(out.size()+n>2000000){c.disconnect();return;}out.write(buf,0,n);}bytes=out.toByteArray();}c.disconnect();android.graphics.BitmapFactory.Options bounds=new android.graphics.BitmapFactory.Options();bounds.inJustDecodeBounds=true;android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.length,bounds);if(bounds.outWidth<=0||bounds.outHeight<=0||bounds.outWidth>6000||bounds.outHeight>6000)return;android.graphics.BitmapFactory.Options opts=new android.graphics.BitmapFactory.Options();opts.inSampleSize=Math.max(1,Math.max(bounds.outWidth/300,bounds.outHeight/450));android.graphics.Bitmap bitmap=android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.length,opts);if(bitmap!=null)main.post(()->{if(target.isAttachedToWindow())target.setImageBitmap(bitmap);});}catch(Exception ignored){}});}'
+    )
+    new_poster = (
+        ' void loadPoster(ImageView target,String address){'
+        'if(target==null||address==null||address.isEmpty())return;'
+        'Bitmap hit154=posterCache154().get(address);if(hit154!=null&&!hit154.isRecycled()){target.setImageBitmap(hit154);return;}'
+        'target.setTag(address);'
+        'pool.execute(()->{try{URI u=new URI(address);String h=u.getHost();if(!"https".equals(u.getScheme())||u.getUserInfo()!=null||u.getPort()!=-1||!("hianime.ms".equals(h)||"hianime.dk".equals(h)||"cdn.hianime.dk".equals(h)||"s4.anilist.co".equals(h)||"cdn.noitatnemucod.net".equals(h)))return;'
+        'byte[] bytes=KuroFastNet154.fetchPoster(u,2000000);if(bytes==null||bytes.length==0)return;'
+        'android.graphics.BitmapFactory.Options bounds=new android.graphics.BitmapFactory.Options();bounds.inJustDecodeBounds=true;android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.length,bounds);if(bounds.outWidth<=0||bounds.outHeight<=0||bounds.outWidth>6000||bounds.outHeight>6000)return;'
+        'android.graphics.BitmapFactory.Options opts=new android.graphics.BitmapFactory.Options();opts.inSampleSize=Math.max(1,Math.max(bounds.outWidth/300,bounds.outHeight/450));opts.inPreferredConfig=Bitmap.Config.RGB_565;'
+        'android.graphics.Bitmap bitmap=android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.length,opts);if(bitmap!=null){posterCache154().put(address,bitmap);main.post(()->{if(target.isAttachedToWindow()&&address.equals(target.getTag()))target.setImageBitmap(bitmap);});}'
+        '}catch(Exception ignored){}});}'
+    )
+    text = patch_once(
+        text,
+        "hit154=posterCache154().get(address)",
+        old_poster,
+        new_poster,
+        "MainActivity loadPoster LruCache + pooled HTTP/2",
+    )
+
+    main_path.write_text(text, encoding="utf-8")
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         raise SystemExit("usage: ui_1.5.4.py <kuro-source-dir>")
@@ -911,7 +1697,8 @@ def main() -> None:
     patch_offline_activity_insets(root)
     patch_player_ad_blocker(root)
     patch_js_hooks(root)
-    print("Applied Kuro 1.5.4-beta Detail v2, Desktop-Site Left-Rail Leanback, WindowInsets, Ad-Guard, and Smart Browse/Voice patches.")
+    patch_perf_and_compat_154(root)
+    print("Applied Kuro 1.5.4-beta Detail v2, Desktop-Site Left-Rail Leanback, WindowInsets, Ad-Guard, Performance & Compatibility, and Smart Browse/Voice patches.")
 
 
 if __name__ == "__main__":

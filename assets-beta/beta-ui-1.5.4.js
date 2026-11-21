@@ -1922,7 +1922,312 @@
     }
   }
 
-  /* Observe DOM mutations so Home shelves, Browse grids, Account Hub & Player overlays stay clean */
+  /* ==========================================================================
+     PERFORMANCE & COMPATIBILITY (1.5.4-BETA):
+     - Native 90Hz/120Hz display rate + battery step-down sync
+     - Encrypted DNS-over-HTTPS (1.1.1.1 / 8.8.8.8) ISP Unblock control
+     - Auto Lite-GPU mode on low-RAM phones & TV sticks + async/lazy image decode
+     - Instant Startup toggle & 1-tap safe temporary cache cleaner in Settings
+     ========================================================================== */
+  var PERF_KEY_154 = 'kuro-perf-154';
+  var perfDefaults154 = {
+    refreshMode: 'auto',
+    dohMode: 'auto',
+    gpuMode: 'auto',
+    fastBoot: false,
+    isTv: false,
+    lowRam: false,
+    ramMb: 4096,
+    maxHz: 60,
+    cacheMb: 0
+  };
+
+  function readPerf154() {
+    var local = {};
+    try { local = JSON.parse(localStorage.getItem(PERF_KEY_154) || '{}') || {}; } catch (_) {}
+    var nat = {};
+    if (window.KuroNative && typeof window.KuroNative.perfGet154 === 'function') {
+      try { nat = JSON.parse(window.KuroNative.perfGet154() || '{}') || {}; } catch (_) {}
+    }
+    var merged = Object.assign({}, perfDefaults154, local, nat);
+    try {
+      localStorage.setItem(PERF_KEY_154, JSON.stringify({
+        refreshMode: merged.refreshMode,
+        dohMode: merged.dohMode,
+        gpuMode: merged.gpuMode,
+        fastBoot: !!merged.fastBoot
+      }));
+    } catch (_) {}
+    return merged;
+  }
+
+  function applyPerfDom154(perf) {
+    var p = perf || readPerf154();
+    var lowMemWeb = false;
+    try { lowMemWeb = !!(navigator.deviceMemory && navigator.deviceMemory <= 4); } catch (_) {}
+    var useLite = p.gpuMode === 'lite' || (p.gpuMode === 'auto' && (p.lowRam || p.isTv || lowMemWeb));
+    document.documentElement.dataset.k154LiteGpu = useLite ? '1' : '0';
+  }
+
+  function savePerf154(patch) {
+    var cur = readPerf154();
+    var next = {
+      refreshMode: patch.refreshMode !== undefined ? patch.refreshMode : cur.refreshMode,
+      dohMode: patch.dohMode !== undefined ? patch.dohMode : cur.dohMode,
+      gpuMode: patch.gpuMode !== undefined ? patch.gpuMode : cur.gpuMode,
+      fastBoot: patch.fastBoot !== undefined ? !!patch.fastBoot : !!cur.fastBoot
+    };
+    try { localStorage.setItem(PERF_KEY_154, JSON.stringify(next)); } catch (_) {}
+    var updated = Object.assign({}, cur, next);
+    if (window.KuroNative && typeof window.KuroNative.perfSet154 === 'function') {
+      try {
+        var fromNative = JSON.parse(window.KuroNative.perfSet154(JSON.stringify(next)) || '{}');
+        updated = Object.assign(updated, fromNative);
+      } catch (_) {}
+    }
+    applyPerfDom154(updated);
+    return updated;
+  }
+
+  function optimizeImages154() {
+    var imgs = document.querySelectorAll('.grid .card img:not([data-k154-img]), .shelf .card img:not([data-k154-img]), .episode-row img:not([data-k154-img])');
+    for (var i = 0; i < imgs.length; i++) {
+      var img = imgs[i];
+      img.setAttribute('data-k154-img', '1');
+      if (!img.getAttribute('decoding')) img.setAttribute('decoding', 'async');
+      if (!img.getAttribute('loading')) img.setAttribute('loading', 'lazy');
+    }
+  }
+
+  function openPerfChoiceSheet154(overlayRoot, titleText, options, currentVal, onPick, triggerBtn) {
+    if (!overlayRoot || !overlayRoot.isConnected) return;
+    var prev = overlayRoot.querySelector('.choice-backdrop567');
+    if (prev) prev.remove();
+
+    var backdrop = document.createElement('div');
+    backdrop.className = 'choice-backdrop567';
+
+    var panel = document.createElement('section');
+    panel.className = 'choice-panel567';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+
+    var heading = document.createElement('div');
+    heading.className = 'choice-head567';
+    var copy = document.createElement('div');
+    var eye = document.createElement('small');
+    eye.textContent = 'KURO.TV \u00b7 PERFORMANCE';
+    var h2 = document.createElement('h2');
+    h2.id = 'k154-choice-title';
+    h2.textContent = titleText;
+    panel.setAttribute('aria-labelledby', h2.id);
+    copy.appendChild(eye);
+    copy.appendChild(h2);
+
+    var closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'choice-close567';
+    closeBtn.setAttribute('aria-label', 'Close choices');
+    closeBtn.textContent = '\u00d7';
+    heading.appendChild(copy);
+    heading.appendChild(closeBtn);
+    panel.appendChild(heading);
+
+    var list = document.createElement('div');
+    list.className = 'choice-list567';
+    list.setAttribute('role', 'radiogroup');
+    list.setAttribute('aria-label', titleText);
+
+    function closeSheet() {
+      if (!backdrop.isConnected) return;
+      backdrop.remove();
+      if (triggerBtn && triggerBtn.isConnected) {
+        triggerBtn.setAttribute('aria-expanded', 'false');
+        triggerBtn.focus();
+      }
+    }
+
+    options.forEach(function (opt) {
+      var row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'choice-option567';
+      row.setAttribute('role', 'radio');
+      var active = String(opt.value) === String(currentVal);
+      row.setAttribute('aria-checked', String(active));
+      var span = document.createElement('span');
+      span.textContent = opt.label;
+      var dot = document.createElement('i');
+      dot.setAttribute('aria-hidden', 'true');
+      row.appendChild(span);
+      row.appendChild(dot);
+      row.onclick = function () {
+        onPick(opt.value);
+        closeSheet();
+      };
+      list.appendChild(row);
+    });
+
+    panel.appendChild(list);
+    backdrop.appendChild(panel);
+    overlayRoot.appendChild(backdrop);
+    if (triggerBtn) triggerBtn.setAttribute('aria-expanded', 'true');
+
+    closeBtn.onclick = closeSheet;
+    backdrop.onclick = function (e) { if (e.target === backdrop) closeSheet(); };
+    backdrop.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        closeSheet();
+      }
+    });
+    var activeOpt = list.querySelector('[aria-checked="true"]') || closeBtn;
+    if (activeOpt) activeOpt.focus();
+  }
+
+  function mountPerfSettingsGroup154() {
+    var overlay = document.getElementById('settings-overlay560');
+    if (!overlay) return;
+    var body = overlay.querySelector('.settings-body560');
+    if (!body || body.querySelector('#k154-perf-group')) return;
+
+    var sec = document.createElement('section');
+    sec.id = 'k154-perf-group';
+    sec.className = 'settings-group560';
+    sec.setAttribute('data-section', 'performance & compatibility speed dns 120hz refresh gpu lite startup cache tv');
+
+    var appearance = body.querySelector('.settings-group560[data-section="appearance and startup"]');
+    if (appearance && appearance.nextSibling) {
+      body.insertBefore(sec, appearance.nextSibling);
+    } else {
+      body.appendChild(sec);
+    }
+
+    function renderPerfGroup() {
+      var p = readPerf154();
+      var hzLabel = p.maxHz >= 90 ? (p.maxHz + 'Hz Screen Ready') : (p.maxHz + 'Hz Screen');
+      var devLabel = p.isTv ? 'Android TV / Fire TV' : (p.ramMb ? (Math.max(1, Math.round(p.ramMb / 1024)) + ' GB RAM') : 'Phone / Tablet');
+      var dnsChip = p.dohMode === 'always' ? 'DNS: Always Encrypted' : (p.dohMode === 'auto' ? 'DNS: Smart Unblock' : 'DNS: System');
+      var cacheLabel = (typeof p.cacheMb === 'number' ? p.cacheMb.toFixed(1) : '0.0') + ' MB temp';
+
+      var specs = [
+        {
+          key: 'refreshMode',
+          title: 'Smooth display rate',
+          desc: 'Unlocks 90Hz/120Hz while browsing and steps down in fullscreen video to save battery.',
+          filter: 'smooth display rate 90hz 120hz refresh battery screen fps',
+          current: p.refreshMode,
+          options: [
+            { value: 'auto', label: 'Auto (' + (p.maxHz >= 90 ? p.maxHz + 'Hz + video saver' : 'Adaptive') + ')' },
+            { value: 'max', label: 'Always highest Hz' },
+            { value: '60', label: '60Hz battery saver' }
+          ]
+        },
+        {
+          key: 'dohMode',
+          title: 'Network & ISP unblock (DNS)',
+          desc: 'Uses encrypted Cloudflare 1.1.1.1 / Google 8.8.8.8 DNS when your carrier blocks anime sources.',
+          filter: 'network isp unblock dns doh cloudflare 1.1.1.1 jio airtel wifi blocked',
+          current: p.dohMode,
+          options: [
+            { value: 'auto', label: 'Smart Auto (recommended)' },
+            { value: 'always', label: 'Always Encrypted DNS' },
+            { value: 'off', label: 'System default DNS' }
+          ]
+        },
+        {
+          key: 'gpuMode',
+          title: 'Graphics & scroll smoothness',
+          desc: 'Lite GPU turns off heavy blur layers so budget phones and TV sticks stay cool and fast.',
+          filter: 'graphics scroll smoothness lite gpu blur lag low ram heat tv',
+          current: p.gpuMode,
+          options: [
+            { value: 'auto', label: 'Auto' + ((p.lowRam || p.isTv) ? ' (Lite active)' : ' (Full active)') },
+            { value: 'lite', label: 'Lite GPU (fastest, less heat)' },
+            { value: 'full', label: 'Full glass blur' }
+          ]
+        },
+        {
+          key: 'fastBoot',
+          title: 'Startup speed',
+          desc: 'Skip the 3.6-second launch animation and open Home straight away.',
+          filter: 'startup speed instant boot skip intro splash launch fast',
+          current: p.fastBoot ? 'true' : 'false',
+          options: [
+            { value: 'false', label: 'Play launch animation' },
+            { value: 'true', label: 'Instant Home (skip intro)' }
+          ]
+        }
+      ];
+
+      var rowsHtml = specs.map(function (sp) {
+        var found = sp.options.find(function (o) { return String(o.value) === String(sp.current); }) || sp.options[0];
+        return '<div class="settings-row560" data-filter="' + esc(sp.filter) + '">' +
+          '<span><strong>' + esc(sp.title) + '</strong><small>' + esc(sp.desc) + '</small></span>' +
+          '<button type="button" class="settings-choice567" data-k154-perf-key="' + esc(sp.key) + '" aria-haspopup="dialog" aria-expanded="false" aria-label="' + esc(sp.title + ': ' + found.label) + '">' +
+            '<span class="choice-value567">' + esc(found.label) + '</span>' +
+            '<span class="choice-chevron567" aria-hidden="true">\u2304</span>' +
+          '</button>' +
+        '</div>';
+      }).join('');
+
+      var clearHtml = '<button type="button" class="settings-row560 settings-action560" data-k154-clear-cache data-filter="clear temporary stream cache storage memory free space">' +
+        '<span><strong>Clear temporary stream cache</strong>' +
+        '<small>Frees temporary web & poster files (' + esc(cacheLabel) + '). Keeps accounts, lists, history & offline downloads.</small></span>' +
+        '<b aria-hidden="true">\u203a</b>' +
+      '</button>';
+
+      sec.innerHTML =
+        '<div class="settings-group-head560">' +
+          '<h3>Performance &amp; compatibility</h3>' +
+          '<p>Faster loading, smoother scrolling, carrier DNS unblock, and TV/low-RAM stability</p>' +
+        '</div>' +
+        '<div class="k154-perf-summary">' +
+          '<span class="k154-perf-chip is-accent">' + esc(hzLabel) + '</span>' +
+          '<span class="k154-perf-chip">' + esc(dnsChip) + '</span>' +
+          '<span class="k154-perf-chip">' + esc(devLabel) + '</span>' +
+          '<span class="k154-perf-chip">' + esc(cacheLabel) + '</span>' +
+        '</div>' +
+        '<div class="settings-rows560">' + rowsHtml + clearHtml + '</div>';
+
+      specs.forEach(function (sp) {
+        var btn = sec.querySelector('[data-k154-perf-key="' + sp.key + '"]');
+        if (!btn) return;
+        btn.onclick = function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          openPerfChoiceSheet154(overlay, sp.title, sp.options, sp.current, function (picked) {
+            var patch = {};
+            patch[sp.key] = sp.key === 'fastBoot' ? (picked === 'true') : picked;
+            savePerf154(patch);
+            renderPerfGroup();
+            toast(sp.title + ' saved.');
+          }, btn);
+        };
+      });
+
+      var clearBtn = sec.querySelector('[data-k154-clear-cache]');
+      if (clearBtn) {
+        clearBtn.onclick = function () {
+          var freedText = '';
+          if (window.KuroNative && typeof window.KuroNative.clearTempCache154 === 'function') {
+            try {
+              var res = JSON.parse(window.KuroNative.clearTempCache154() || '{}');
+              if (typeof res.freedMb === 'number' && res.freedMb > 0) {
+                freedText = ' (' + res.freedMb.toFixed(1) + ' MB freed)';
+              }
+            } catch (_) {}
+          }
+          renderPerfGroup();
+          toast('Temporary cache cleared' + freedText + '. Accounts, lists & downloads kept.');
+        };
+      }
+    }
+
+    renderPerfGroup();
+  }
+
+  /* Observe DOM mutations so Home shelves, Browse grids, Account Hub, Settings & Player overlays stay clean */
   function startObserver154() {
     var rootEl = document.body || document.getElementById('main');
     if (!rootEl) return;
@@ -1933,8 +2238,12 @@
       requestAnimationFrame(function () {
         rafPending = false;
         pruneHiddenControls154();
+        optimizeImages154();
         if (document.getElementById('discover-search')) {
           enhanceBrowseCommandBar154();
+        }
+        if (document.getElementById('settings-overlay560')) {
+          mountPerfSettingsGroup154();
         }
         if (document.querySelector('#main > .profile-page547')) {
           renderAccountHub154(false);
@@ -1946,12 +2255,17 @@
   }
 
   function init154() {
+    applyPerfDom154(readPerf154());
     syncDesktopSite154();
     pruneHiddenControls154();
+    optimizeImages154();
     hookDetailView154();
     hookBrowseFilters154();
     hookAccountTrackerHub154();
     startObserver154();
+    if (document.getElementById('settings-overlay560')) {
+      mountPerfSettingsGroup154();
+    }
     if (document.querySelector('#main > .profile-page547')) {
       renderAccountHub154(false);
     }
