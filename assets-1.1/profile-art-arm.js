@@ -1,4 +1,4 @@
-/* Kuro profile art — 24 manga character face avatars + 24 matching 16:9 banners.
+/* Kuro profile art — 40 anime & manga character face avatars + 40 matching 16:9 banners.
    Self-contained: paints the profile hero and injects its own picker, so it
    survives every re-render of the account page. */
 (function(){
@@ -28,7 +28,23 @@
   ['art-31','Ai Hoshino · Oshi no Ko'],
   ['art-32','Buddha · Record of Ragnarok'],
   ['art-33','Johan Liebert · Monster'],
-  ['art-34','Yuuichi Katagiri · Tomodachi Game']
+  ['art-34','Yuuichi Katagiri · Tomodachi Game'],
+  ['art-35','Monkey D. Luffy (Gear 5) · One Piece'],
+  ['art-36','Roronoa Zoro · One Piece'],
+  ['art-37','Itachi Uchiha · Naruto Shippuden'],
+  ['art-38','Naruto Uzumaki · Naruto Shippuden'],
+  ['art-39','Sasuke Uchiha · Naruto Shippuden'],
+  ['art-40','Tanjiro Kamado · Demon Slayer'],
+  ['art-41','Kyojuro Rengoku · Demon Slayer: Mugen Train'],
+  ['art-42','Killua Zoldyck · Hunter \u00d7 Hunter'],
+  ['art-43','Ken Kaneki · Tokyo Ghoul'],
+  ['art-44','Thorfinn · Vinland Saga'],
+  ['art-45','Guts · Berserk'],
+  ['art-46','Lelouch Lamperouge · Code Geass'],
+  ['art-47','Power · Chainsaw Man'],
+  ['art-48','Okarun (Turbo Granny) · DAN DA DAN'],
+  ['art-49','Zero Two · DARLING in the FRANXX'],
+  ['art-50','Spike Spiegel · Cowboy Bebop']
  ];
  var IDS=META.map(function(m){return m[0]});
  var LABELS={};META.forEach(function(m){LABELS[m[0]]=m[1]});
@@ -47,10 +63,10 @@
  function build(o){
   var el=document.createElement('div');
   el.className='account-section profile-art581';el.id='profile-art581';
-  el.innerHTML='<div class="account-section-head"><div><h2>Profile art</h2><p>24 manga face avatars, each paired with a matching manga banner. Saved on this phone.</p></div><button type="button" class="button ghost small" data-art-match="1">Match banner</button></div>'+
+  el.innerHTML='<div class="account-section-head"><div><h2>Profile art</h2><p>40 anime &amp; manga face avatars, each paired with a matching 16:9 banner. Saved on this phone.</p></div><button type="button" class="button ghost small" data-art-match="1">Match banner</button></div>'+
    '<div class="art-row581"><span class="art-label581">Avatar</span><div class="art-grid581 art-grid-pfp581">'+tiles('pfp',o.pfp,'Initials')+'</div></div>'+
    '<div class="art-row581"><span class="art-label581">Banner</span><div class="art-grid581 art-grid-banner581">'+tiles('banner',o.banner,'None')+'</div></div>'+
-   '<p class="art-note581">Each avatar and banner share the same order \u2014 tap Match banner anytime to pair your avatar\u2019s manga spread.</p>';
+   '<p class="art-note581">Each avatar and banner share the same order \u2014 tap Match banner anytime to pair your avatar\u2019s matching banner.</p>';
   return el;
  }
  function panel(o){

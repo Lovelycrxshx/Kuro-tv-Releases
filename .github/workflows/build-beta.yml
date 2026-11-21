@@ -121,7 +121,7 @@ jobs:
           [ "$(strip "$PROJECT/assets/index.html")" = "$(strip "$OVERLAY/index.html")" ] \
             || { echo "::error::assets/index.html in the source zip differs from the one the 1.1 overlay was cut from. Regenerate assets-1.1/index.html first."; exit 1; }
 
-          # Remove all legacy art-01..art-10 PFPs and banners from unpacked source before copying new art-11..art-34 pairs.
+          # Remove all legacy art-01..art-10 PFPs and banners from unpacked source before copying new art-11..art-50 pairs.
           rm -f "$PROJECT/assets/profile-art/pfp/art-"*.webp "$PROJECT/assets/profile-art/banner/art-"*.webp
 
           ( cd "$OVERLAY" && find . -type f -print0 ) | while IFS= read -r -d '' f; do
