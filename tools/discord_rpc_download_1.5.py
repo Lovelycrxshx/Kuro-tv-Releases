@@ -209,8 +209,13 @@ def patch_tests(root: pathlib.Path) -> None:
             )
             if target in src:
                 src = src.replace(target, repl, 1)
-                t564.write_text(src, encoding="utf-8")
-                print(f"patched {t564}")
+            src = src.replace(
+                'browsing.details.equals("Browsing Kuro")',
+                'browsing.details.equals("Looking for an anime to watch")&&browsing.downloadUrl.equals(KuroPresence564.DOWNLOAD_PAGE_URL)',
+                1,
+            )
+            t564.write_text(src, encoding="utf-8")
+            print(f"patched {t564}")
 
     t565 = root / "tests/KuroPresence565HostTest.java"
     if t565.exists():

@@ -26,7 +26,7 @@ public final class KuroPresence564HostTest {
   check(KuroPresence564.safeDownloadUrl("https://EXAMPLE.com/public/get").equals("https://example.com/public/get"),"valid HTTPS public-shaped URL");
   KuroPresence564.PauseClear pause=new KuroPresence564.PauseClear();check(!pause.shouldClear("paused","clear1",1000),"start pause timer");check(!pause.shouldClear("paused","clear1",60999),"not cleared early");check(pause.shouldClear("paused","clear1",61000),"clear after one minute");check(!pause.shouldClear("playing","clear1",62000),"resume resets");check(!pause.shouldClear("paused","clear5",63000)&&!pause.shouldClear("paused","clear5",362999)&&pause.shouldClear("paused","clear5",363000),"five-minute pause");
   check(!pause.shouldClear("paused","show",9000000),"no clear in show mode");pause.reset();check(!pause.shouldClear("paused","clear1",2),"reset and monotonic rollback");
-  KuroPresence563.Snapshot browsing=KuroPresence564.browsing(1000,new KuroPresence564.Options());check(browsing.watching&&browsing.startMs==1000&&browsing.details.equals("Browsing Kuro"),"browsing session still Watching");
+  KuroPresence563.Snapshot browsing=KuroPresence564.browsing(1000,new KuroPresence564.Options());check(browsing.watching&&browsing.startMs==1000&&browsing.details.equals("Looking for an anime to watch")&&browsing.downloadUrl.equals(KuroPresence564.DOWNLOAD_PAGE_URL),"browsing session still Watching");
   KuroPresence563.Snapshot test=KuroPresence564.test();check(test.details.contains("test")&&test.buttonUrl.isEmpty()&&test.image.isEmpty(),"generic non-identifying test");
   System.out.println("PASS "+checks+" presence 5.64 model, privacy, controls, metadata and timer checks");
  }
