@@ -1,4 +1,4 @@
-name: build Kuro 1.5.2
+name: build Kuro 1.5.3
 
 # Builds the CURRENT Kuro version from the source zip stored in Drive, commits the
 # *aligned but unsigned* APK back to this branch, and never sees the signing key — the
@@ -30,10 +30,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  APK_NAME: Kuro-tv-1.5.2
+  APK_NAME: Kuro-tv-1.5.3
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
-  EXPECT_VERSION_NAME: "1.5.2"
-  EXPECT_VERSION_CODE: "94"
+  EXPECT_VERSION_NAME: "1.5.3"
+  EXPECT_VERSION_CODE: "95"
 
 jobs:
   apk:
@@ -592,12 +592,12 @@ jobs:
               for abi in ("arm64-v8a", "armeabi-v7a", "x86_64", "x86"):
                   so = z.read(f"lib/{abi}/libkuro_discord_rpc563.so")
                   assert b"Discord_Activity_AddButton" in so, f"{abi}: missing Discord_Activity_AddButton"
-                  assert b"https://lovelycrxshx.github.io/Kuro-tv-Releases/" in so, f"{abi}: missing download page URL"
+                  assert b"https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.3/Kuro-tv-1.5.3.apk" in so, f"{abi}: missing direct GitHub APK download URL"
                   assert b"Download\x00" in so, f"{abi}: missing Download label"
               js = z.read("assets/settings560.js").decode("utf-8")
               assert "['download','Download button'" in js, "settings560.js missing Download button row"
               dex_blobs = [z.read(n) for n in z.namelist() if n.startswith("classes") and n.endswith(".dex")]
-              assert any(b"https://lovelycrxshx.github.io/Kuro-tv-Releases/" in d for d in dex_blobs), "dex missing DOWNLOAD_PAGE_URL"
+              assert any(b"https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.3/Kuro-tv-1.5.3.apk" in d for d in dex_blobs), "dex missing direct GitHub APK DOWNLOAD_PAGE_URL"
               assert any(b"option-download15" in d for d in dex_blobs), "dex missing option-download15"
               assert any(b"You are on the latest version" in d for d in dex_blobs), "dex missing You are on the latest version"
               assert any(b"UP TO DATE" in d for d in dex_blobs), "dex missing UP TO DATE chip"
@@ -609,12 +609,12 @@ jobs:
               assert "assets/beta-polish-1.5.2.js" in z.namelist(), "APK missing assets/beta-polish-1.5.2.js"
               assert "assets/beta-polish-1.5.2.css" in z.namelist(), "APK missing assets/beta-polish-1.5.2.css"
               wn_js = z.read("assets/beta-whatsnew-1.5.js").decode("utf-8")
-              assert "var STAMP = '1.5.2';" in wn_js, "beta-whatsnew-1.5.js STAMP is not 1.5.2"
+              assert "var STAMP = '1.5.3';" in wn_js, "beta-whatsnew-1.5.js STAMP is not 1.5.3"
               motion_js = z.read("assets/beta-motion-1.5.js").decode("utf-8")
               assert "INTRO_HOLD = 3600;" in motion_js, "beta-motion-1.5.js missing 3600ms INTRO_HOLD"
               motion_css = z.read("assets/beta-motion-1.5.css").decode("utf-8")
               assert "km-iris .54s cubic-bezier(.62,.02,.9,.4) 3s forwards" in motion_css, "beta-motion-1.5.css missing 3s iris timing"
-          print("APK 1.5.2 verified: OLED mode, skeletons, hidden titles, full backup, ic_stat_kuro, and update permission prompt")
+          print("APK 1.5.3 verified: direct GitHub APK download URL + all 1.5.2/1.5.1 features")
           PY
           sha256sum "$RUNNER_TEMP/$APK_NAME-aligned.apk"
 
