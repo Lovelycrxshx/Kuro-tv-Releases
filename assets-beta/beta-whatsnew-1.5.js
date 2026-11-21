@@ -1,20 +1,19 @@
-/* Kuro 1.5.3 — one-time "What's new" card, shown once after the splash on
-   first launch of 1.5.3 and never again. Self-contained, dismissible by
+/* Kuro 1.5.4-beta — one-time "What's new" card, shown once after the splash on
+   first launch of 1.5.4-beta and never again. Self-contained, dismissible by
    button, backdrop tap, or Escape / Android back. */
 (function () {
   'use strict';
 
-  var STAMP = '1.5.3';
-  var KEY = 'kuro-beta-whatsnew-seen-1.5.3-player';
+  var STAMP = '1.5.4-beta';
+  var KEY = 'kuro-beta-whatsnew-seen-1.5.4-beta';
 
   try { if (localStorage.getItem(KEY) === STAMP) return; } catch (_) { return; }
 
   var ITEMS = [
-    ['OLED Segmented Player (All Servers)', 'Pure black gradient fade, gapped chapter timeline with glowing vertical scrubber pill, OLED pill-chip controls, and live accent + Pure Black OLED sync across all embedded server players, Web HLS, and native ExoPlayer.'],
-    ['Fullscreen Swipe-Up for Next Episode', 'Drag or swipe up from the bottom while in fullscreen to pull up the themed Up Next & Episodes drawer and switch episodes without leaving fullscreen.'],
-    ['App-UI Auto-Play Next Episode', 'Redesigned floating OLED Up-Next card with episode number & title, smooth 10-second accent progress bar, Play Next & Cancel pills, and embedded server end detection.'],
-    ['Direct GitHub APK Downloads', 'Release page, Discord Rich Presence Download button, and docs link directly to the signed Kuro-tv-1.5.3.apk on GitHub Releases.'],
-    ['20 Accents + Pure Black OLED', 'Full theme palette across WebView, native dialogs, and every video player, with instant Backup & Restore checkpoints.']
+    ['Cinematic Title Detail v2', 'Full-bleed banner header with ★ score, studio & runtime pills, interactive Franchise & Watch-Order strip, Canon / Filler / Recap badges, Skip Filler switch (also skips fillers on Auto-Next), 16:9 episode rows, and ⬇ Batch Offline Download.'],
+    ['Desktop-Site Left-Rail & DPAD UI', 'Turn on Settings → Site view → Desktop to unlock the frosted-OLED left navigation rail, widescreen hero & multi-column shelves, glowing accent DPAD focus halo, and remote/keyboard spatial navigation (standard mobile view stays untouched).'],
+    ['Smart Multi-Filter Browse & Voice Search', 'Combinable OLED filter pills on Browse (Dub Available, ★ 8.0+, Airing/Completed, Genre, Format, Year), native Android Voice Search mic pill, 🎲 Surprise Me randomizer, and richer SUB | DUB + ★ rating poster badges.'],
+    ['OLED Segmented Player & Fullscreen Swipe-Up', 'Carried forward from 1.5.3 across all servers, Web HLS, and native ExoPlayer with live 20-accent and Pure Black OLED sync.']
   ];
 
   function mark() {
@@ -36,12 +35,12 @@
 
     var tag = document.createElement('div');
     tag.className = 'kb-wn-tag';
-    tag.textContent = 'KURO.TV  \u00b7  1.5.3';
+    tag.textContent = 'KURO.TV  \u00b7  1.5.4 BETA';
 
     var h = document.createElement('h2');
     h.id = 'kb-wn-title';
     h.className = 'kb-wn-title';
-    h.textContent = 'What\u2019s new in 1.5.3';
+    h.textContent = 'What\u2019s new in 1.5.4-beta';
 
     var list = document.createElement('ul');
     list.className = 'kb-wn-list';
