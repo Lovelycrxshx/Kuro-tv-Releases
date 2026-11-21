@@ -605,7 +605,7 @@ jobs:
               assert any(b"themeAmoled152" in d for d in dex_blobs), "dex missing themeAmoled152"
               assert any(b"checkpointsExport152" in d for d in dex_blobs), "dex missing checkpointsExport152"
               assert any(b"Update alerts are off" in d for d in dex_blobs), "dex missing Update alerts permission banner"
-              assert "res/drawable/ic_stat_kuro.xml" in z.namelist(), "APK missing res/drawable/ic_stat_kuro.xml"
+              assert b"ic_stat_kuro" in z.read("resources.arsc"), "resources.arsc missing ic_stat_kuro"
               assert "assets/beta-polish-1.5.2.js" in z.namelist(), "APK missing assets/beta-polish-1.5.2.js"
               assert "assets/beta-polish-1.5.2.css" in z.namelist(), "APK missing assets/beta-polish-1.5.2.css"
               wn_js = z.read("assets/beta-whatsnew-1.5.js").decode("utf-8")

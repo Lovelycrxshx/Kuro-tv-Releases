@@ -41,7 +41,7 @@ updates**.
   Kuro updates surface a one-tap **Allow notifications** prompt instead of failing
   silently in the background.
 - **Slimmer source archive.** `Kuro-tv-1.5.2-Source.zip` packages only the clean
-  Gradle source tree (~8 MiB) instead of bundling historical build outputs.
+  Gradle source tree (~11 MiB) instead of bundling historical build outputs.
 
 ## Carried forward from 1.5.1 & 1.5
 
@@ -61,7 +61,7 @@ signing key, so profiles, watch list, history, downloads and logins stay put.
 
 ```
 sha256sum Kuro-tv-1.5.2.apk
-# {{APK_SHA256}}
+# 2a02912f6584934adbb7e9e35f9a4159c42770338795e4429d6d0d68ff5d8a71
 
 apksigner verify --print-certs Kuro-tv-1.5.2.apk
 # CN=Kuro Anime
@@ -70,4 +70,4 @@ apksigner verify --print-certs Kuro-tv-1.5.2.apk
 
 ## Notes
 
-- APK {{APK_BYTES}} bytes · the source archive's size is in its `.sha256` companion.
+- APK 48,714,133 bytes (46.5 MiB) · the source archive's size is in its `.sha256` companion.

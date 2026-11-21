@@ -33,9 +33,9 @@ env:
   VERSION_CODE: ${{ inputs.version_code || '94' }}
   TAG: v${{ inputs.version || '1.5.2' }}
   APK_NAME: Kuro-tv-${{ inputs.version || '1.5.2' }}
-  APK_SHA256: "PENDING_AFTER_BUILD"
+  APK_SHA256: "2a02912f6584934adbb7e9e35f9a4159c42770338795e4429d6d0d68ff5d8a71"
   SIGNER_SHA256: "1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e"
-  UNSIGNED_SHA256: "PENDING_AFTER_BUILD"
+  UNSIGNED_SHA256: "5275c5f287d0fb4d648b534636daf114e77b308f2158541f77068ac2585dab8f"
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
 
 jobs:
@@ -97,8 +97,8 @@ jobs:
             unzip -p "$APK" classes.dex | grep -aq "/$f" \
               || { echo "::error::$f is packed but the WebView would drop it"; exit 1; }
           done
-          unzip -l "$APK" | grep -q "res/drawable/ic_stat_kuro.xml" \
-            || { echo "::error::res/drawable/ic_stat_kuro.xml missing from APK"; exit 1; }
+          unzip -p "$APK" resources.arsc | grep -aq "ic_stat_kuro" \
+            || { echo "::error::resources.arsc missing ic_stat_kuro"; exit 1; }
           unzip -p "$APK" assets/beta-whatsnew-1.5.js | grep -aFq "var STAMP = '${VERSION}';" \
             || { echo "::error::beta-whatsnew-1.5.js stamp is not ${VERSION}"; exit 1; }
           unzip -p "$APK" classes.dex | grep -aFq 'themeAmoled152' \
