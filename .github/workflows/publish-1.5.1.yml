@@ -85,7 +85,9 @@ jobs:
             || { echo "::error::the APK has no accent picker - wrong build attached"; exit 1; }
           COUNT=$(unzip -l "$APK" | grep -cE 'assets/profile-art/(pfp|banner)/art-[0-9]{2}\.webp')
           echo "profile art files in the APK: $COUNT"
-          [ "$COUNT" -ge 20 ] || { echo "::error::only $COUNT art files in the APK - the ten-pair pack did not ship"; exit 1; }
+          [ "$COUNT" -ge 176 ] || { echo "::error::only $COUNT art files in the APK - expected 176 (88 pairs)"; exit 1; }
+          unzip -p "$APK" 'assets/profile-art-arm.js' | grep -aFq "'art-88'" \
+            || { echo "::error::profile-art-arm.js in the APK does not list art-88"; exit 1; }
           unzip -p "$APK" classes.dex | grep -aq 'KuroWebAssets13' \
             || { echo "::error::the WebView has no overlay asset list - the theme would not load"; exit 1; }
           unzip -p "$APK" classes.dex | grep -aq 'KuroTheme12' \
