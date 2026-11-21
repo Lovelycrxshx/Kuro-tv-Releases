@@ -84,7 +84,7 @@ Kuro is a player / front-end and hosts no media. The catalogue comes from these 
   accent, OLED mode and settings
 * **Downloads upkeep** — count and size, delete watched, keep the latest episode per series,
   delete all, and an optional quiet sweep every 7 or 30 days
-* **What's new** — one card per build on Home, and the same list in Settings → Developer
+* **What's new** — one card per build on Home, and developer contact & notices in Settings → Contact developer & notice for bugs and error
 
 ---
 

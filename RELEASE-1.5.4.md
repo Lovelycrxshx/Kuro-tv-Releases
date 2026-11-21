@@ -58,6 +58,10 @@ AniList / MyAnimeList Sync & Discord Hub**.
     Download button.
   - Restores **Signature Violet** (`violet`) as the default theme for fresh
     installs while keeping every user's chosen accent across all 20 themes.
+  - Updates the Settings support section to **Contact developer & notice for
+    bugs and error** and opens the verified developer Discord profile
+    (`https://discord.com/users/825998094067695616`) directly in Discord or the
+    browser.
 
 ## Carried forward from 1.5.3, 1.5.2, 1.5.1 & 1.5
 
@@ -82,7 +86,7 @@ APK over the top once if you want the non-beta `1.5.4` label.
 
 ```
 sha256sum Kuro-tv-1.5.4.apk
-# 25ae918de0105f2120588842b0f9cc8b87b176d817e2efbca06159ec02881f46
+# b2776b36b9d43897b73c6185a01d13704b7b313b44b3c9a5e4d16051f81b2ace
 
 apksigner verify --print-certs Kuro-tv-1.5.4.apk
 # CN=Kuro Anime
@@ -91,4 +95,4 @@ apksigner verify --print-certs Kuro-tv-1.5.4.apk
 
 ## Notes
 
-- APK 53,085,266 bytes (50.6 MiB) · the source archive (`Kuro-tv-1.5.4-Source.zip`, 15.6 MiB) has its own `.sha256` companion.
+- APK 53,085,286 bytes (50.6 MiB) · the source archive (`Kuro-tv-1.5.4-Source.zip`, 15.6 MiB) has its own `.sha256` companion.
