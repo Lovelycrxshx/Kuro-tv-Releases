@@ -4,11 +4,19 @@
 
 1.5.1 is a polish and updater fix release on top of 1.5: **Kuro updates** now
 tells you clearly when you are already on the latest build instead of getting
-stuck on a stale `100%` bar, and the opening title animation plays for a full
-**3.6 seconds** from frame one.
+stuck on a stale `100%` bar, the opening title animation plays for a full
+**3.6 seconds** from frame one, and **Profile art** expands with **78 new anime
+avatars and matching banners** (88 pairs total).
 
 ## What changed
 
+- **78 new anime PFPs & matching banners (88 pairs total).** Account → **Profile
+  art** now includes four new collections spanning modern shonen/fantasy, dark &
+  gothic anime, 90s/00s retro classics, and high-contrast manga panels (`art-11`
+  through `art-88`, alongside `art-01` through `art-10`). Both the Avatar and
+  Banner pickers use a compact two-row horizontal rail so all 88 choices browse
+  quickly and can be mixed and matched freely across the profile hero, header
+  chip, account drawer, and native player bar.
 - **"You are on the latest version" in Kuro updates.** When an update check finds
   no newer release on GitHub, the **Kuro updates** dialog now displays an
   **UP TO DATE** chip and **"You are on the latest version"**, hides the progress
