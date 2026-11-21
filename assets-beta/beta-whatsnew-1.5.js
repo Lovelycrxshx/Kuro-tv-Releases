@@ -18,7 +18,6 @@
  var CARD_ID = 'km-whatsnew-15';
 
  var ITEMS = [
-  '78 new anime avatars and matching banners added to Account > Profile art (88 pairs total across classic, modern, and manga styles).',
   'Kuro updates now clearly displays "You are on the latest version" instead of a stale 100% progress bar when no newer release exists.',
   'The opening title sequence now plays smoothly for ~3.6 seconds from cold launch (still skippable with a tap).',
   'Continue watching sits at the top of Home, with the episode number and how far in you are.',
