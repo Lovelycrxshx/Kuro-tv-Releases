@@ -58,6 +58,7 @@ Kuro is a player / front-end and hosts no media. The catalogue comes from these 
   and one tap back to the right episode
 * **Long press a poster** — Open, add or remove from My List, or hide it from Home
 * **Twenty accents** chosen in Settings, with the native dialogs, bars and player following
+* **88 anime avatars & matching banners** in Account → Profile art across classic, modern, and manga styles
 * **Downloads upkeep** — count and size, delete watched, keep the latest episode per series,
   delete all, and an optional quiet sweep every 7 or 30 days
 * **What's new** — one card per build on Home, and the same list in Settings → Developer
