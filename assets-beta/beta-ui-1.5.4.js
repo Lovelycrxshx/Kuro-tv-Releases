@@ -1106,50 +1106,15 @@
     toast('Voice search requires Android Speech Services or a supported microphone.');
   }
 
-  /* Surprise Me Randomizer */
-  function triggerSurpriseMe154(pager) {
-    var pool = (pager && pager.state && Array.isArray(pager.state.items)) ? pager.state.items.slice() : [];
-    if (hasActiveSmartFilters()) {
-      var filtered = pool.filter(matchesSmartFilters154);
-      if (filtered.length) pool = filtered;
-    }
-    // Prefer higher-scored items when metadata is cached
-    var highRated = pool.filter(function (it) {
-      var m = getItemMeta(it);
-      return !m || !m.score || m.score >= 75;
-    });
-    if (highRated.length) pool = highRated;
-
-    if (pool.length > 0 && typeof window.openShow === 'function') {
-      var pick = pool[Math.floor(Math.random() * pool.length)];
-      toast('🎲 Surprise pick: ' + pick.title);
-      window.openShow(pick);
-      return;
-    }
-
-    // Remote AniList discovery fallback when no items are loaded yet
-    var randomPage = 1 + Math.floor(Math.random() * 6);
-    catalogCall154('metaBatch154', { random: true, page: randomPage })
-      .then(function (res) {
-        var list = res && res.data && res.data.Page && res.data.Page.media;
-        if (!Array.isArray(list) || !list.length) throw new Error('empty');
-        var chosen = list[Math.floor(Math.random() * list.length)];
-        recordMediaMeta(chosen);
-        var t = (chosen.title && (chosen.title.english || chosen.title.romaji)) || '';
-        if (t && typeof window.searchPage === 'function') {
-          toast('🎲 Surprise pick: ' + t);
-          setCurView('search');
-          window.searchPage(t);
-        }
-      })
-      .catch(function () {
-        toast('Load Browse results first, then tap Surprise Me.');
-      });
-  }
-
   var activeBrowsePager154 = null;
 
-  function enhanceBrowseCommandBar154(pager) {
+  function pruneHiddenControls154() {
+    document.querySelectorAll('.open-sites, [data-miruro-verify], #k154-surprise-btn, .k154-surprise-btn').forEach(function (el) {
+      el.remove();
+    });
+  }
+
+  function enhanceBrowseCommandBar154() {
     var form = document.getElementById('discover-search');
     if (!form || form.classList.contains('k154-cmd-ready')) return;
     form.classList.add('k154-cmd-ready');
@@ -1163,15 +1128,7 @@
     micBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8.5 21h7"/></svg><span>Voice</span>';
     micBtn.onclick = triggerVoiceSearch154;
 
-    var surpriseBtn = document.createElement('button');
-    surpriseBtn.type = 'button';
-    surpriseBtn.id = 'k154-surprise-btn';
-    surpriseBtn.className = 'k154-surprise-btn';
-    surpriseBtn.textContent = '🎲 Surprise Me';
-    surpriseBtn.onclick = function () { triggerSurpriseMe154(activeBrowsePager154 || pager); };
-
     form.appendChild(micBtn);
-    form.appendChild(surpriseBtn);
   }
 
   function renderSmartFilterBar154(pager) {
@@ -1305,27 +1262,29 @@
     }
   }
 
-  /* Observe #main mutations so Home shelves, Browse grids & Search popups stay enhanced */
+  /* Observe DOM mutations so Home shelves, Browse grids, Search & Player overlays stay clean */
   function startObserver154() {
-    var mainEl = document.getElementById('main');
-    if (!mainEl) return;
+    var rootEl = document.body || document.getElementById('main');
+    if (!rootEl) return;
     var rafPending = false;
     var obs = new MutationObserver(function () {
       if (rafPending) return;
       rafPending = true;
       requestAnimationFrame(function () {
         rafPending = false;
+        pruneHiddenControls154();
         if (document.getElementById('discover-search')) {
-          enhanceBrowseCommandBar154(activeBrowsePager154);
+          enhanceBrowseCommandBar154();
         }
         decorateRenderedPosters154();
       });
     });
-    obs.observe(mainEl, { childList: true, subtree: true });
+    obs.observe(rootEl, { childList: true, subtree: true });
   }
 
   function init154() {
     syncDesktopSite154();
+    pruneHiddenControls154();
     hookDetailView154();
     hookBrowseFilters154();
     startObserver154();

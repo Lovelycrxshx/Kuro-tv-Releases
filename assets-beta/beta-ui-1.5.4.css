@@ -47,6 +47,17 @@ html[data-kuro-theme="light"] {
   --k154-recap-fg: #7e22ce;
 }
 
+/* --------------------------------------------------------------------------
+   Hidden Browse / Source Clutter (Verify Library 11, Surprise Me, Source sites)
+   -------------------------------------------------------------------------- */
+.open-sites,
+[data-open-site],
+[data-miruro-verify],
+#k154-surprise-btn,
+.k154-surprise-btn {
+  display: none !important;
+}
+
 /* ==========================================================================
    #2 CINEMATIC TITLE DETAIL PAGE V2
    ========================================================================== */
