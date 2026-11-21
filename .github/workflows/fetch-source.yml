@@ -30,7 +30,7 @@ jobs:
       OUT: staging/Kuro-tv-5.81-Source.zip
       MIN_BYTES: 15000000
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Download the source zip from Drive
         run: |

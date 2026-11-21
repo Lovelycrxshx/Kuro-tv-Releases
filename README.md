@@ -2,10 +2,10 @@
 
 An open-source media client designed for Android TV, Fire TV, and mobile devices.
 
-[![Latest Release](https://img.shields.io/badge/Latest_Version-1.5.1-blue)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)
+[![Latest Release](https://img.shields.io/badge/Latest_Version-1.5.2-blue)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green.svg)](LICENSE)
 
-**Current release: 1.5.1** (`versionCode` 93) — release notes in [RELEASE-1.5.1.md](RELEASE-1.5.1.md).
+**Current release: 1.5.2** (`versionCode` 94) — release notes in [RELEASE-1.5.2.md](RELEASE-1.5.2.md).
 Notes for every earlier cut are in [archive/1.x/](archive/1.x/), and the same text is on the
 [releases page](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases).
 
@@ -56,8 +56,13 @@ Kuro is a player / front-end and hosts no media. The catalogue comes from these 
   suggestion never skips by itself
 * **Continue watching** — Home opens with the episodes you have started, the minutes you are in,
   and one tap back to the right episode
-* **Long press a poster** — Open, add or remove from My List, or hide it from Home
-* **Twenty accents** chosen in Settings, with the native dialogs, bars and player following
+* **Long press a poster** — Open, add or remove from My List, or hide it from Home (with a
+  **Hidden titles** manager in Settings → Privacy and links)
+* **Twenty accents + Pure black (OLED)** chosen in Settings, with the native dialogs, bars and
+  player following
+* **Shimmer loading skeletons** on Home and Browse so catalogues never jump when artwork arrives
+* **Local `.json` Backup & restore** — lists, history, episode resume checkpoints, profile art,
+  accent, OLED mode and settings
 * **Downloads upkeep** — count and size, delete watched, keep the latest episode per series,
   delete all, and an optional quiet sweep every 7 or 30 days
 * **What's new** — one card per build on Home, and the same list in Settings → Developer
@@ -86,8 +91,8 @@ Kuro TV is purely a media player / front-end interface. It does not host, upload
 ## 🗺️ Roadmap
 
 What's next for the 1.x line — an update channel with a real beta ring, the DPAD/focus
-overhaul, home skeletons, the airing calendar and theming v2 — lives in
-**[ROADMAP.md](ROADMAP.md)**. The 5.x line is closed, and 1.0–1.5 are history: both are in
+overhaul, the airing calendar and custom themes — lives in
+**[ROADMAP.md](ROADMAP.md)**. The 5.x line is closed, and 1.0–1.5.1 are history: both are in
 **[archive/](archive/)**.
 
 ---

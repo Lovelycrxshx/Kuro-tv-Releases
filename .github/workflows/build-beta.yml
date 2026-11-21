@@ -1,4 +1,4 @@
-name: build Kuro 1.5.1
+name: build Kuro 1.5.2
 
 # Builds the CURRENT Kuro version from the source zip stored in Drive, commits the
 # *aligned but unsigned* APK back to this branch, and never sees the signing key — the
@@ -30,10 +30,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  APK_NAME: Kuro-tv-1.5.1
+  APK_NAME: Kuro-tv-1.5.2
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
-  EXPECT_VERSION_NAME: "1.5.1"
-  EXPECT_VERSION_CODE: "93"
+  EXPECT_VERSION_NAME: "1.5.2"
+  EXPECT_VERSION_CODE: "94"
 
 jobs:
   apk:
@@ -42,13 +42,13 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Check out this branch (receives the artifacts)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.ref_name }}
           path: out
           fetch-depth: 1
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -172,8 +172,10 @@ jobs:
             || { echo "::error::the motion stylesheet is not linked."; exit 1; }
           grep -qF 'theme-rich-1.5.css' "$PROJECT/assets/index.html" \
             || { echo "::error::the richer surface layer is not linked."; exit 1; }
-          for f in beta-extras-1.5.css beta-extras-1.5.js beta-continue-1.5.js \
-                   beta-whatsnew-1.5.js beta-downloads-1.5.js; do
+          for f in beta-motion-1.5.css beta-motion-1.5.js theme-rich-1.5.css \
+                   beta-extras-1.5.css beta-extras-1.5.js beta-continue-1.5.js \
+                   beta-whatsnew-1.5.js beta-downloads-1.5.js \
+                   beta-polish-1.5.2.css beta-polish-1.5.2.js; do
             grep -qF "$f" "$PROJECT/assets/index.html" \
               || { echo "::error::$f is shipped but the page never loads it."; exit 1; }
           done
@@ -351,6 +353,26 @@ jobs:
           "$PROJECT/tests/test-discord-native564.sh"
           "$PROJECT/tests/test-presence564.sh"
           "$PROJECT/tests/test-presence566.sh"
+
+      - name: Apply Kuro 1.5.2 native & backup polish
+        run: |
+          set -euo pipefail
+          python3 "$GITHUB_WORKSPACE/out/tools/polish_1.5.2.py" "$PROJECT"
+
+          PKG="$PROJECT/src/app/lovelycrxshx/kuro"
+          test -s "$PROJECT/res/drawable/ic_stat_kuro.xml" \
+            || { echo "::error::res/drawable/ic_stat_kuro.xml missing."; exit 1; }
+          ! grep -rn "setSmallIcon.*getApplicationInfo" "$PKG/" \
+            || { echo "::error::opaque getApplicationInfo().icon still used in setSmallIcon."; exit 1; }
+          grep -Fq 'requestUpdateNotifications152' "$PKG/MainActivity.java" \
+            || { echo "::error::MainActivity missing requestUpdateNotifications152."; exit 1; }
+          grep -Fq 'notifBanner152' "$PKG/KuroUpdateDialog582.java" \
+            || { echo "::error::KuroUpdateDialog582 missing notifBanner152."; exit 1; }
+          grep -Fq 'checkpointsExport152' "$PKG/MainActivity.java" \
+            || { echo "::error::MainActivity missing checkpointsExport152."; exit 1; }
+          grep -Fq 'themeAmoled152' "$PKG/MainActivity.java" \
+            || { echo "::error::MainActivity missing themeAmoled152."; exit 1; }
+          ( cd "$PROJECT" && node tests/test-restore-selection573.cjs )
 
       - name: Verify the expected changes are in this source
         run: |
@@ -580,11 +602,19 @@ jobs:
               assert any(b"You are on the latest version" in d for d in dex_blobs), "dex missing You are on the latest version"
               assert any(b"UP TO DATE" in d for d in dex_blobs), "dex missing UP TO DATE chip"
               assert any(b"dismissEntry15" in d for d in dex_blobs), "dex missing dismissEntry15"
+              assert any(b"themeAmoled152" in d for d in dex_blobs), "dex missing themeAmoled152"
+              assert any(b"checkpointsExport152" in d for d in dex_blobs), "dex missing checkpointsExport152"
+              assert any(b"Update alerts are off" in d for d in dex_blobs), "dex missing Update alerts permission banner"
+              assert b"ic_stat_kuro" in z.read("resources.arsc"), "resources.arsc missing ic_stat_kuro"
+              assert "assets/beta-polish-1.5.2.js" in z.namelist(), "APK missing assets/beta-polish-1.5.2.js"
+              assert "assets/beta-polish-1.5.2.css" in z.namelist(), "APK missing assets/beta-polish-1.5.2.css"
+              wn_js = z.read("assets/beta-whatsnew-1.5.js").decode("utf-8")
+              assert "var STAMP = '1.5.2';" in wn_js, "beta-whatsnew-1.5.js STAMP is not 1.5.2"
               motion_js = z.read("assets/beta-motion-1.5.js").decode("utf-8")
               assert "INTRO_HOLD = 3600;" in motion_js, "beta-motion-1.5.js missing 3600ms INTRO_HOLD"
               motion_css = z.read("assets/beta-motion-1.5.css").decode("utf-8")
               assert "km-iris .54s cubic-bezier(.62,.02,.9,.4) 3s forwards" in motion_css, "beta-motion-1.5.css missing 3s iris timing"
-          print("APK 1.5.1 verified: Discord RPC Download button, up-to-date dialog, and 3.6s intro")
+          print("APK 1.5.2 verified: OLED mode, skeletons, hidden titles, full backup, ic_stat_kuro, and update permission prompt")
           PY
           sha256sum "$RUNNER_TEMP/$APK_NAME-aligned.apk"
 
