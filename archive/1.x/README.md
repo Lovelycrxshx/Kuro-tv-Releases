@@ -1,6 +1,6 @@
-# Archive — 1.0 to 1.4
+# Archive — 1.0 to 1.5
 
-Kept for history. The current release is [1.5](../../RELEASE-1.5.md); its notes are the only
+Kept for history. The current release is [1.5.1](../../RELEASE-1.5.1.md); its notes are the only
 ones at the repository root.
 
 ## Release notes
@@ -10,6 +10,7 @@ ones at the repository root.
 - [RELEASE-1.2.md](RELEASE-1.2.md) — the native layer follows the theme.
 - [RELEASE-1.3.md](RELEASE-1.3.md) — the WebView actually serves the overlay assets.
 - [RELEASE-1.4.md](RELEASE-1.4.md) — ten accents and a richer theme picker.
+- [RELEASE-1.5.md](RELEASE-1.5.md) — continue watching, twenty accents, poster sheet, downloads upkeep and Discord Rich Presence Download button.
 
 The same text is on the [releases page](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases).
 

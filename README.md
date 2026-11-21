@@ -2,10 +2,10 @@
 
 An open-source media client designed for Android TV, Fire TV, and mobile devices.
 
-[![Latest Release](https://img.shields.io/badge/Latest_Version-1.5-blue)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)
+[![Latest Release](https://img.shields.io/badge/Latest_Version-1.5.1-blue)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green.svg)](LICENSE)
 
-**Current release: 1.5** (`versionCode` 92) — release notes in [RELEASE-1.5.md](RELEASE-1.5.md).
+**Current release: 1.5.1** (`versionCode` 93) — release notes in [RELEASE-1.5.1.md](RELEASE-1.5.1.md).
 Notes for every earlier cut are in [archive/1.x/](archive/1.x/), and the same text is on the
 [releases page](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases).
 
@@ -87,7 +87,7 @@ Kuro TV is purely a media player / front-end interface. It does not host, upload
 
 What's next for the 1.x line — an update channel with a real beta ring, the DPAD/focus
 overhaul, home skeletons, the airing calendar and theming v2 — lives in
-**[ROADMAP.md](ROADMAP.md)**. The 5.x line is closed, and 1.0–1.4 are history: both are in
+**[ROADMAP.md](ROADMAP.md)**. The 5.x line is closed, and 1.0–1.5 are history: both are in
 **[archive/](archive/)**.
 
 ---
