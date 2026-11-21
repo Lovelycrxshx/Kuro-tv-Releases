@@ -26,7 +26,9 @@ def detect_download_url(root: pathlib.Path) -> str:
     if gradle.exists():
         m = re.search(r"versionName\s+'([^']+)'", gradle.read_text(encoding="utf-8"))
         if m:
-            ver = m.group(1).strip()
+            cand = m.group(1).strip()
+            if cand and "-" not in cand:
+                ver = cand
     return f"https://github.com/{REPO}/releases/download/v{ver}/Kuro-tv-{ver}.apk"
 
 
