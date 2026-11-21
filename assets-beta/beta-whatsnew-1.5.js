@@ -22,6 +22,7 @@
   'Hold any poster for quick actions: open it, add it to My List, or hide it from Home.',
   'Downloads can clean themselves up: delete watched episodes, keep one per series, or clear them all.',
   'Theme colour lives in Settings > Appearance and startup, with twenty accents.',
+  'Discord Rich Presence now includes a Download button linking to Kuro\u2019s download page, with a Show / Hide option in Presence customization.',
   'The update arrow in the header is now the only update button - the Account card is gone.',
   'The "Private profile / LOCAL" card is gone from Account.'
  ];

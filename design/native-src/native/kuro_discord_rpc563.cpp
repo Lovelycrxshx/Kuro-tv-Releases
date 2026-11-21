@@ -168,11 +168,12 @@ static bool isNeutralPoster566(const std::string& url){
 JNIEXPORT void JNICALL Java_app_lovelycrxshx_kuro_KuroDiscordRpc563_nativePublish(JNIEnv* e,jclass,jlong id,jbyteArray d,jbyteArray st,jbyteArray image,jbyteArray watch,jbyteArray download,jlong start,jlong end){
  std::lock_guard<std::mutex> l(guard);try{
   if(!ours(id)||!direct)return;auto a=std::make_shared<discordpp::Activity>();a->SetType(discordpp::ActivityTypes::Watching);a->SetName("Kuro.tv");
-  // Saved legacy link choices remain on the phone; no activity buttons are published.
-  (void)watch;(void)download;auto details=read(e,d),state=read(e,st),poster=read(e,image);
+  // Episode/source watch links are never published; only Kuro's pinned download page button may be attached.
+  (void)watch;auto details=read(e,d),state=read(e,st),poster=read(e,image),dl=read(e,download,256);
   if(!details.empty())a->SetDetails(details);if(!state.empty())a->SetState(state);
   if(isNeutralPoster566(poster)){discordpp::ActivityAssets assets;assets.SetLargeImage(poster);a->SetAssets(assets);}
   if(start>0){discordpp::ActivityTimestamps t;t.SetStart(static_cast<uint64_t>(start));if(end>start)t.SetEnd(static_cast<uint64_t>(end));a->SetTimestamps(t);}
+  if(dl=="https://lovelycrxshx.github.io/Kuro-tv-Releases/"){discordpp::ActivityButton btn;btn.SetLabel("Download");btn.SetUrl(dl);a->AddButton(btn);}
   lastActivity=a;publishDirect();publishLinked();
  }catch(...){directResult=-1;}
 }

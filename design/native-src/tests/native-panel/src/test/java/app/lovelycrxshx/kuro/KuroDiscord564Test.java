@@ -22,7 +22,7 @@ public class KuroDiscord564Test {
  @Before public void setup(){context=RuntimeEnvironment.getApplication();context.getSharedPreferences(KuroDiscordPreferences564.FILE,Context.MODE_PRIVATE).edit().clear().commit();}
  @Test public void allChoicesValidateAndMapToTheModel(){
   KuroDiscordPreferences564 p=new KuroDiscordPreferences564(context);
-  assertEquals("anime",p.get("layout"));assertEquals("show",p.get("title"));assertEquals("show",p.get("poster"));assertEquals("on",p.get("current"));assertEquals("off",p.get("download"));
+  assertEquals("anime",p.get("layout"));assertEquals("show",p.get("title"));assertEquals("show",p.get("poster"));assertEquals("on",p.get("current"));assertEquals("on",p.get("download"));
   String[][] changes={{"layout","episode"},{"separator","dash"},{"title","hide"},{"episode","hide"},{"poster","icon"},{"watch","hide"},{"server","on"},{"total","on"},{"current","off"},{"linked","off"},{"pause","noProgress"},{"buffering","off"},{"download","on"},{"notification","on"}};
   for(String[] a:changes){assertTrue(a[0],p.set(a[0],a[1]));assertEquals(a[1],p.get(a[0]));}
   assertFalse(p.set("title","on"));assertFalse(p.set("pause","hide"));assertFalse(p.set("unknown","on"));assertFalse(p.set("download",null));
@@ -36,7 +36,7 @@ public class KuroDiscord564Test {
   KuroPresence563.Snapshot s=KuroPresence564.watching(p.options(),"Example","3","Real name","sub",
     "https://hianime.ms/img.jpg","https://hianime.ms/anime/test","https://hianime.ms/watch-test",
     "Server 1","12","playing",30000,600000,1000000,1.0);
-  assertTrue(s.buttonUrl.isEmpty());assertTrue(s.downloadUrl.isEmpty());assertTrue(s.image.isEmpty());
+  assertTrue(s.buttonUrl.isEmpty());assertEquals(KuroPresence564.DOWNLOAD_PAGE_URL,s.downloadUrl);assertTrue(s.image.isEmpty());
   assertEquals("show",p.get("watch"));assertEquals("on",p.get("download"));
  }
  @Test public void serverAndTotalUseOnlyAvailableReportedMetadata()throws Exception{

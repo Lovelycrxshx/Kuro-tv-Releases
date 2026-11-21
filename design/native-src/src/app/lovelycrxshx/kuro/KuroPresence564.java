@@ -7,10 +7,12 @@ import java.util.Locale;
 /** Privacy-first presentation of data Kuro actually knows. No player scraping is added here. */
 final class KuroPresence564 {
  private KuroPresence564() {}
+ static final String DOWNLOAD_PAGE_URL="https://lovelycrxshx.github.io/Kuro-tv-Releases/";
  static final class Options {
   String layout="anime",separator="dot",pause="show",downloadUrl="",away="quick";
-  boolean title=true,episode=true,poster=true,watch=true,server=false,total=false,buffering=true,download=false,rewatch=false;
+  boolean title=true,episode=true,poster=true,watch=true,server=false,total=false,buffering=true,download=true,rewatch=false;
  }
+ private static String downloadButton(Options o){return o!=null&&o.download&&o.title?DOWNLOAD_PAGE_URL:"";}
  static String safeDownloadUrl(String value){
   if(value==null||value.length()>256||value.length()<10)return "";
   try{
@@ -36,12 +38,12 @@ final class KuroPresence564 {
   return n;
  }
  static KuroPresence563.Snapshot browsing(long sessionStart,Options o){
-  // No buttons are published. Title privacy applies here too: when the user
+  // Source links are never published. Title privacy applies here too: when the user
   // hides titles the app never names the service it is idling in.
   boolean named=o!=null&&o.title;
   String details=named?"Looking for an anime to watch":"In the app";
   String state=named?"Kuro.tv":"Browsing";
-  return new KuroPresence563.Snapshot(details,state,"","",true,Math.max(0,sessionStart),0,"");
+  return new KuroPresence563.Snapshot(details,state,"","",true,Math.max(0,sessionStart),0,downloadButton(o));
  }
  // Compatibility overload used by the earlier offline tests.
  static KuroPresence563.Snapshot watching(Options o,String title,String episode,String language,String poster,String showUrl,
@@ -105,9 +107,10 @@ final class KuroPresence564 {
   // Only neutral metadata-site covers are shared, and title privacy hides them.
   // Source page identities are never passed into a Discord activity.
   String image=o.title&&o.poster?KuroPresence563.safeUrl(poster,true):"";
-  return new KuroPresence563.Snapshot(details,state,image,"",true,start,end,"");
+  return new KuroPresence563.Snapshot(details,state,image,"",true,start,end,downloadButton(o));
  }
- static KuroPresence563.Snapshot test(){return new KuroPresence563.Snapshot("Kuro connection test","Test activity for 15 seconds","","",true,0,0,"");}
+ static KuroPresence563.Snapshot test(){return test(null);}
+ static KuroPresence563.Snapshot test(Options o){return new KuroPresence563.Snapshot("Kuro connection test","Test activity for 15 seconds","","",true,0,0,(o==null||(o.download&&o.title))?DOWNLOAD_PAGE_URL:"");}
  /** Pause clearing uses monotonic time, never a fabricated player state. */
  static final class PauseClear {
   private long since=-1;

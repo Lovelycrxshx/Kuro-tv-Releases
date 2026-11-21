@@ -34,6 +34,10 @@ int main(){
  assert(direct->updateCount==1&&linkedClient->updateCount==1);
  assert(direct->GetStatus()==discordpp::Client::Status::Disconnected); // published without ever connectingassert(direct->last.type==discordpp::ActivityTypes::Watching);assert(direct->last.name=="Kuro.tv");
  assert(direct->last.details=="Actual title"&&direct->last.state=="Episode 1 · DUB");assert(direct->last.assets.large=="https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1-example.jpg");assert(direct->last.buttons.empty()&&linkedClient->last.buttons.empty());assert(direct->last.times.start==1000&&direct->last.times.end==2000);
+ auto officialDl=makeBytes("https://lovelycrxshx.github.io/Kuro-tv-Releases/");
+ Java_app_lovelycrxshx_kuro_KuroDiscordRpc563_nativePublish(&env,nullptr,one,d,st,img,watch,officialDl,1000,2000);
+ assert(direct->last.buttons.size()==1&&direct->last.buttons[0].label=="Download"&&direct->last.buttons[0].url=="https://lovelycrxshx.github.io/Kuro-tv-Releases/");
+ assert(linkedClient->last.buttons.size()==1&&linkedClient->last.buttons[0].label=="Download"&&linkedClient->last.buttons[0].url=="https://lovelycrxshx.github.io/Kuro-tv-Releases/");
  auto providerImg=makeBytes("https://hianime.ms/poster.jpg");
  Java_app_lovelycrxshx_kuro_KuroDiscordRpc563_nativePublish(&env,nullptr,one,d,st,providerImg,watch,download,1000,2000);
  assert(direct->last.assets.large.empty()&&linkedClient->last.assets.large.empty());

@@ -24,15 +24,16 @@ final class KuroDiscordPreferences564 {
   CHOICES.put("linked",new String[]{"on","off"});
   CHOICES.put("pause",new String[]{"show","noProgress","clear1","clear5"});
   CHOICES.put("buffering",new String[]{"on","off"});
-  CHOICES.put("download",new String[]{"off","on"});
+  CHOICES.put("download",new String[]{"on","off"});
   CHOICES.put("notification",new String[]{"off","on"});
   // How long presence survives after Kuro leaves the foreground.
   CHOICES.put("away",new String[]{"quick","min1","min5","keep"});
  }
  private final SharedPreferences prefs;
  KuroDiscordPreferences564(Context c){prefs=c.getSharedPreferences(FILE,Context.MODE_PRIVATE);}
- String get(String key){String[] values=CHOICES.get(key);if(values==null)return "";String v=prefs.getString("option-"+key,values[0]);return Arrays.asList(values).contains(v)?v:values[0];}
- boolean set(String key,String value){String[] values=CHOICES.get(key);if(values==null||value==null||!Arrays.asList(values).contains(value))return false;prefs.edit().putString("option-"+key,value).apply();return true;}
+ private static String storageKey(String key){return "download".equals(key)?"option-download15":"option-"+key;}
+ String get(String key){String[] values=CHOICES.get(key);if(values==null)return "";String v=prefs.getString(storageKey(key),values[0]);return Arrays.asList(values).contains(v)?v:values[0];}
+ boolean set(String key,String value){String[] values=CHOICES.get(key);if(values==null||value==null||!Arrays.asList(values).contains(value))return false;prefs.edit().putString(storageKey(key),value).apply();return true;}
  boolean setDownloadUrl(String value){String safe=KuroPresence564.safeDownloadUrl(value);if(value!=null&&!value.isEmpty()&&safe.isEmpty())return false;prefs.edit().putString("download-url",safe).apply();return true;}
  String downloadUrl(){return KuroPresence564.safeDownloadUrl(prefs.getString("download-url",""));}
  JSONObject json(){JSONObject o=new JSONObject();try{for(String k:CHOICES.keySet())o.put(k,get(k));o.put("downloadUrl",downloadUrl());}catch(Exception ignored){}return o;}

@@ -209,9 +209,9 @@ final class KuroDiscordRpc563 {
     boolean failed=(currentTarget()&&result<0)||(linkedTarget()&&linkResult<0);
     boolean ready=retry567.ready(failed,lastSend,now);failing=failed;
     if(failed&&ready&&lastSend>=0)gate.reset();
-    KuroPresence563.Snapshot s=inTest?KuroPresence564.test():latest;
+    KuroPresence563.Snapshot s=inTest?KuroPresence564.test(preferences.options()):latest;
     if(s!=null&&ready&&gate.due(s,now)){
-     nativePublish(owner,utf8(s.details),utf8(s.state),utf8(s.image),NO_PRESENCE_LINK,NO_PRESENCE_LINK,s.startMs,s.endMs);
+     nativePublish(owner,utf8(s.details),utf8(s.state),utf8(s.image),NO_PRESENCE_LINK,utf8(s.downloadUrl),s.startMs,s.endMs);
      gate.sent(s,now);retry567.sent(failed);lastSend=now;hotUntil=now+4000;
     }
     // Poll faster only while there is work: a handshake, an update in flight or

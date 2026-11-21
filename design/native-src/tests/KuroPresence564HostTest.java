@@ -14,9 +14,10 @@ public final class KuroPresence564HostTest {
   o.pause="noProgress";s=sample(o,"paused",61000,1200000);check(s.details.contains("Paused")&&!s.details.contains("1:01"),"hide paused progress");
   o.buffering=true;check(sample(o,"buffering",0,0).details.contains("Buffering"),"show observed buffering");o.buffering=false;check(!sample(o,"buffering",0,0).details.contains("Buffering"),"hide buffering");
   s=sample(o,"unknown",0,0);check(s.details.contains("Selected")&&s.startMs==0&&s.endMs==0,"do not invent state or timing for embeds");
-  o.download=true;o.downloadUrl="https://example.com/get/kuro";check(sample(o,"playing",0,10000).downloadUrl.isEmpty(),"download not published even when an older option was on");
+  o.download=true;o.downloadUrl="https://example.com/get/kuro";check(sample(o,"playing",0,10000).downloadUrl.equals(KuroPresence564.DOWNLOAD_PAGE_URL),"only pinned Kuro download page is published");
+  o.download=false;check(sample(o,"playing",0,10000).downloadUrl.isEmpty(),"download button hidden when toggled off");o.download=true;
   o.title=false;s=sample(o,"playing",0,10000);check(!s.details.contains("Jujutsu")&&!s.state.contains("Jujutsu")&&s.image.isEmpty()&&s.buttonUrl.isEmpty()&&s.downloadUrl.isEmpty(),"title privacy hides identifying assets");
-  o.title=true;o.episode=false;s=sample(o,"playing",0,10000);check(!s.details.contains("12")&&!s.state.contains("12")&&s.buttonUrl.isEmpty()&&s.downloadUrl.isEmpty(),"episode privacy hides episode-specific links");
+  o.title=true;o.episode=false;s=sample(o,"playing",0,10000);check(!s.details.contains("12")&&!s.state.contains("12")&&s.buttonUrl.isEmpty()&&s.downloadUrl.equals(KuroPresence564.DOWNLOAD_PAGE_URL),"episode privacy hides episode-specific links while keeping app download page");
   o.title=true;o.episode=true;o.poster=false;o.watch=false;s=sample(o,"playing",0,10000);check(s.image.isEmpty()&&s.buttonUrl.isEmpty(),"app icon fallback and no watch link");
   KuroPresence563.Snapshot bogus=KuroPresence564.watching(o,"A\nB","1?token=bad","sub","","","https://secret.invalid/path","20?key=x","playing",-1,-1,1000000);
   check(!bogus.details.contains("\n")&&!bogus.state.contains("token")&&!bogus.state.contains("key=")&&!bogus.state.contains("secret.invalid")&&bogus.startMs==0,"untrusted fields and absent timing sanitized");
