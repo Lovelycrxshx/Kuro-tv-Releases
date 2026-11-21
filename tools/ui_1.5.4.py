@@ -111,7 +111,7 @@ def patch_offline(root: pathlib.Path) -> None:
         if (activity == null || activity.isFinishing() || activity.isDestroyed() || rawJson == null || rawJson.length() > 250000) return;
         final List<JSONObject> valid = new ArrayList<>();
         try {
-            JSONArray arr = new JSONArray(rawJson);
+            org.json.JSONArray arr = new org.json.JSONArray(rawJson);
             for (int i = 0; i < arr.length() && valid.size() < 30; i++) {
                 JSONObject row = arr.optJSONObject(i);
                 if (row == null) continue;
@@ -142,7 +142,7 @@ def patch_offline(root: pathlib.Path) -> None:
                             String ep = limit(row.optString("episode", ""), 20);
                             String id = "kuro561:" + Integer.toHexString((addr + "|" + key).hashCode());
                             JSONObject meta = new JSONObject().put("title", t).put("episode", ep).put("key", KuroPlayback561.validKey(key) ? key : "");
-                            DownloadRequest req = new DownloadRequest.Builder(id, Uri.parse(addr))
+                            DownloadRequest req = new DownloadRequest.Builder(id, android.net.Uri.parse(addr))
                                     .setMimeType(MimeTypes.APPLICATION_M3U8)
                                     .setData(meta.toString().getBytes(StandardCharsets.UTF_8))
                                     .build();
