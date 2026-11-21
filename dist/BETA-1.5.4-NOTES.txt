@@ -4,10 +4,10 @@ Installs cleanly over v1.5.3 (versionName 1.5.4-beta, versionCode 96), signed
 with the same CN=Kuro Anime release key so no uninstall is needed. Public GitHub
 Releases remain on v1.5.3.
 
-APK      https://drive.google.com/file/d/14UZzL76JXd0WLaPpqGnVEsPnPS3FmhBt/view
-sha256   bf90970c2959d6cc1112f1e0f3adcf40c917105ba50dddd9c25338abd4aff5de
-md5      e5a35ea36e23b33c440ee760bc10d1d3
-size     48,758,292 bytes
+APK      https://drive.google.com/file/d/18a6i2zJpWd0DiHWpsrCQ62v0RFecpjmq/view
+sha256   1c5668e66839d05659d7b5836c4c013bd44fec27c4eeb42deb0a78e0fceab07f
+md5      d7abf7aed3d1d1824acb2f6cb267c1b7
+size     48,757,956 bytes
 
 What is new in 1.5.4-beta
   1. Cinematic Title Detail Page v2 (#2).
@@ -40,6 +40,9 @@ What is new in 1.5.4-beta
        ★ 8.5+, Airing, Completed, and top Genres alongside Format & Year chips.
      - Native Android Voice Search mic button (RecognizerIntent, zero RECORD_AUDIO
        permission required, with Web Speech fallback) right in the Browse bar.
-     - "🎲 Surprise Me" randomizer pill.
      - Richer poster badges with top-right ★ scores and bottom-left SUB | DUB
        split count pills.
+
+  4. Cleaner Browse & Detail Surface (Beta Polish).
+     - Hidden "Verify Library 11" ([data-miruro-verify]), "🎲 Surprise Me", and
+       the "Source sites · open separately" external link strip (.open-sites).
