@@ -1262,7 +1262,667 @@
     }
   }
 
-  /* Observe DOM mutations so Home shelves, Browse grids, Search & Player overlays stay clean */
+  /* ==========================================================================
+     ACCOUNT SECTION (#3): UNIFIED TRACKERS & DISCORD RICH PRESENCE HUB
+     ========================================================================== */
+  var LAST_SYNC_KEY_154 = 'kuro-tracker-last-sync-154';
+  var RPC_FALLBACK_KEY_154 = 'kuro-rpc-fallback-154';
+
+  function readLastSyncMap154() {
+    var d = lsRead(LAST_SYNC_KEY_154, {});
+    return (d && typeof d === 'object' && !Array.isArray(d)) ? d : {};
+  }
+
+  function recordSyncSuccess154(provider) {
+    if (provider !== 'anilist' && provider !== 'mal') return;
+    var m = readLastSyncMap154();
+    m[provider] = Date.now();
+    lsWrite(LAST_SYNC_KEY_154, m);
+  }
+
+  function formatRelativeAgo154(ts) {
+    var n = Number(ts) || 0;
+    if (!n || n > Date.now() + 60000) return '';
+    var diffSec = Math.max(0, Math.floor((Date.now() - n) / 1000));
+    if (diffSec < 45) return 'just now';
+    var mins = Math.floor(diffSec / 60);
+    if (mins < 60) return mins + 'm ago';
+    var hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + 'h ago';
+    return Math.floor(hrs / 24) + 'd ago';
+  }
+
+  function readTrackerStats154() {
+    var raw = lsRead('kuro-tracker-sync-v1', null);
+    var queue = (raw && Array.isArray(raw.queue)) ? raw.queue : [];
+    var auto = (raw && raw.auto && typeof raw.auto === 'object') ? raw.auto : { anilist: true, mal: true };
+    var imports = lsRead('kuro-imports-v1', []);
+    if (!Array.isArray(imports)) imports = [];
+
+    var watchedTotal = 0;
+    var watchedObj = lsRead('kuro-watched-v1', {});
+    if (watchedObj && typeof watchedObj === 'object' && !Array.isArray(watchedObj)) {
+      Object.keys(watchedObj).forEach(function (k) {
+        var row = watchedObj[k];
+        if (row && typeof row === 'object' && !Array.isArray(row)) {
+          Object.keys(row).forEach(function (ep) {
+            if (row[ep] === true) watchedTotal++;
+          });
+        }
+      });
+    }
+
+    function forProvider(p) {
+      var pJobs = queue.filter(function (j) { return j && j.provider === p; });
+      var pImports = imports.filter(function (x) { return x && x.provider === p; });
+      var importedEps = pImports.reduce(function (sum, x) {
+        return sum + Math.max(0, Math.min(10000, Number(x && x.progress) || 0));
+      }, 0);
+      return {
+        autoOn: auto[p] !== false,
+        pending: pJobs.filter(function (j) { return j.state === 'pending'; }).length,
+        match: pJobs.filter(function (j) { return j.state === 'match'; }).length,
+        conflicts: pJobs.filter(function (j) { return j.state === 'conflict'; }).length,
+        blocked: pJobs.filter(function (j) { return j.state === 'blocked'; }).length,
+        importsCount: pImports.length,
+        mirroredEpisodes: Math.max(watchedTotal, importedEps)
+      };
+    }
+
+    return {
+      anilist: forProvider('anilist'),
+      mal: forProvider('mal'),
+      watchedTotal: watchedTotal
+    };
+  }
+
+  function readProviderDomState154(page, provider) {
+    var list = page.querySelector('.profile-account-list547');
+    if (!list) return { connected: false, name: '', row: null };
+    var ctrl = list.querySelector('[data-disconnect="' + provider + '"], [data-connect="' + provider + '"]');
+    var row = ctrl ? ctrl.closest('.account-connection') : null;
+    if (row) row.classList.add('k154-delegated-row');
+    var isCon = !!(ctrl && ctrl.hasAttribute('data-disconnect'));
+    var name = '';
+    if (isCon && row) {
+      var span = row.querySelector('.connection-copy span');
+      var txt = span ? String(span.textContent || '').trim() : '';
+      name = txt.replace(/^Connected as\s+/i, '').trim();
+    }
+    var importBtn = row ? row.querySelector('[data-import="' + provider + '"]') : null;
+    var disconnectBtn = row ? row.querySelector('[data-disconnect="' + provider + '"]') : null;
+    var connectBtn = row ? row.querySelector('[data-connect="' + provider + '"]') : null;
+    return {
+      connected: isCon,
+      name: name,
+      handle: name ? (name.charAt(0) === '@' ? name : '@' + name) : '',
+      row: row,
+      importBtn: importBtn,
+      disconnectBtn: disconnectBtn,
+      connectBtn: connectBtn
+    };
+  }
+
+  function readDiscordRpcState154() {
+    var fallback = lsRead(RPC_FALLBACK_KEY_154, { enabled: false, episode: 'show', title: 'show', poster: 'show', layout: 'anime' });
+    var nativeHasRpc = !!(window.KuroNative && typeof window.KuroNative.discordRpcEnabled563 === 'function');
+    var enabled = !!fallback.enabled;
+    if (nativeHasRpc) {
+      try { enabled = !!window.KuroNative.discordRpcEnabled563(); } catch (_) {}
+    }
+    var opts = {
+      episode: fallback.episode || 'show',
+      title: fallback.title || 'show',
+      poster: fallback.poster || 'show',
+      pause: fallback.pause || 'show',
+      layout: fallback.layout || 'anime',
+      download: fallback.download || 'on'
+    };
+    if (window.KuroNative && typeof window.KuroNative.discordOptions564 === 'function') {
+      try {
+        var parsed = JSON.parse(window.KuroNative.discordOptions564() || '{}');
+        if (parsed && typeof parsed === 'object') {
+          Object.keys(parsed).forEach(function (k) { opts[k] = parsed[k]; });
+        }
+      } catch (_) {}
+    }
+    return {
+      enabled: enabled,
+      showProgress: opts.episode !== 'hide',
+      privacyHideTitles: opts.title === 'hide',
+      showPoster: opts.poster !== 'icon',
+      layout: opts.layout || 'anime'
+    };
+  }
+
+  function setDiscordRpcMaster154(on) {
+    var next = !!on;
+    var fb = lsRead(RPC_FALLBACK_KEY_154, {});
+    fb.enabled = next;
+    lsWrite(RPC_FALLBACK_KEY_154, fb);
+    if (window.KuroNative && typeof window.KuroNative.setDiscordRpcEnabled563 === 'function') {
+      try { window.KuroNative.setDiscordRpcEnabled563(next); } catch (_) {}
+    }
+    toast(next ? 'Discord Rich Presence enabled.' : 'Discord Rich Presence turned off.');
+  }
+
+  function setDiscordRpcOption154(key, value) {
+    var fb = lsRead(RPC_FALLBACK_KEY_154, {});
+    fb[key] = value;
+    lsWrite(RPC_FALLBACK_KEY_154, fb);
+    if (window.KuroNative && typeof window.KuroNative.setDiscordOption564 === 'function') {
+      try { window.KuroNative.setDiscordOption564(key, value); } catch (_) {}
+    }
+  }
+
+  function readDiscordSample154() {
+    var hist = lsRead('kuro-episode-history-v1', []);
+    if (Array.isArray(hist) && hist.length) {
+      for (var i = 0; i < hist.length; i++) {
+        var h = hist[i];
+        if (h && h.item && h.item.title) {
+          var img = String(h.item.img || '');
+          var safeImg = /^https:\/\//i.test(img) ? img : '';
+          var epNum = (h.ep && h.ep.number != null) ? String(h.ep.number) : '1';
+          var pctStep = 60;
+          var remainText = '18:40 remaining';
+          if (window.KuroNative && typeof window.KuroNative.progress15 === 'function') {
+            try {
+              var pRaw = window.KuroNative.progress15(String(h.item.title || '') + '::' + epNum);
+              var pObj = pRaw ? JSON.parse(pRaw) : null;
+              if (pObj && Number(pObj.duration) > 60000 && Number(pObj.position) > 0) {
+                var remSec = Math.max(0, Math.round((Number(pObj.duration) - Number(pObj.position)) / 1000));
+                var mins = Math.floor(remSec / 60);
+                var secs = remSec % 60;
+                remainText = mins + ':' + (secs < 10 ? '0' : '') + secs + ' remaining';
+                var ratio = Math.max(10, Math.min(100, Math.round((Number(pObj.position) / Number(pObj.duration)) * 10) * 10));
+                pctStep = ratio;
+              }
+            } catch (_) {}
+          }
+          return {
+            title: String(h.item.title),
+            epNum: epNum,
+            img: safeImg,
+            remainText: remainText,
+            pctClass: 'k154-pct-' + pctStep
+          };
+        }
+      }
+    }
+    return {
+      title: 'Frieren: Beyond Journey\u2019s End',
+      epNum: '28',
+      img: '',
+      remainText: '18:40 remaining',
+      pctClass: 'k154-pct-60'
+    };
+  }
+
+  function collectReviewRowsForProvider154(syncBox, labelPrefix) {
+    if (!syncBox) return [];
+    var out = [];
+    var reviews = syncBox.querySelectorAll('.tracker-review553');
+    reviews.forEach(function (el) {
+      var sm = el.querySelector('small');
+      var smText = sm ? String(sm.textContent || '') : '';
+      if (smText.indexOf(labelPrefix) !== 0) return;
+      var titleEl = el.querySelector('strong');
+      var btns = [];
+      el.querySelectorAll('button').forEach(function (b) {
+        btns.push({ label: String(b.textContent || 'Action'), target: b });
+      });
+      out.push({
+        title: titleEl ? String(titleEl.textContent || '') : 'Anime',
+        detail: smText,
+        btns: btns
+      });
+    });
+    return out;
+  }
+
+  function triggerProviderConnect154(domInfo, provider) {
+    if (domInfo && domInfo.connectBtn) {
+      domInfo.connectBtn.click();
+      setTimeout(function () {
+        var btn = document.querySelector('#account-overlay [data-signin="' + provider + '"]');
+        if (btn) {
+          try { btn.focus(); } catch (_) {}
+          btn.click();
+        }
+      }, 30);
+    }
+  }
+
+  function renderAccountHub154(force) {
+    var page = document.querySelector('#main > .profile-page547');
+    if (!page) return;
+    var syncBox = page.querySelector('#tracker-sync553');
+    if (syncBox) syncBox.classList.add('k154-delegated-sync');
+
+    var aniDom = readProviderDomState154(page, 'anilist');
+    var malDom = readProviderDomState154(page, 'mal');
+    var discDom = readProviderDomState154(page, 'discord');
+    var tStats = readTrackerStats154();
+    var lastSync = readLastSyncMap154();
+    var rpc = readDiscordRpcState154();
+    var sample = readDiscordSample154();
+
+    var aniReviews = collectReviewRowsForProvider154(syncBox, 'AniList');
+    var malReviews = collectReviewRowsForProvider154(syncBox, 'MyAnimeList');
+
+    var sig = JSON.stringify({
+      a: [aniDom.connected, aniDom.name, aniDom.disconnectBtn && !!aniDom.disconnectBtn.dataset.confirm, aniDom.importBtn && aniDom.importBtn.disabled, tStats.anilist, Boolean(lastSync.anilist), aniReviews.length],
+      m: [malDom.connected, malDom.name, malDom.disconnectBtn && !!malDom.disconnectBtn.dataset.confirm, malDom.importBtn && malDom.importBtn.disabled, tStats.mal, Boolean(lastSync.mal), malReviews.length],
+      d: [discDom.connected, discDom.name, rpc, sample.title, sample.epNum, sample.pctClass]
+    });
+
+    var hub = document.getElementById('k154-account-hub');
+    if (!force && hub && hub.parentNode === page && hub.dataset.k154Sig === sig) return;
+
+    if (!hub) {
+      hub = document.createElement('section');
+      hub.id = 'k154-account-hub';
+      hub.className = 'k154-account-hub';
+      hub.setAttribute('aria-label', 'Trackers and Discord Rich Presence');
+    }
+    hub.dataset.k154Sig = sig;
+
+    var anchorLabel = null;
+    page.querySelectorAll('.profile-label547').forEach(function (lbl) {
+      if (String(lbl.textContent || '').trim().toLowerCase() === 'account') anchorLabel = lbl;
+    });
+    if (hub.parentNode !== page) {
+      if (anchorLabel) page.insertBefore(hub, anchorLabel);
+      else if (syncBox) page.insertBefore(hub, syncBox);
+      else page.appendChild(hub);
+    }
+
+    var aniAgo = formatRelativeAgo154(lastSync.anilist);
+    var aniStatusLine = aniDom.connected
+      ? ('Synced ' + (aniAgo || 'ready') + ' \u00b7 ' + tStats.anilist.conflicts + ' conflicts' + (tStats.anilist.pending ? (' \u00b7 ' + tStats.anilist.pending + ' pending') : ''))
+      : (tStats.anilist.importsCount ? (tStats.anilist.importsCount + ' titles saved locally \u00b7 connect to sync') : 'Mirror episodes, progress & anime lists');
+
+    var aniImportLabel = (aniDom.importBtn && aniDom.importBtn.disabled)
+      ? 'Importing\u2026'
+      : (tStats.anilist.importsCount > 0 ? ('Import (' + tStats.anilist.importsCount + ' saved)') : 'Import Titles');
+
+    var malImportLabel = (malDom.importBtn && malDom.importBtn.disabled)
+      ? 'Importing\u2026'
+      : (tStats.mal.importsCount > 0 ? ('Import (' + tStats.mal.importsCount + ' saved)') : 'Import Titles');
+
+    var previewHeadline = rpc.privacyHideTitles ? 'Watching an anime' : sample.title;
+    var previewSub = rpc.showProgress
+      ? ('Episode ' + sample.epNum + ' \u00b7 ' + sample.remainText)
+      : 'Episode number & progress bar hidden';
+    var useCoverImg = !rpc.privacyHideTitles && rpc.showPoster && !!sample.img;
+
+    function reviewHtml(list, prefix) {
+      if (!list.length) return '';
+      return '<div class="k154-hub-reviews">' + list.map(function (r, idx) {
+        return '<div class="k154-hub-review-item">' +
+          '<div><strong>' + esc(r.title) + '</strong><small>' + esc(r.detail) + '</small></div>' +
+          '<div class="k154-hub-review-btns">' + r.btns.map(function (b, bi) {
+            return '<button type="button" data-k154-rev="' + prefix + ':' + idx + ':' + bi + '">' + esc(b.label) + '</button>';
+          }).join('') + '</div></div>';
+      }).join('') + '</div>';
+    }
+
+    hub.innerHTML =
+      '<div class="k154-hub-head">' +
+        '<span class="k154-hub-head-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-15.5-6.36L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.5 6.36L21 16"/><path d="M16 16h5v5"/></svg></span>' +
+        '<div><h2>Trackers &amp; Rich Presence</h2><p>Connect your anime trackers and control rich presence.</p></div>' +
+      '</div>' +
+      '<div class="k154-hub-grid">' +
+
+        /* Card 1: AniList */
+        '<article class="k154-hub-card is-anilist">' +
+          '<div class="k154-hub-card-top">' +
+            '<span class="k154-brand-badge is-al" aria-hidden="true">A<em>L</em></span>' +
+            '<div class="k154-hub-identity">' +
+              '<div class="k154-hub-title-row">' +
+                '<strong>AniList</strong><span class="k154-hub-dot-sep">\u00b7</span>' +
+                '<span class="k154-hub-state' + (aniDom.connected ? ' is-on' : '') + '">' + (aniDom.connected ? 'Connected' : 'Not connected') + '</span>' +
+              '</div>' +
+              '<div class="k154-hub-handle">' + esc(aniDom.connected ? (aniDom.handle || '@connected') : 'Encrypted local PIN token') + '</div>' +
+              '<div class="k154-hub-meta-line">' +
+                '<span class="k154-live-dot' + (aniDom.connected ? '' : ' is-off') + '" aria-hidden="true"></span>' +
+                '<span>' + esc(aniStatusLine) + '</span>' +
+              '</div>' +
+            '</div>' +
+            (aniDom.connected
+              ? '<button type="button" class="k154-hub-unlink' + (aniDom.disconnectBtn && aniDom.disconnectBtn.dataset.confirm ? ' is-confirm' : '') + '" data-k154-unlink="anilist">' +
+                  (aniDom.disconnectBtn && aniDom.disconnectBtn.dataset.confirm ? 'Confirm' : 'Disconnect') +
+                '</button>'
+              : '') +
+          '</div>' +
+          '<div class="k154-hub-divider"></div>' +
+          '<div class="k154-hub-toggle-row">' +
+            '<div class="k154-hub-toggle-copy">' +
+              '<span class="k154-hub-row-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-15.5-6.36L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.5 6.36L21 16"/><path d="M16 16h5v5"/></svg></span>' +
+              '<div><strong>Two-Way Auto-Sync</strong><small>Episodes, progress &amp; list status</small></div>' +
+            '</div>' +
+            '<button type="button" role="switch" class="k154-oled-switch" data-k154-autosync="anilist" aria-label="AniList Two-Way Auto-Sync" aria-checked="' + String(tStats.anilist.autoOn) + '"></button>' +
+          '</div>' +
+          '<div class="k154-hub-actions">' +
+            (aniDom.connected
+              ? '<button type="button" class="k154-hub-btn" data-k154-syncnow="anilist">\u21bb Sync Now</button>' +
+                '<button type="button" class="k154-hub-btn" data-k154-import="anilist"' + (aniDom.importBtn && aniDom.importBtn.disabled ? ' disabled' : '') + '>\u21e7 ' + esc(aniImportLabel) + '</button>'
+              : '<button type="button" class="k154-hub-btn is-primary" data-k154-connect="anilist">Connect AniList</button>' +
+                '<button type="button" class="k154-hub-btn is-muted" data-k154-open-imports="1">Imported (' + tStats.anilist.importsCount + ')</button>') +
+          '</div>' +
+          reviewHtml(aniReviews, 'ani') +
+        '</article>' +
+
+        /* Card 2: MyAnimeList */
+        '<article class="k154-hub-card is-mal">' +
+          '<div class="k154-hub-card-top">' +
+            '<span class="k154-brand-badge is-mal" aria-hidden="true">MAL</span>' +
+            '<div class="k154-hub-identity">' +
+              '<div class="k154-hub-title-row">' +
+                '<strong>MyAnimeList</strong><span class="k154-hub-dot-sep">\u00b7</span>' +
+                '<span class="k154-hub-state' + (malDom.connected ? ' is-on' : '') + '">' + (malDom.connected ? 'Connected' : 'Not connected') + '</span>' +
+              '</div>' +
+              (malDom.connected && malDom.handle ? '<div class="k154-hub-handle">' + esc(malDom.handle) + '</div>' : '') +
+              '<div class="k154-hub-meta-line">' +
+                '<span class="k154-hub-mini-icon" aria-hidden="true">\u2713</span>' +
+                '<span>' + tStats.mal.mirroredEpisodes + ' episodes mirrored</span>' +
+              '</div>' +
+              '<div class="k154-hub-meta-line">' +
+                '<span class="k154-hub-mini-icon" aria-hidden="true">\u25f7</span>' +
+                '<span>Queue: ' + tStats.mal.pending + ' pending offline updates' + (tStats.mal.conflicts ? (' \u00b7 ' + tStats.mal.conflicts + ' conflicts') : '') + '</span>' +
+              '</div>' +
+            '</div>' +
+            (malDom.connected
+              ? '<button type="button" class="k154-hub-unlink' + (malDom.disconnectBtn && malDom.disconnectBtn.dataset.confirm ? ' is-confirm' : '') + '" data-k154-unlink="mal">' +
+                  (malDom.disconnectBtn && malDom.disconnectBtn.dataset.confirm ? 'Confirm' : 'Disconnect') +
+                '</button>'
+              : '') +
+          '</div>' +
+          '<div class="k154-hub-divider"></div>' +
+          '<div class="k154-hub-toggle-row">' +
+            '<div class="k154-hub-toggle-copy">' +
+              '<span class="k154-hub-row-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-15.5-6.36L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.5 6.36L21 16"/><path d="M16 16h5v5"/></svg></span>' +
+              '<div><strong>Two-Way Auto-Sync</strong><small>Mirror watched episodes &amp; status</small></div>' +
+            '</div>' +
+            '<button type="button" role="switch" class="k154-oled-switch" data-k154-autosync="mal" aria-label="MyAnimeList Two-Way Auto-Sync" aria-checked="' + String(tStats.mal.autoOn) + '"></button>' +
+          '</div>' +
+          '<div class="k154-hub-actions">' +
+            (malDom.connected
+              ? '<button type="button" class="k154-hub-btn" data-k154-syncnow="mal">\u21bb Sync Now</button>' +
+                '<button type="button" class="k154-hub-btn" data-k154-import="mal"' + (malDom.importBtn && malDom.importBtn.disabled ? ' disabled' : '') + '>\u21e7 ' + esc(malImportLabel) + '</button>'
+              : '<button type="button" class="k154-hub-btn is-primary" data-k154-connect="mal">Connect MyAnimeList</button>' +
+                '<button type="button" class="k154-hub-btn is-muted" data-k154-open-imports="1">Imported (' + tStats.mal.importsCount + ')</button>') +
+          '</div>' +
+          reviewHtml(malReviews, 'mal') +
+        '</article>' +
+
+        /* Card 3: Discord Rich Presence · Live Preview */
+        '<article class="k154-hub-card is-discord">' +
+          '<div class="k154-hub-card-top">' +
+            '<span class="k154-brand-badge is-discord" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6.1 5.1C8.1 4.2 9 4 10 4l.4.9a14 14 0 0 1 3.2 0L14 4c1 0 2 .3 3.9 1.1 2.3 3.1 3 6.5 2.5 10.6-1.8 1.5-3.2 2.2-4.7 2.6l-1-1.4c.7-.2 1.3-.5 1.9-.9-3.1 1.4-6.1 1.4-9.2 0 .6.4 1.2.7 1.9.9l-1 1.4c-1.5-.4-2.9-1.1-4.7-2.6-.5-4.1.2-7.5 2.5-10.6ZM9 13a1.3 1.3 0 1 0 0-2.6A1.3 1.3 0 0 0 9 13Zm6 0a1.3 1.3 0 1 0 0-2.6A1.3 1.3 0 0 0 15 13Z"/></svg></span>' +
+            '<div class="k154-hub-identity">' +
+              '<div class="k154-hub-title-row">' +
+                '<strong>Discord Rich Presence</strong><span class="k154-hub-dot-sep">\u00b7</span>' +
+                '<span class="k154-hub-state is-on">Live Preview</span>' +
+              '</div>' +
+              '<div class="k154-hub-handle">' + esc(discDom.connected && discDom.handle ? ('Connected as ' + discDom.handle + ' \u00b7 see how your activity appears') : 'See how your activity appears to others.') + '</div>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="k154-rpc-preview" aria-label="Discord Rich Presence preview">' +
+            '<div class="k154-rpc-art">' +
+              (useCoverImg
+                ? '<img src="' + esc(sample.img) + '" alt="" loading="lazy" decoding="async">'
+                : '<img class="is-logo" src="kuro-logo.svg" alt="" decoding="async">') +
+            '</div>' +
+            '<div class="k154-rpc-body">' +
+              '<div class="k154-rpc-eyebrow">' +
+                '<span class="k154-rpc-k" aria-hidden="true">K</span>' +
+                '<span>Kuro.tv</span>' +
+                '<span class="k154-rpc-pill' + (rpc.enabled ? ' is-live' : '') + '">' + (rpc.enabled ? 'SHARING ON' : 'PREVIEW') + '</span>' +
+              '</div>' +
+              '<strong class="k154-rpc-title">' + esc(previewHeadline) + '</strong>' +
+              '<span class="k154-rpc-watching">Watching on Kuro.tv</span>' +
+              '<span class="k154-rpc-ep">' + esc(previewSub) + '</span>' +
+              (rpc.showProgress ? '<div class="k154-rpc-bar" aria-hidden="true"><i class="' + esc(sample.pctClass) + '"></i></div>' : '') +
+            '</div>' +
+          '</div>' +
+
+          '<div class="k154-hub-toggle-row">' +
+            '<div class="k154-hub-toggle-copy">' +
+              '<span class="k154-hub-row-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4V8Z"/></svg></span>' +
+              '<div><strong>Share Activity on Discord</strong><small>Broadcast Watching on Kuro.tv while playing</small></div>' +
+            '</div>' +
+            '<button type="button" role="switch" class="k154-oled-switch" data-k154-rpc-master="1" aria-label="Share Activity on Discord" aria-checked="' + String(rpc.enabled) + '"></button>' +
+          '</div>' +
+
+          '<div class="k154-hub-toggle-row">' +
+            '<div class="k154-hub-toggle-copy">' +
+              '<span class="k154-hub-row-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V11M10 19V7M16 19v-5M22 19V4"/></svg></span>' +
+              '<div><strong>Show Episode Progress</strong><small>Display episode number &amp; progress bar in rich presence</small></div>' +
+            '</div>' +
+            '<button type="button" role="switch" class="k154-oled-switch" data-k154-rpc-progress="1" aria-label="Show Episode Progress" aria-checked="' + String(rpc.showProgress) + '"></button>' +
+          '</div>' +
+
+          '<div class="k154-hub-toggle-row">' +
+            '<div class="k154-hub-toggle-copy">' +
+              '<span class="k154-hub-row-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></span>' +
+              '<div><strong>Privacy Mode on 18+ &amp; Titles</strong><small>18+ is always hidden; turn on to hide all titles &amp; covers</small></div>' +
+            '</div>' +
+            '<button type="button" role="switch" class="k154-oled-switch" data-k154-rpc-privacy="1" aria-label="Privacy Mode on 18+ and Titles" aria-checked="' + String(rpc.privacyHideTitles) + '"></button>' +
+          '</div>' +
+
+          '<div class="k154-hub-foot-actions">' +
+            '<button type="button" class="k154-hub-btn is-muted" data-k154-rpc-test="1">\u26a1 15s Test</button>' +
+            '<button type="button" class="k154-hub-btn is-muted" data-k154-rpc-more="1">\u2699 Customize</button>' +
+            (discDom.connected
+              ? '<button type="button" class="k154-hub-btn" data-k154-rpc-account="1">Account &amp; Targets</button>'
+              : '<button type="button" class="k154-hub-btn" data-k154-connect="discord">Connect Discord</button>') +
+          '</div>' +
+        '</article>' +
+
+      '</div>';
+
+    // Graceful image error fallback on Discord cover preview
+    var artImg = hub.querySelector('.k154-rpc-art img:not(.is-logo)');
+    if (artImg) {
+      artImg.addEventListener('error', function () {
+        artImg.className = 'is-logo';
+        artImg.src = 'kuro-logo.svg';
+      }, { once: true });
+    }
+
+    // Wire Auto-Sync switches (delegated to tracker-sync553 buttons or direct state)
+    hub.querySelectorAll('[data-k154-autosync]').forEach(function (sw) {
+      sw.onclick = function () {
+        var p = sw.dataset.k154Autosync;
+        var origToggle = syncBox ? syncBox.querySelector('[data-sync-toggle553="' + p + '"]') : null;
+        if (origToggle) {
+          origToggle.click();
+        } else {
+          var st = lsRead('kuro-tracker-sync-v1', { v: 1, queue: [], links: {}, initialized: {}, auto: { anilist: true, mal: true }, cooldown: {}, seq: 0 });
+          if (!st.auto) st.auto = { anilist: true, mal: true };
+          st.auto[p] = !(st.auto[p] !== false);
+          lsWrite('kuro-tracker-sync-v1', st);
+        }
+        renderAccountHub154(true);
+      };
+    });
+
+    // Wire Sync Now
+    hub.querySelectorAll('[data-k154-syncnow]').forEach(function (btn) {
+      btn.onclick = function () {
+        var p = btn.dataset.k154Syncnow;
+        var retryBtn = syncBox ? syncBox.querySelector('#tracker-retry553') : null;
+        if (retryBtn) retryBtn.click();
+        if (typeof window.kuroSyncResume553 === 'function') window.kuroSyncResume553();
+        var cur = readTrackerStats154()[p];
+        if (cur && cur.pending === 0 && cur.conflicts === 0 && cur.match === 0) {
+          recordSyncSuccess154(p);
+          toast((p === 'anilist' ? 'AniList' : 'MyAnimeList') + ' is up to date \u00b7 0 pending.');
+        } else {
+          toast('Syncing ' + (p === 'anilist' ? 'AniList' : 'MyAnimeList') + ' queue\u2026');
+        }
+        renderAccountHub154(true);
+      };
+    });
+
+    // Wire Import Titles
+    hub.querySelectorAll('[data-k154-import]').forEach(function (btn) {
+      btn.onclick = function () {
+        var p = btn.dataset.k154Import;
+        var dom = p === 'anilist' ? aniDom : malDom;
+        if (dom.importBtn) {
+          dom.importBtn.click();
+          setTimeout(function () { renderAccountHub154(true); }, 60);
+        }
+      };
+    });
+
+    // Wire Connect buttons
+    hub.querySelectorAll('[data-k154-connect]').forEach(function (btn) {
+      btn.onclick = function () {
+        var p = btn.dataset.k154Connect;
+        var dom = p === 'anilist' ? aniDom : (p === 'mal' ? malDom : discDom);
+        triggerProviderConnect154(dom, p);
+      };
+    });
+
+    // Wire Disconnect (2-step confirm preserved from accounts542.js)
+    hub.querySelectorAll('[data-k154-unlink]').forEach(function (btn) {
+      btn.onclick = function () {
+        var p = btn.dataset.k154Unlink;
+        var dom = p === 'anilist' ? aniDom : malDom;
+        if (dom.disconnectBtn) {
+          dom.disconnectBtn.click();
+          renderAccountHub154(true);
+          setTimeout(function () { renderAccountHub154(true); }, 5100);
+        }
+      };
+    });
+
+    // Wire Open Imported Lists
+    hub.querySelectorAll('[data-k154-open-imports]').forEach(function (btn) {
+      btn.onclick = function () {
+        var imp = page.querySelector('#profile-imported');
+        if (imp) imp.click();
+      };
+    });
+
+    // Wire Inline Review actions
+    hub.querySelectorAll('[data-k154-rev]').forEach(function (btn) {
+      btn.onclick = function () {
+        var parts = String(btn.dataset.k154Rev || '').split(':');
+        var list = parts[0] === 'ani' ? aniReviews : malReviews;
+        var item = list[Number(parts[1])];
+        var action = item && item.btns[Number(parts[2])];
+        if (action && action.target) {
+          action.target.click();
+          setTimeout(function () { renderAccountHub154(true); }, 50);
+        }
+      };
+    });
+
+    // Wire Discord Rich Presence switches & actions
+    var rpcMaster = hub.querySelector('[data-k154-rpc-master]');
+    if (rpcMaster) {
+      rpcMaster.onclick = function () {
+        var cur = readDiscordRpcState154();
+        setDiscordRpcMaster154(!cur.enabled);
+        renderAccountHub154(true);
+      };
+    }
+
+    var rpcProg = hub.querySelector('[data-k154-rpc-progress]');
+    if (rpcProg) {
+      rpcProg.onclick = function () {
+        var cur = readDiscordRpcState154();
+        var next = !cur.showProgress;
+        setDiscordRpcOption154('episode', next ? 'show' : 'hide');
+        setDiscordRpcOption154('pause', next ? 'show' : 'noProgress');
+        toast(next ? 'Episode progress enabled in Rich Presence.' : 'Episode progress hidden in Rich Presence.');
+        renderAccountHub154(true);
+      };
+    }
+
+    var rpcPriv = hub.querySelector('[data-k154-rpc-privacy]');
+    if (rpcPriv) {
+      rpcPriv.onclick = function () {
+        var cur = readDiscordRpcState154();
+        var next = !cur.privacyHideTitles;
+        setDiscordRpcOption154('title', next ? 'hide' : 'show');
+        toast(next ? 'Privacy Mode on: anime titles & covers hidden.' : 'Anime titles & covers shown (18+ stays hidden).');
+        renderAccountHub154(true);
+      };
+    }
+
+    var rpcTest = hub.querySelector('[data-k154-rpc-test]');
+    if (rpcTest) {
+      rpcTest.onclick = function () {
+        if (window.KuroNative && typeof window.KuroNative.discordAction564 === 'function') {
+          try {
+            window.KuroNative.discordAction564('test');
+            toast('Sent 15-second test activity to Discord.');
+            return;
+          } catch (_) {}
+        }
+        toast('Discord test activity requires the Kuro Android app.');
+      };
+    }
+
+    var rpcMore = hub.querySelector('[data-k154-rpc-more]');
+    if (rpcMore) {
+      rpcMore.onclick = function () {
+        if (window.kuroSettings560 && typeof window.kuroSettings560.openDiscord569 === 'function') {
+          window.kuroSettings560.openDiscord569('customization', {
+            onClosed: function () { renderAccountHub154(true); }
+          });
+        }
+      };
+    }
+
+    var rpcAcc = hub.querySelector('[data-k154-rpc-account]');
+    if (rpcAcc) {
+      rpcAcc.onclick = function () {
+        if (window.kuroSettings560 && typeof window.kuroSettings560.openDiscord569 === 'function') {
+          window.kuroSettings560.openDiscord569('presence', {
+            onClosed: function () { renderAccountHub154(true); }
+          });
+        }
+      };
+    }
+  }
+
+  function hookAccountTrackerHub154() {
+    if (typeof window.kuroTrackerRequest553 === 'function' && !window.kuroTrackerRequest553.__k154) {
+      var origReq = window.kuroTrackerRequest553;
+      var wrappedReq = function (action, data) {
+        return origReq.apply(this, arguments).then(function (res) {
+          if (action === 'trackerSync' && data && data.provider && !(res && res.conflict)) {
+            recordSyncSuccess154(data.provider);
+            setTimeout(function () { renderAccountHub154(true); }, 30);
+          }
+          return res;
+        });
+      };
+      wrappedReq.__k154 = true;
+      window.kuroTrackerRequest553 = wrappedReq;
+    }
+
+    if (typeof window.kuroSyncPaint553 === 'function' && !window.kuroSyncPaint553.__k154) {
+      var origPaint = window.kuroSyncPaint553;
+      var wrappedPaint = function () {
+        var r = origPaint.apply(this, arguments);
+        renderAccountHub154(true);
+        return r;
+      };
+      wrappedPaint.__k154 = true;
+      window.kuroSyncPaint553 = wrappedPaint;
+    }
+  }
+
+  /* Observe DOM mutations so Home shelves, Browse grids, Account Hub & Player overlays stay clean */
   function startObserver154() {
     var rootEl = document.body || document.getElementById('main');
     if (!rootEl) return;
@@ -1276,6 +1936,9 @@
         if (document.getElementById('discover-search')) {
           enhanceBrowseCommandBar154();
         }
+        if (document.querySelector('#main > .profile-page547')) {
+          renderAccountHub154(false);
+        }
         decorateRenderedPosters154();
       });
     });
@@ -1287,7 +1950,11 @@
     pruneHiddenControls154();
     hookDetailView154();
     hookBrowseFilters154();
+    hookAccountTrackerHub154();
     startObserver154();
+    if (document.querySelector('#main > .profile-page547')) {
+      renderAccountHub154(false);
+    }
     decorateRenderedPosters154();
   }
 

@@ -13,7 +13,7 @@
     ['Cinematic Title Detail v2', 'Full-bleed banner header with ★ score, studio & runtime pills, interactive Franchise & Watch-Order strip, Canon / Filler / Recap badges, Skip Filler switch (also skips fillers on Auto-Next), 16:9 episode rows, and ⬇ Batch Offline Download.'],
     ['Desktop-Site Left-Rail & DPAD UI', 'Turn on Settings → Site view → Desktop to unlock the frosted-OLED left navigation rail, widescreen hero & multi-column shelves, glowing accent DPAD focus halo, and remote/keyboard spatial navigation (standard mobile view stays untouched).'],
     ['Smart Multi-Filter Browse & Voice Search', 'Combinable OLED filter pills on Browse (Dub Available, ★ 8.0+, Airing/Completed, Genre, Format, Year), native Android Voice Search mic pill, and richer SUB | DUB + ★ rating poster badges.'],
-    ['OLED Segmented Player & Fullscreen Swipe-Up', 'Carried forward from 1.5.3 across all servers, Web HLS, and native ExoPlayer with live 20-accent and Pure Black OLED sync.']
+    ['Trackers & Discord Rich Presence Hub', 'Upgraded Account tab with live AniList & MyAnimeList sync cards, Two-Way Auto-Sync switches, Sync Now & Import pills, and a live interactive Discord Rich Presence preview with progress & privacy toggles.']
   ];
 
   function mark() {
