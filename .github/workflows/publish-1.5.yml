@@ -27,12 +27,12 @@ concurrency:
 env:
   TAG: v1.5
   APK_NAME: Kuro-tv-1.5
-  # SHA-256 of the signed APK committed as dist/Kuro-tv-1.4.apk. Signed with the
+  # SHA-256 of the signed APK committed as dist/Kuro-tv-1.5.apk. Signed with the
   # Kuro Anime release key; the job re-checks the signature with the real
   # apksigner before it publishes.
-  APK_SHA256: "fba989a96ced9672ef76c735340fb1db7e81d4ff792c455a03046d851721a338"
+  APK_SHA256: "c06b31bd4ef9fbfe3ee250b70a1e738a7ac7f4da0dc78225512de9b923e7eeba"
   SIGNER_SHA256: "1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e"
-  UNSIGNED_SHA256: "e7baa4b8e9d4799067887c1605eecb7c36f3250522f1830a06bbfd5b21556c76"
+  UNSIGNED_SHA256: "f027a018ed278df68e86b0f61eec94ba5ae687c4313675ab6c7f445b847aad3f"
   # The 1.0 source zip the 1.1 assets and the 1.2 native theme are applied to.
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
 
@@ -157,6 +157,15 @@ jobs:
             || { echo "::error::the what's-new card has no build stamp"; exit 1; }
           unzip -p "$APK" assets/beta-whatsnew-1.5.js | grep -aq 'Continue watching' \
             || { echo "::error::the what's-new card does not describe 1.5"; exit 1; }
+          # Discord Rich Presence Download button across all 4 ABIs, DEX, and settings UI
+          for abi in arm64-v8a armeabi-v7a x86 x86_64; do
+            unzip -p "$APK" "lib/$abi/libkuro_discord_rpc563.so" | grep -aq 'https://lovelycrxshx.github.io/Kuro-tv-Releases/' \
+              || { echo "::error::lib/$abi/libkuro_discord_rpc563.so is missing the Download button URL"; exit 1; }
+          done
+          unzip -p "$APK" classes.dex | grep -aq 'option-download15' \
+            || { echo "::error::classes.dex is missing option-download15"; exit 1; }
+          unzip -p "$APK" assets/settings560.js | grep -aFq "['download','Download button'" \
+            || { echo "::error::assets/settings560.js is missing the Download button toggle"; exit 1; }
           echo "All artifacts sane; APK matches the signed build."
 
       - name: Build the 1.5 source archive (same overlays and rewrites as the build)
@@ -183,6 +192,7 @@ jobs:
           python3 tools/webview_assets_1.3.py "$PROJECT" assets-1.1 assets-beta
           python3 tools/theme_native_1.2.py "$PROJECT"
           python3 tools/discord_link_1.5.py "$PROJECT"
+          python3 tools/discord_rpc_download_1.5.py "$PROJECT"
           python3 tools/update_button_1.5.py "$PROJECT"
           python3 tools/offline_beta_1.5.py "$PROJECT"
           sed -i -E "s/versionCode +[0-9]+/versionCode 92/" "$PROJECT/build.gradle"
@@ -208,6 +218,10 @@ jobs:
             || { echo "::error::the source archive has no playhead bridge"; exit 1; }
           unzip -p "dist/$APK_NAME-Source.zip" '*KuroOfflineActivity561.java' | grep -q 'markPlayed15' \
             || { echo "::error::the source archive does not mark a download as played"; exit 1; }
+          unzip -p "dist/$APK_NAME-Source.zip" '*kuro_discord_rpc563.cpp' | grep -q 'AddButton' \
+            || { echo "::error::the source archive has no Discord Rich Presence Download button"; exit 1; }
+          unzip -p "dist/$APK_NAME-Source.zip" '*settings560.js' | grep -Fq "['download','Download button'" \
+            || { echo "::error::the source archive settings560.js has no Download button toggle"; exit 1; }
           printf '%s  %s\n' "$(sha256sum "dist/$APK_NAME-Source.zip" | cut -d' ' -f1)" "$APK_NAME-Source.zip" \
             > "dist/$APK_NAME-Source.zip.sha256"
           ls -l dist

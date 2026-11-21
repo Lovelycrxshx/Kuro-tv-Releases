@@ -14,7 +14,7 @@ public final class KuroPresence566HostTest {
   check(a.details.equals("My Happy Marriage"),"title remains accurate");
   check(a.state.contains("Episode 12 of 24 - \"The Start\"")&&a.state.contains("DUB")&&a.state.contains("Server 2"),"episode and valid metadata remain");
   check(a.image.equals("https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1-example.jpg"),"neutral artwork retained");
-  check(a.buttonUrl.isEmpty()&&a.downloadUrl.isEmpty(),"old on settings cannot create links");
+  check(a.buttonUrl.isEmpty()&&a.downloadUrl.equals(KuroPresence564.DOWNLOAD_PAGE_URL),"watch URLs blocked and only pinned Kuro download page allowed");
   check(a.startMs==1799999970000L&&a.endMs==1800001170000L,"real timestamps retained");
   check(!a.details.contains("hianime")&&!a.state.contains("hianime")&&!a.image.contains("hianime"),"no source text");
   String[] providerPosters={"https://hianime.ms/poster.jpg","https://hianime.dk/a.jpg","https://cdn.hianime.dk/a.jpg","https://cdn.noitatnemucod.net/a.jpg","https://s4.anilist.co/file/hianime.jpg","https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1-example.jpg?source=hianime.ms","https://evil.invalid/a.jpg"};
@@ -28,8 +28,8 @@ public final class KuroPresence566HostTest {
   check(a.details.equals("Watching an anime")&&a.image.isEmpty()&&a.buttonUrl.isEmpty()&&a.downloadUrl.isEmpty(),"title privacy retained");
   KuroPresence563.Snapshot raw=new KuroPresence563.Snapshot("test","test","",source,true,0,0,source);
   check(raw.buttonUrl.isEmpty()&&raw.downloadUrl.isEmpty(),"all snapshots discard button URLs");
-  a=KuroPresence564.browsing(1000,o);check(a.buttonUrl.isEmpty()&&a.downloadUrl.isEmpty(),"browsing has no buttons");
-  a=KuroPresence564.test();check(a.buttonUrl.isEmpty()&&a.downloadUrl.isEmpty(),"test presence has no buttons");
+  a=KuroPresence564.browsing(1000,o);check(a.buttonUrl.isEmpty()&&a.downloadUrl.isEmpty(),"browsing respects hidden download/title");
+  a=KuroPresence564.test();check(a.buttonUrl.isEmpty()&&a.downloadUrl.equals(KuroPresence564.DOWNLOAD_PAGE_URL),"test presence carries pinned Download button");
   System.out.println("PASS "+checks+" no-button, provider-text/artwork privacy, title, episode and real-progress checks");
  }
 }

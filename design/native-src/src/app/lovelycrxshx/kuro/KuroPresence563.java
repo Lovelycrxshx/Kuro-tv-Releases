@@ -62,7 +62,11 @@ final class KuroPresence563 {
  static final class Snapshot {
   final String details,state,image,buttonUrl,downloadUrl;final boolean watching;final long startMs,endMs;
   Snapshot(String d,String s,String i,String b,boolean w,long start,long end){this(d,s,i,b,w,start,end,"");}
-  Snapshot(String d,String s,String i,String b,boolean w,long start,long end,String download){details=d;state=s;image=i;buttonUrl="";watching=w;startMs=start;endMs=end;downloadUrl="";}
+  Snapshot(String d,String s,String i,String b,boolean w,long start,long end,String download){
+   details=d==null?"":d;state=s==null?"":s;image=i==null?"":i;buttonUrl="";watching=w;
+   startMs=Math.max(0,start);endMs=end>startMs?end:0;
+   downloadUrl=KuroPresence564.DOWNLOAD_PAGE_URL.equals(download)?download:"";
+  }
   boolean equivalent(Snapshot x){
    if(x==null||watching!=x.watching||!details.equals(x.details)||!state.equals(x.state)||!image.equals(x.image)||!buttonUrl.equals(x.buttonUrl)||!downloadUrl.equals(x.downloadUrl))return false;
    if((startMs==0)!=(x.startMs==0)||(endMs==0)!=(x.endMs==0))return false;

@@ -17,9 +17,9 @@ public final class KuroPresence565HostTest {
   check(s.details.equals("Jujutsu Kaisen"),"anime title");check(s.state.equals("Episode 12 - \"The Shibuya Incident\" · DUB"),"live episode number, actual name and dub");
   check(s.buttonUrl.isEmpty(),"HiAnime episode URL is not published");
   check(s.startMs==1_799_999_400_000L&&s.endMs==1_800_000_600_000L,"Discord gets real position and duration");
-  check(s.downloadUrl.isEmpty(),"no Download button");
-  o.download=true;o.downloadUrl="https://example.org/download";check(sample(o,"12","Title",episode,show,"playing",1,600_000,1).downloadUrl.isEmpty(),"old Download preference cannot publish");
-  check(KuroPresence564.browsing(1,o).downloadUrl.isEmpty(),"browsing cannot publish Download");
+  check(s.downloadUrl.equals(KuroPresence564.DOWNLOAD_PAGE_URL),"default Download button points to Kuro download page");
+  o.download=true;o.downloadUrl="https://example.org/download";check(sample(o,"12","Title",episode,show,"playing",1,600_000,1).downloadUrl.equals(KuroPresence564.DOWNLOAD_PAGE_URL),"custom downloadUrl cannot override pinned page");
+  check(KuroPresence564.browsing(1,o).downloadUrl.equals(KuroPresence564.DOWNLOAD_PAGE_URL),"browsing publishes pinned Download page when enabled");
   o.episode=false;s=sample(o,"12","Secret episode",episode,show,"playing",1,600_000,1);check(!s.state.contains("12")&&!s.state.contains("Secret")&&s.buttonUrl.isEmpty(),"hide episode also hides title and button");
   o.episode=true;o.title=false;s=sample(o,"12","Secret episode",episode,show,"playing",1,600_000,1);check(!s.details.contains("Jujutsu")&&!s.state.contains("Secret")&&s.image.isEmpty()&&s.buttonUrl.isEmpty(),"hide title does not reveal identifying name or link");
   o.title=true;o.layout="episode";o.separator="bar";o.total=true;o.server=true;s=sample(o,"12","The Shibuya Incident",episode,show,"playing",30_000,1_200_000,1);
@@ -34,7 +34,7 @@ public final class KuroPresence565HostTest {
   s=sample(o,"12","Name",episode,show,"playing",600_000,1_200_000,2);check(s.startMs==1_799_999_700_000L&&s.endMs==1_800_000_300_000L,"two-times speed has correct remaining wall time and fraction");
   s=sample(o,"12","Name",episode,show,"playing",600_000,1_200_000,Double.NaN);check(s.startMs==0&&s.endMs==0,"unknown rate means no fabricated timing");
   String[] pages={"https://hianime.ms/watch-naruto-1","https://hianime.dk/watch/test?ep=4","https://hianime.dk/watch/test?ep=4&token=x","https://evil.example/watch/ok"};
-  for(String page:pages){s=sample(o,"12","Episode",page,page,"playing",0,600_000,1);check(s.buttonUrl.isEmpty()&&s.downloadUrl.isEmpty(),"no page URL may be published: "+page);}
+  for(String page:pages){s=sample(o,"12","Episode",page,page,"playing",0,600_000,1);check(s.buttonUrl.isEmpty()&&!s.downloadUrl.equals(page),"no source page URL may be published: "+page);}
   long attempt=42,now=200_000;String valid=js(attempt,"playing","30000","1200000","1.5");
   KuroProgress565.Sample x=KuroProgress565.parse(valid,attempt,now);check(x!=null&&x.fresh(now+9_000)&&!x.fresh(now+9_001),"freshness bound");
   check(x.positionAt(now+1_000)==31_500&&x.positionAt(now+8_000)==34_500,"speed-adjusted bounded sample extrapolation");
