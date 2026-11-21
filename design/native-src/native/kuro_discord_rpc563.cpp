@@ -173,7 +173,7 @@ JNIEXPORT void JNICALL Java_app_lovelycrxshx_kuro_KuroDiscordRpc563_nativePublis
   if(!details.empty())a->SetDetails(details);if(!state.empty())a->SetState(state);
   if(isNeutralPoster566(poster)){discordpp::ActivityAssets assets;assets.SetLargeImage(poster);a->SetAssets(assets);}
   if(start>0){discordpp::ActivityTimestamps t;t.SetStart(static_cast<uint64_t>(start));if(end>start)t.SetEnd(static_cast<uint64_t>(end));a->SetTimestamps(t);}
-  if(dl=="https://lovelycrxshx.github.io/Kuro-tv-Releases/"){discordpp::ActivityButton btn;btn.SetLabel("Download");btn.SetUrl(dl);a->AddButton(btn);}
+  if(dl=="https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.3/Kuro-tv-1.5.3.apk"){discordpp::ActivityButton btn;btn.SetLabel("Download");btn.SetUrl(dl);a->AddButton(btn);}
   lastActivity=a;publishDirect();publishLinked();
  }catch(...){directResult=-1;}
 }
