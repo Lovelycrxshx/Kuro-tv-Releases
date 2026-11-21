@@ -669,6 +669,7 @@ jobs:
               assert any(b"other-servers-154" in d for d in dex_blobs), "dex missing other-servers-154"
               assert any(b"ep-playlist-scroll-154" in d for d in dex_blobs), "dex missing ep-playlist-scroll-154"
               assert any(b"watch-rec-feed-154" in d for d in dex_blobs), "dex missing watch-rec-feed-154"
+              assert any(b"watch-rec-hscroll-154" in d for d in dex_blobs), "dex missing watch-rec-hscroll-154"
               assert not any(b"watch-episodes" in d for d in dex_blobs), "dex still contains watch-episodes header button"
               ui154_js = z.read("assets/beta-ui-1.5.4.js").decode("utf-8")
               assert "kuroOpenRecommended154" in ui154_js, "beta-ui-1.5.4.js missing kuroOpenRecommended154"

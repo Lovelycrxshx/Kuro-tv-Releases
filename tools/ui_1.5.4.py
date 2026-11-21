@@ -95,9 +95,9 @@ def patch_catalog(root: pathlib.Path) -> None:
         '  }else if("watchFeed154".equals(action)){\n'
         '   long id=p.optLong("id",0);String search=p.optString("search","").trim();\n'
         '   String recFields="{id idMal isAdult title{romaji english} bannerImage coverImage{extraLarge large} averageScore episodes format seasonYear genres studios(isMain:true){nodes{name}}}";\n'
-        '   String fb="fallback:Page(page:1,perPage:12){media(type:ANIME,isAdult:false,sort:POPULARITY_DESC)"+recFields+"}";\n'
-        '   if(id>=1&&id<=999999999){v.put("id",id);query="query($id:Int){Media(id:$id,type:ANIME,isAdult:false){id recommendations(page:1,perPage:10,sort:RATING_DESC){nodes{mediaRecommendation"+recFields+"}}} "+fb+"}";}\n'
-        '   else if(search.length()>=1&&search.length()<=140){v.put("search",search);query="query($search:String){Media(search:$search,type:ANIME,isAdult:false,sort:SEARCH_MATCH){id recommendations(page:1,perPage:10,sort:RATING_DESC){nodes{mediaRecommendation"+recFields+"}}} "+fb+"}";}\n'
+        '   String fb="fallback:Page(page:1,perPage:16){media(type:ANIME,isAdult:false,sort:POPULARITY_DESC)"+recFields+"}";\n'
+        '   if(id>=1&&id<=999999999){v.put("id",id);query="query($id:Int){Media(id:$id,type:ANIME,isAdult:false){id recommendations(page:1,perPage:14,sort:RATING_DESC){nodes{mediaRecommendation"+recFields+"}}} "+fb+"}";}\n'
+        '   else if(search.length()>=1&&search.length()<=140){v.put("search",search);query="query($search:String){Media(search:$search,type:ANIME,isAdult:false,sort:SEARCH_MATCH){id recommendations(page:1,perPage:14,sort:RATING_DESC){nodes{mediaRecommendation"+recFields+"}}} "+fb+"}";}\n'
         '   else{query="query{"+fb+"}";}\n'
         '  }else throw new IOException("Invalid action");'
     )
@@ -2570,11 +2570,26 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
         '  ImageView poster=new ImageView(this);poster.setScaleType(ImageView.ScaleType.CENTER_CROP);poster.setBackgroundColor(KuroTheme12.col(0xff372447));LinearLayout.LayoutParams posterLP=new LinearLayout.LayoutParams(dp(76),dp(114));posterLP.setMargins(0,0,dp(14),0);detail.addView(poster,posterLP);loadPoster(poster,anime.optString("image",""));\n'
         '  LinearLayout detailText=new LinearLayout(this);detailText.setOrientation(LinearLayout.VERTICAL);detail.addView(detailText,new LinearLayout.LayoutParams(0,-2,1));TextView detailName=text(info.optString("title","Anime"),18,Color.WHITE);detailName.setTypeface(null,android.graphics.Typeface.BOLD);detailText.addView(detailName);addGap(detailText,7);\n'
         '  JSONObject counts=anime.optJSONObject("counts");StringBuilder facts=new StringBuilder();if(counts!=null){String sub=counts.optString("sub","");String dub=counts.optString("dub","");String total=counts.optString("total","");if(sub.matches("[0-9]{1,5}"))facts.append("CC ").append(sub);if(dub.matches("[0-9]{1,5}")){if(facts.length()>0)facts.append("  •  ");facts.append("DUB ").append(dub);}if(total.matches("[0-9]{1,5}")){if(facts.length()>0)facts.append("  •  ");facts.append(total).append(" EPS");}}String meta=anime.optString("meta","").trim();if(!meta.isEmpty()){if(facts.length()>0)facts.append("  •  ");facts.append(meta.length()>80?meta.substring(0,80):meta);}if(facts.length()>0){detailText.addView(text(facts.toString(),11,KuroTheme12.col(0xffb98ae5)));addGap(detailText,8);}String desc=anime.optString("description","").trim();if(desc.length()>3000)desc=desc.substring(0,3000);TextView synopsis=text(desc.isEmpty()?"Description not available from this source.":desc,13,KuroTheme12.col(0xffdcd5e2));synopsis.setLineSpacing(dp(3),1);detailText.addView(synopsis);addGap(detailText,10);TextView more=chip("View details",false);detailText.addView(more);more.setOnClickListener(v->{closePlayer();ui.evaluateJavascript("window.kuroOpenDetails&&window.kuroOpenDetails()",null);});\n'
-        '  addGap(content,10);TextView note=text("Playback uses a third-party player. Autoplay is best effort; tap play if needed. Use its fullscreen control to expand.",12,KuroTheme12.col(0xffa08fae));content.addView(note);\n'
-        '  addGap(content,24);TextView recHeading154=text("More anime",16,KuroTheme12.col(0xfff3eef7));recHeading154.setTypeface(null,android.graphics.Typeface.BOLD);content.addView(recHeading154);addGap(content,4);\n'
-        '  TextView recSub154=text("Recommended & trending • tap to open",12,KuroTheme12.col(0xffa79ab2));content.addView(recSub154);addGap(content,12);\n'
-        '  LinearLayout recFeed154=new LinearLayout(this);recFeed154.setOrientation(LinearLayout.VERTICAL);recFeed154.setTag("watch-rec-feed-154");content.addView(recFeed154,new LinearLayout.LayoutParams(-1,-2));\n'
-        '  populateWatchRecommendations154(session,info,anime,recFeed154,recSub154);'
+        '  addGap(content,24);content.setClipToPadding(false);\n'
+        '  LinearLayout recHdrRow154=new LinearLayout(this);recHdrRow154.setOrientation(LinearLayout.HORIZONTAL);recHdrRow154.setGravity(Gravity.CENTER_VERTICAL);\n'
+        '  LinearLayout recTitleCol154=new LinearLayout(this);recTitleCol154.setOrientation(LinearLayout.VERTICAL);\n'
+        '  TextView recHeading154=text("More anime",16,KuroTheme12.col(0xfff3eef7));recHeading154.setTypeface(null,android.graphics.Typeface.BOLD);recTitleCol154.addView(recHeading154);addGap(recTitleCol154,2);\n'
+        '  TextView recSub154=text("Recommended • swipe left / right",12,KuroTheme12.col(0xffa79ab2));recTitleCol154.addView(recSub154);\n'
+        '  recHdrRow154.addView(recTitleCol154,new LinearLayout.LayoutParams(0,-2,1));\n'
+        '  TextView recLeftBtn154=text("‹",18,KuroTheme12.col(0xffe6e1eb));recLeftBtn154.setTypeface(null,android.graphics.Typeface.BOLD);recLeftBtn154.setGravity(Gravity.CENTER);recLeftBtn154.setBackground(watchShape154(KuroTheme12.col(0xff261830),KuroTheme12.col(0xff4c3a59),999));recLeftBtn154.setContentDescription("Scroll recommendations left");\n'
+        '  LinearLayout.LayoutParams rlLp154=new LinearLayout.LayoutParams(dp(34),dp(34));rlLp154.setMargins(dp(8),0,dp(6),0);recHdrRow154.addView(recLeftBtn154,rlLp154);\n'
+        '  TextView recRightBtn154=text("›",18,KuroTheme12.col(0xffe6e1eb));recRightBtn154.setTypeface(null,android.graphics.Typeface.BOLD);recRightBtn154.setGravity(Gravity.CENTER);recRightBtn154.setBackground(watchShape154(KuroTheme12.col(0xff261830),KuroTheme12.col(0xff4c3a59),999));recRightBtn154.setContentDescription("Scroll recommendations right");\n'
+        '  recHdrRow154.addView(recRightBtn154,new LinearLayout.LayoutParams(dp(34),dp(34)));\n'
+        '  content.addView(recHdrRow154,new LinearLayout.LayoutParams(-1,-2));addGap(content,12);\n'
+        '  final HorizontalScrollView recHScroll154=new HorizontalScrollView(this){private float startX,startY;@Override public boolean dispatchTouchEvent(MotionEvent ev){int act=ev.getActionMasked();if(act==MotionEvent.ACTION_DOWN){startX=ev.getX();startY=ev.getY();}else if(act==MotionEvent.ACTION_MOVE){float dx=Math.abs(ev.getX()-startX),dy=Math.abs(ev.getY()-startY);if(dx>dy&&(canScrollHorizontally(1)||canScrollHorizontally(-1))){ViewParent p=getParent();if(p!=null)p.requestDisallowInterceptTouchEvent(true);}}return super.dispatchTouchEvent(ev);}};\n'
+        '  recHScroll154.setTag("watch-rec-hscroll-154");recHScroll154.setHorizontalScrollBarEnabled(false);recHScroll154.setClipToPadding(false);recHScroll154.setPadding(dp(18),dp(2),dp(18),dp(4));\n'
+        '  LinearLayout.LayoutParams hScrollLp154=new LinearLayout.LayoutParams(-1,-2);hScrollLp154.setMargins(-dp(18),0,-dp(18),0);\n'
+        '  LinearLayout recFeed154=new LinearLayout(this);recFeed154.setOrientation(LinearLayout.HORIZONTAL);recFeed154.setTag("watch-rec-feed-154");\n'
+        '  recHScroll154.addView(recFeed154,new FrameLayout.LayoutParams(-2,-2));content.addView(recHScroll154,hScrollLp154);\n'
+        '  recLeftBtn154.setOnClickListener(v->recHScroll154.smoothScrollBy(-dp(268),0));\n'
+        '  recRightBtn154.setOnClickListener(v->recHScroll154.smoothScrollBy(dp(268),0));\n'
+        '  populateWatchRecommendations154(session,info,anime,recFeed154,recSub154);\n'
+        '  addGap(content,14);TextView note=text("Playback uses a third-party player. Autoplay is best effort; tap play if needed. Use its fullscreen control to expand.",12,KuroTheme12.col(0xffa08fae));content.addView(note);'
     )
 
     ma_text = patch_once(
@@ -2662,52 +2677,45 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
   card.setClickable(true);card.setFocusable(true);
   card.setForeground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(Color.argb(46,255,255,255)),null,null));
 
-  FrameLayout videoThumbBox=new FrameLayout(this){
-   @Override protected void onMeasure(int wSpec,int hSpec){
-    int w=View.MeasureSpec.getSize(wSpec);
-    super.onMeasure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(w*9/16,View.MeasureSpec.EXACTLY));
-   }
-  };
+  FrameLayout videoThumbBox=new FrameLayout(this);
   videoThumbBox.setBackgroundColor(KuroTheme12.col(0xff24172e));
   ImageView thumbImg=new ImageView(this);thumbImg.setScaleType(ImageView.ScaleType.CENTER_CROP);
   videoThumbBox.addView(thumbImg,new FrameLayout.LayoutParams(-1,-1));
-  loadThumb154(thumbImg,thumbUrl,800,450);
+  loadThumb154(thumbImg,thumbUrl,640,360);
 
-  TextView durBadge=text(badgeRight,11,Color.WHITE);durBadge.setTypeface(null,android.graphics.Typeface.BOLD);
-  durBadge.setPadding(dp(8),dp(3),dp(8),dp(3));durBadge.setBackground(watchShape154(Color.argb(224,8,8,12),0,6));
+  TextView durBadge=text(badgeRight,10,Color.WHITE);durBadge.setTypeface(null,android.graphics.Typeface.BOLD);
+  durBadge.setPadding(dp(7),dp(2),dp(7),dp(2));durBadge.setBackground(watchShape154(Color.argb(224,8,8,12),0,6));
   FrameLayout.LayoutParams durLp=new FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM|Gravity.END);
-  durLp.setMargins(dp(10),dp(10),dp(10),dp(10));
+  durLp.setMargins(dp(8),dp(8),dp(8),dp(8));
   videoThumbBox.addView(durBadge,durLp);
 
   if(score>0){
    String scStr=String.format(Locale.ROOT,"★ %.1f",score/10.0);
-   TextView scBadge=text(scStr,11,KuroTheme12.col(0xffcfa2fb));scBadge.setTypeface(null,android.graphics.Typeface.BOLD);
-   scBadge.setPadding(dp(8),dp(3),dp(8),dp(3));scBadge.setBackground(watchShape154(Color.argb(220,12,10,18),KuroTheme12.col(0xff4c3a59),6));
+   TextView scBadge=text(scStr,10,KuroTheme12.col(0xffcfa2fb));scBadge.setTypeface(null,android.graphics.Typeface.BOLD);
+   scBadge.setPadding(dp(7),dp(2),dp(7),dp(2));scBadge.setBackground(watchShape154(Color.argb(220,12,10,18),KuroTheme12.col(0xff4c3a59),6));
    FrameLayout.LayoutParams scLp=new FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM|Gravity.START);
-   scLp.setMargins(dp(10),dp(10),dp(10),dp(10));
+   scLp.setMargins(dp(8),dp(8),dp(8),dp(8));
    videoThumbBox.addView(scBadge,scLp);
   }
-  card.addView(videoThumbBox,new LinearLayout.LayoutParams(-1,-2));
+  card.addView(videoThumbBox,new LinearLayout.LayoutParams(-1,dp(144)));
 
   LinearLayout metaRow=new LinearLayout(this);metaRow.setOrientation(LinearLayout.HORIZONTAL);
-  metaRow.setGravity(Gravity.TOP);metaRow.setPadding(dp(12),dp(11),dp(12),dp(12));
+  metaRow.setGravity(Gravity.TOP);metaRow.setPadding(dp(11),dp(10),dp(11),dp(12));
   ImageView avatar=new ImageView(this);avatar.setScaleType(ImageView.ScaleType.CENTER_CROP);
   avatar.setBackground(watchShape154(KuroTheme12.col(0xff372447),KuroTheme12.col(0xff4c3a59),999));
   avatar.setClipToOutline(true);avatar.setOutlineProvider(ViewOutlineProvider.BACKGROUND);
-  LinearLayout.LayoutParams avLp=new LinearLayout.LayoutParams(dp(40),dp(40));avLp.setMargins(0,dp(1),dp(12),0);
+  LinearLayout.LayoutParams avLp=new LinearLayout.LayoutParams(dp(34),dp(34));avLp.setMargins(0,dp(1),dp(10),0);
   metaRow.addView(avatar,avLp);
-  loadThumb154(avatar,coverUrl,140,140);
+  loadThumb154(avatar,coverUrl,128,128);
 
   LinearLayout textCol=new LinearLayout(this);textCol.setOrientation(LinearLayout.VERTICAL);
-  TextView tView=text(dispTitle,15,Color.WHITE);tView.setTypeface(null,android.graphics.Typeface.BOLD);
-  tView.setMaxLines(2);tView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+  TextView tView=text(dispTitle,14,Color.WHITE);tView.setTypeface(null,android.graphics.Typeface.BOLD);
+  tView.setLines(2);tView.setEllipsize(android.text.TextUtils.TruncateAt.END);
   textCol.addView(tView);
-  if(subLine.length()>0){
-   addGap(textCol,3);
-   TextView sView=text(subLine.toString(),12,KuroTheme12.col(0xffa79ab2));
-   sView.setMaxLines(2);sView.setEllipsize(android.text.TextUtils.TruncateAt.END);
-   textCol.addView(sView);
-  }
+  addGap(textCol,3);
+  TextView sView=text(subLine.length()>0?subLine.toString():"Anime",12,KuroTheme12.col(0xffa79ab2));
+  sView.setSingleLine(true);sView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+  textCol.addView(sView);
   metaRow.addView(textCol,new LinearLayout.LayoutParams(0,-2,1));
   card.addView(metaRow,new LinearLayout.LayoutParams(-1,-2));
 
@@ -2747,7 +2755,7 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
       JSONObject recs=media.optJSONObject("recommendations");
       JSONArray nodes=recs==null?null:recs.optJSONArray("nodes");
       if(nodes!=null){
-       for(int i=0;i<nodes.length()&&cards.size()<10;i++){
+       for(int i=0;i<nodes.length()&&cards.size()<12;i++){
         JSONObject n=nodes.optJSONObject(i);
         JSONObject mr=n==null?null:n.optJSONObject("mediaRecommendation");
         if(mr==null||mr.optBoolean("isAdult",false))continue;
@@ -2764,7 +2772,7 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
      JSONObject fb=data.optJSONObject("fallback");
      JSONArray fbMedia=fb==null?null:fb.optJSONArray("media");
      if(fbMedia!=null){
-      for(int j=0;j<fbMedia.length()&&cards.size()<10;j++){
+      for(int j=0;j<fbMedia.length()&&cards.size()<12;j++){
        JSONObject mr=fbMedia.optJSONObject(j);
        if(mr==null||mr.optBoolean("isAdult",false))continue;
        long id=mr.optLong("id",0);
@@ -2784,11 +2792,11 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
       feed.addView(text("No recommendations available right now.",13,KuroTheme12.col(0xffa79ab2)));
       return;
      }
-     if(subLabel!=null&&!curTitle.isEmpty())subLabel.setText("Recommended for "+curTitle+" • tap to open");
+     if(subLabel!=null&&!curTitle.isEmpty())subLabel.setText("Recommended for "+curTitle+" • swipe left / right");
      for(int i=0;i<cards.size();i++){
       View cardView=buildYoutubeAnimeCard154(cards.get(i));
-      LinearLayout.LayoutParams clp=new LinearLayout.LayoutParams(-1,-2);
-      clp.setMargins(0,0,0,dp(16));
+      LinearLayout.LayoutParams clp=new LinearLayout.LayoutParams(dp(256),-2);
+      clp.setMargins(0,0,i+1<cards.size()?dp(12):0,0);
       feed.addView(cardView,clp);
      }
     });
