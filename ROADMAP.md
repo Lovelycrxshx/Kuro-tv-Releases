@@ -19,6 +19,9 @@ every install by the updater.
 
 ## Shipped
 
+- **1.5.3** — Direct GitHub Releases `.apk` downloads across the repository `README`, the
+  download page (`index.html`), and the Discord Rich Presence Download button (removing the
+  Google Drive mirror redirect).
 - **1.5.2** — Pure black (OLED) mode across all twenty accents, Home & Browse shimmer loading
   skeletons, Hidden titles manager in Settings, full local `.json` Backup & restore (including
   profile art, theme/OLED, hidden titles, auto-clean and episode resume checkpoints), monochrome

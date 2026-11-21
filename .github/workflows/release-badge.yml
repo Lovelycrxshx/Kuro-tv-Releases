@@ -59,7 +59,10 @@ jobs:
 
           OLD=$(grep -oE 'badge/Latest_Version-[^-)]*-blue' README.md | head -1 || true)
           echo "current badge: ${OLD:-none}"
-          sed -i -E "s#(badge/Latest_Version-)[^-)]*(-blue)#\1${VER}\2#" README.md
+          sed -i -E \
+            -e "s#(badge/Latest_Version-)[^-)]*(-blue)#\1${VER}\2#" \
+            -e "s#(\\[!\\[Download\\]\\(design/download-button\\.svg\\)\\]\\()[^)]*(\\))#\\1https://github.com/${REPO}/releases/download/v${VER}/Kuro-tv-${VER}.apk\\2#" \
+            README.md
           NEW=$(grep -oE 'badge/Latest_Version-[^-)]*-blue' README.md | head -1 || true)
           echo "new badge: $NEW"
           [ -n "$NEW" ] || { echo "::error::the README has no release badge to rewrite"; exit 1; }

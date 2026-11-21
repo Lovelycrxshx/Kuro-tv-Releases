@@ -13,16 +13,17 @@
  if (!window.km15) return;
  var K = window.km15;
 
- var STAMP = '1.5.2';
+ var STAMP = '1.5.3';
  var SEEN_KEY = 'kuro-whatsnew-15';
  var CARD_ID = 'km-whatsnew-15';
 
  var ITEMS = [
+  'Direct GitHub Releases APK downloads across the README, download page, and Discord Rich Presence Download button \u2014 no Google Drive mirror redirect.',
   'Pure black (OLED) mode in Settings > Appearance and startup pairs a #000000 floor with any of Kuro\u2019s twenty accent colours.',
   'Shimmer loading skeletons replace blank spaces on Home and Browse while catalogues load.',
   'Hidden titles manager in Settings > Privacy and links lets you inspect and restore anime hidden from Home.',
-  'Backup & restore (.json) now preserves profile artwork, your 20-colour accent, OLED mode, hidden titles, auto-clean rules, and episode resume checkpoints.',
-  'Kuro updates prompts directly for Android 13+ notification permission when alerts are off, and all status-bar icons now use a crisp monochrome glyph.'
+  'Backup & restore (.json) preserves profile artwork, your 20-colour accent, OLED mode, hidden titles, auto-clean rules, and episode resume checkpoints.',
+  'Kuro updates prompts directly for Android 13+ notification permission when alerts are off, and all status-bar icons use a crisp monochrome glyph.'
  ];
 
  function seen() {
@@ -34,7 +35,7 @@
  }
 
  function openSheet() {
-  K.sheet("What's new", 'Kuro 1.5.2 \u00b7 this build', ITEMS.map(function (text) {
+  K.sheet("What's new", 'Kuro 1.5.3 \u00b7 this build', ITEMS.map(function (text) {
    return { label: text };
   }));
  }
@@ -51,7 +52,7 @@
   el.className = 'km-whatsnew-15';
   el.setAttribute('aria-labelledby', 'km-whatsnew-title-15');
   el.innerHTML =
-   '<div class="overline">NEW IN 1.5.2</div>' +
+   '<div class="overline">NEW IN 1.5.3</div>' +
    '<h2 id="km-whatsnew-title-15">What\u2019s new</h2>' +
    '<ul class="km-whatsnew-list-15">' + ITEMS.slice(0, 4).map(function (t) {
     return '<li>' + K.esc(t) + '</li>';
@@ -86,7 +87,7 @@
   var row = document.createElement('button');
   row.type = 'button';
   row.className = 'settings-row560 settings-action560 km-wn-row-15';
-  row.innerHTML = '<span><strong>What\u2019s new</strong><small>Changes in Kuro 1.5.2</small></span>' +
+  row.innerHTML = '<span><strong>What\u2019s new</strong><small>Changes in Kuro 1.5.3</small></span>' +
    '<b aria-hidden="true">\u203a</b>';
   row.addEventListener('click', openSheet);
   rows.insertBefore(row, rows.firstChild);

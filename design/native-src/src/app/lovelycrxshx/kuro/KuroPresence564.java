@@ -7,7 +7,7 @@ import java.util.Locale;
 /** Privacy-first presentation of data Kuro actually knows. No player scraping is added here. */
 final class KuroPresence564 {
  private KuroPresence564() {}
- static final String DOWNLOAD_PAGE_URL="https://lovelycrxshx.github.io/Kuro-tv-Releases/";
+ static final String DOWNLOAD_PAGE_URL="https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.3/Kuro-tv-1.5.3.apk";
  static final class Options {
   String layout="anime",separator="dot",pause="show",downloadUrl="",away="quick";
   boolean title=true,episode=true,poster=true,watch=true,server=false,total=false,buffering=true,download=true,rewatch=false;

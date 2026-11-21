@@ -5,7 +5,7 @@ name: publish Kuro release
 # this runner with the pinned CN=Kuro Anime release key), and this job only publishes
 # when the SHA-256 matches the exact build that was signed.
 #
-# Trigger: manual dispatch, or a commit whose message contains "[release 1.5.2]".
+# Trigger: manual dispatch, or a commit whose message contains "[release 1.5.3]".
 
 on:
   push:
@@ -13,13 +13,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version (e.g. 1.5.2)"
+        description: "Release version (e.g. 1.5.3)"
         required: false
-        default: "1.5.2"
+        default: "1.5.3"
       version_code:
-        description: "Android versionCode (e.g. 94)"
+        description: "Android versionCode (e.g. 95)"
         required: false
-        default: "94"
+        default: "95"
 
 permissions:
   contents: write
@@ -29,18 +29,18 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  VERSION: ${{ inputs.version || '1.5.2' }}
-  VERSION_CODE: ${{ inputs.version_code || '94' }}
-  TAG: v${{ inputs.version || '1.5.2' }}
-  APK_NAME: Kuro-tv-${{ inputs.version || '1.5.2' }}
-  APK_SHA256: "2a02912f6584934adbb7e9e35f9a4159c42770338795e4429d6d0d68ff5d8a71"
+  VERSION: ${{ inputs.version || '1.5.3' }}
+  VERSION_CODE: ${{ inputs.version_code || '95' }}
+  TAG: v${{ inputs.version || '1.5.3' }}
+  APK_NAME: Kuro-tv-${{ inputs.version || '1.5.3' }}
+  APK_SHA256: "PENDING"
   SIGNER_SHA256: "1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e"
-  UNSIGNED_SHA256: "5275c5f287d0fb4d648b534636daf114e77b308f2158541f77068ac2585dab8f"
+  UNSIGNED_SHA256: "PENDING"
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
 
 jobs:
   release:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release 1.5.2]')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release 1.5.3]')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -107,6 +107,8 @@ jobs:
             || { echo "::error::classes.dex is missing checkpointsExport152"; exit 1; }
           unzip -p "$APK" classes.dex | grep -aFq 'Update alerts are off' \
             || { echo "::error::classes.dex is missing the update notification banner"; exit 1; }
+          unzip -p "$APK" classes.dex | grep -aFq "releases/download/v${VERSION}/Kuro-tv-${VERSION}.apk" \
+            || { echo "::error::classes.dex is missing direct GitHub APK DOWNLOAD_PAGE_URL for ${VERSION}"; exit 1; }
           echo "All ${VERSION} artifacts sane; APK matches the signed build."
 
       - name: Build slim source archive (clean Gradle project tree only)
@@ -131,6 +133,9 @@ jobs:
             mkdir -p "$PROJECT/assets/$(dirname "$f")"
             cp -f "assets-beta/$f" "$PROJECT/assets/$f"
           done
+          sed -i -E "s/versionCode +[0-9]+/versionCode ${VERSION_CODE}/" "$PROJECT/build.gradle"
+          sed -i -E "s/versionName +'[^']*'/versionName '${VERSION}'/" "$PROJECT/build.gradle"
+          grep -nE "versionName|versionCode" "$PROJECT/build.gradle"
           python3 tools/webview_assets_1.3.py "$PROJECT" assets-1.1 assets-beta
           python3 tools/theme_native_1.2.py "$PROJECT"
           python3 tools/discord_link_1.5.py "$PROJECT"
@@ -140,9 +145,6 @@ jobs:
           python3 tools/polish_1.5.2.py "$PROJECT"
           cp -f design/native-src/tests/native-panel/src/test/java/app/lovelycrxshx/kuro/KuroUpdater572Test.java \
             "$PROJECT/tests/native-panel/src/test/java/app/lovelycrxshx/kuro/KuroUpdater572Test.java"
-          sed -i -E "s/versionCode +[0-9]+/versionCode ${VERSION_CODE}/" "$PROJECT/build.gradle"
-          sed -i -E "s/versionName +'[^']*'/versionName '${VERSION}'/" "$PROJECT/build.gradle"
-          grep -nE "versionName|versionCode" "$PROJECT/build.gradle"
 
           rm -f "$GITHUB_WORKSPACE/dist/$APK_NAME-Source.zip"
           ( cd "$PROJECT" && zip -qr "$GITHUB_WORKSPACE/dist/$APK_NAME-Source.zip" . )

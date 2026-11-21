@@ -340,7 +340,7 @@ jobs:
           PKG="$PROJECT/src/app/lovelycrxshx/kuro"
           grep -Fq 'btn.SetLabel("Download")' "$PROJECT/native/kuro_discord_rpc563.cpp" \
             || { echo "::error::native Discord RPC Download button missing."; exit 1; }
-          grep -Fq 'DOWNLOAD_PAGE_URL="https://lovelycrxshx.github.io/Kuro-tv-Releases/"' "$PKG/KuroPresence564.java" \
+          grep -Fq 'DOWNLOAD_PAGE_URL="https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.3/Kuro-tv-1.5.3.apk"' "$PKG/KuroPresence564.java" \
             || { echo "::error::KuroPresence564 DOWNLOAD_PAGE_URL missing."; exit 1; }
           grep -Fq 'utf8(s.downloadUrl)' "$PKG/KuroDiscordRpc563.java" \
             || { echo "::error::KuroDiscordRpc563 does not forward s.downloadUrl."; exit 1; }
