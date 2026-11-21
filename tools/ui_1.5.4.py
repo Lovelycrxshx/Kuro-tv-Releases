@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Kuro 1.5.4-beta native & WebView bridge patcher.
+"""Kuro 1.5.4 native & WebView bridge patcher.
 
 Implements:
 - #2 Cinematic Title Detail Page v2:
@@ -2836,7 +2836,7 @@ def main() -> None:
     patch_perf_and_compat_154(root)
     patch_accounts_and_sync_154(root)
     patch_watch_ui_154(root)
-    print("Applied Kuro 1.5.4-beta Detail v2, Desktop-Site Left-Rail Leanback, WindowInsets, Ad-Guard, Performance & Compatibility, Tracker Sync & Discord OAuth, Watch UI v2, and Smart Browse/Voice patches.")
+    print("Applied Kuro 1.5.4 Detail v2, Desktop-Site Left-Rail Leanback, WindowInsets, Ad-Guard, Performance & Compatibility, Tracker Sync & Discord OAuth, Watch UI v2, and Smart Browse/Voice patches.")
 
 
 if __name__ == "__main__":

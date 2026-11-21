@@ -1,4 +1,4 @@
-name: build Kuro 1.5.3
+name: build Kuro 1.5.4
 
 # Builds the CURRENT Kuro version from the source zip stored in Drive, commits the
 # *aligned but unsigned* APK back to this branch, and never sees the signing key — the
@@ -30,9 +30,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  APK_NAME: Kuro-tv-beta-1.5.4
+  APK_NAME: Kuro-tv-1.5.4
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
-  EXPECT_VERSION_NAME: "1.5.4-beta"
+  EXPECT_VERSION_NAME: "1.5.4"
   EXPECT_VERSION_CODE: "96"
 
 jobs:
@@ -146,12 +146,12 @@ jobs:
             grep -qF "'$accent'" "$PROJECT/assets/theme-accent-1.1.js" \
               || { echo "::error::$accent is not in the accent picker."; exit 1; }
           done
-          grep -qF "'art-34'" "$PROJECT/assets/profile-art-arm.js" \
-            || { echo "::error::the profile art registry does not list art-34."; exit 1; }
+          grep -qF "'art-50'" "$PROJECT/assets/profile-art-arm.js" \
+            || { echo "::error::the profile art registry does not list art-50."; exit 1; }
           if grep -qE "'art-(0[1-9]|10)'" "$PROJECT/assets/profile-art-arm.js"; then
             echo "::error::legacy art-01..art-10 still listed in profile-art-arm.js."; exit 1
           fi
-          for n in $(seq -w 11 34); do
+          for n in $(seq -w 11 50); do
             test -s "$PROJECT/assets/profile-art/pfp/art-$n.webp"    || { echo "::error::pfp art-$n.webp missing."; exit 1; }
             test -s "$PROJECT/assets/profile-art/banner/art-$n.webp" || { echo "::error::banner art-$n.webp missing."; exit 1; }
           done
@@ -347,7 +347,7 @@ jobs:
           PKG="$PROJECT/src/app/lovelycrxshx/kuro"
           grep -Fq 'btn.SetLabel("Download")' "$PROJECT/native/kuro_discord_rpc563.cpp" \
             || { echo "::error::native Discord RPC Download button missing."; exit 1; }
-          grep -Fq 'DOWNLOAD_PAGE_URL="https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.3/Kuro-tv-1.5.3.apk"' "$PKG/KuroPresence564.java" \
+          grep -Fq 'DOWNLOAD_PAGE_URL="https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.4/Kuro-tv-1.5.4.apk"' "$PKG/KuroPresence564.java" \
             || { echo "::error::KuroPresence564 DOWNLOAD_PAGE_URL missing."; exit 1; }
           grep -Fq 'utf8(s.downloadUrl)' "$PKG/KuroDiscordRpc563.java" \
             || { echo "::error::KuroDiscordRpc563 does not forward s.downloadUrl."; exit 1; }
@@ -640,12 +640,12 @@ jobs:
               for abi in ("arm64-v8a", "armeabi-v7a", "x86_64", "x86"):
                   so = z.read(f"lib/{abi}/libkuro_discord_rpc563.so")
                   assert b"Discord_Activity_AddButton" in so, f"{abi}: missing Discord_Activity_AddButton"
-                  assert b"https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.3/Kuro-tv-1.5.3.apk" in so, f"{abi}: missing direct GitHub APK download URL"
+                  assert b"https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.4/Kuro-tv-1.5.4.apk" in so, f"{abi}: missing direct GitHub APK download URL"
                   assert b"Download\x00" in so, f"{abi}: missing Download label"
               js = z.read("assets/settings560.js").decode("utf-8")
               assert "['download','Download button'" in js, "settings560.js missing Download button row"
               dex_blobs = [z.read(n) for n in z.namelist() if n.startswith("classes") and n.endswith(".dex")]
-              assert any(b"https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.3/Kuro-tv-1.5.3.apk" in d for d in dex_blobs), "dex missing direct GitHub APK DOWNLOAD_PAGE_URL"
+              assert any(b"https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.4/Kuro-tv-1.5.4.apk" in d for d in dex_blobs), "dex missing direct GitHub APK DOWNLOAD_PAGE_URL"
               assert any(b"option-download15" in d for d in dex_blobs), "dex missing option-download15"
               assert any(b"You are on the latest version" in d for d in dex_blobs), "dex missing You are on the latest version"
               assert any(b"UP TO DATE" in d for d in dex_blobs), "dex missing UP TO DATE chip"
@@ -678,12 +678,12 @@ jobs:
               assert any(b"onRenderProcessGone" in d for d in dex_blobs), "dex missing onRenderProcessGone"
               assert b"kuro_tv_banner" in z.read("resources.arsc"), "resources.arsc missing kuro_tv_banner"
               wn_js = z.read("assets/beta-whatsnew-1.5.js").decode("utf-8")
-              assert "var STAMP = '1.5.4-beta';" in wn_js, "beta-whatsnew-1.5.js STAMP is not 1.5.4-beta"
+              assert "var STAMP = '1.5.4';" in wn_js, "beta-whatsnew-1.5.js STAMP is not 1.5.4"
               motion_js = z.read("assets/beta-motion-1.5.js").decode("utf-8")
               assert "INTRO_HOLD = 3600;" in motion_js, "beta-motion-1.5.js missing 3600ms INTRO_HOLD"
               motion_css = z.read("assets/beta-motion-1.5.css").decode("utf-8")
               assert "km-iris .54s cubic-bezier(.62,.02,.9,.4) 3s forwards" in motion_css, "beta-motion-1.5.css missing 3s iris timing"
-          print("APK 1.5.4-beta verified: Detail v2 + Desktop-Site Left-Rail + Smart Browse/Voice + 1.5.3 player")
+          print("APK 1.5.4 verified: Detail v2 + Desktop-Site Left-Rail + Watch v2 + Smart Browse/Voice + 1.5.3 player")
           PY
           sha256sum "$RUNNER_TEMP/$APK_NAME-aligned.apk"
 
