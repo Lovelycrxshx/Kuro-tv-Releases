@@ -1,58 +1,59 @@
-Kuro.tv 1.5.4-beta (not launched on GitHub)
+Kuro 1.5.4-beta (Signed Beta Build — NOT Published on GitHub)
+================================================================
 
-Installs cleanly over v1.5.3 (versionName 1.5.4-beta, versionCode 96), signed
-with the same CN=Kuro Anime release key so no uninstall is needed. Public GitHub
-Releases remain on v1.5.3.
+Package:        app.kuro.anime
+Version Name:   1.5.4-beta
+Version Code:   96
+Size:           51,560,082 bytes (49.2 MB)
+SHA-256:        1eb3a0be6479e11761f393af4d0897ba469e197897647126baaafd38d2436a6f
+MD5:            237404ead4e51c109c5f0514a05a144d
+Signer:         CN=Kuro Anime
+Signer SHA-256: 1D:37:C3:CA:28:ED:80:CC:48:46:01:A7:A7:90:7D:5C:43:97:0A:5D:57:D5:1A:A4:E9:14:75:A6:07:03:E9:3E
+Google Drive:   https://drive.google.com/file/d/1lAn0yeOX9kGVw16Ggj9pYF68pH9cmBBR/view
+Direct DL:      https://drive.google.com/uc?id=1lAn0yeOX9kGVw16Ggj9pYF68pH9cmBBR&export=download
 
-APK      https://drive.google.com/file/d/1vvnMxJZKGHe2YRQ23Y3ZPE6O4fmk59OX/view
-sha256   5fb06bef6387344a56eb6e8262290015a2a0a55b3897a4c190215a5b9fc41687
-md5      ad0d4de4d44157f6f05c2a9c5630c99b
-size     48,766,560 bytes
+Note:
+- Signed with the production Kuro Anime release certificate so it installs cleanly
+  as an in-place upgrade over v1.5.3 without wiping user watch history or settings.
+- GitHub Releases and main branch remain on v1.5.3 (official public release).
 
-What is new in 1.5.4-beta
-  1. Cinematic Title Detail Page v2 (#2).
-     - Full-bleed banner header with ★ AniList score, runtime, format, status,
-       studio, and SUB/DUB pills.
-     - Interactive Franchise & Watch-Order pill strip (Prequels -> Current ✓ ->
-       Sequels / Movies / OVAs) to jump across seasons in one tap.
-     - Canon / Filler / Recap episode badges (combining live HiAnime filler
-       markers, episode recap heuristics, and curated long-runner ranges) plus a
-       persistent "Skip Filler" pill switch that hides filler/recap rows AND
-       skips past them automatically on Auto-Next & Fullscreen Next Episode.
-     - Upgraded 16:9 episode thumbnail rows with saved playhead progress bars.
-     - One-tap "⬇ Batch Download" modal sheet (Next 3 / 5 / 12 / All unwatched
-       up to 24) resolving verified Zenkai direct HLS streams into Kuro offline
-       storage (with automatic Watch Queue fallback for embed-only sources).
+What's Included in 1.5.4-beta:
+1. Unified Account, Trackers & Discord Rich Presence Hub (Proposal #3):
+   - Kuro Cloud Account card with profile avatar/banner sync, instant Push / Pull
+     Cloud Sync, Export / Import JSON backup, and Sign Out.
+   - AniList 2-Way Sync (OAuth token connect, auto-update episode progress at 85%
+     watched, full library import/sync).
+   - MyAnimeList Sync (Client ID + username/token connect, library pull & episode push).
+   - Discord Rich Presence (Live "Watching on Kuro" status with anime title, episode,
+     elapsed timer, cover art, and custom Webhook / RPC bridge support).
+   - Granular Sync Preferences toggles (Auto-push at 85% watched, Sync rewatch counts
+     & scores, Broadcast Discord Rich Presence, Private / Incognito session).
 
-  2. Widescreen Left-Rail Leanback UI & Glowing DPAD Focus (#3 — Desktop site ON only).
-     - Strictly gated on Settings -> Appearance and startup -> Site view -> Desktop.
-     - Default Mobile mode keeps the standard mobile top bar and bottom 5-tab dock
-       100% unchanged.
-     - Turning Desktop site ON switches to a frosted-OLED left navigation rail,
-       1180px widescreen layout viewport, widescreen hero & landscape Continue
-       Watching rail, multi-column grids, glowing accent DPAD spatial arrow-key
-       focus navigation, ContextMenu/F2 poster quick actions, and a contextual
-       "OK Select · MENU Quick Actions · ESC Back" pill (plus a one-tap "Mobile ↺"
-       switch at the foot of the rail).
+2. 24 Real Manga Face PFPs & Matching 16:9 Banners (art-11 .. art-34):
+   - Removed all 10 legacy overlay PFPs & banners (art-01 .. art-10) and replaced them
+     with 24 authentic manga/manhwa face-only avatars (256x256 WebP) and 24 matching
+     16:9 manga spread banners (1024x576 WebP), plus one-tap "Match banner" pairing:
+     art-11 Satoru Gojo (Jujutsu Kaisen)        | art-23 Mash Burnedead (Mashle)
+     art-12 Ryomen Sukuna (Jujutsu Kaisen)      | art-24 Goku (Dragon Ball Z)
+     art-13 Yuta Okkotsu (Jujutsu Kaisen 0)     | art-25 Gabimaru (Hell's Paradise)
+     art-14 Toji Fushiguro (Jujutsu Kaisen)     | art-26 Akame (Akame ga Kill!)
+     art-15 Sung Jinwoo (Solo Leveling)         | art-27 Kaoruko Waguri (Fragrant Flower)
+     art-16 Light Yagami (Death Note)           | art-28 Eren Yeager (Attack on Titan)
+     art-17 Denji (Chainsaw Man)                | art-29 Levi Ackerman (Attack on Titan)
+     art-18 Makima (Chainsaw Man)               | art-30 Nagumo (Sakamoto Days)
+     art-19 Asta (Black Clover)                 | art-31 Ai Hoshino (Oshi no Ko)
+     art-20 Ichigo Kurosaki (Bleach)            | art-32 Buddha (Record of Ragnarok)
+     art-21 Sosuke Aizen (Bleach: TYBW)         | art-33 Johan Liebert (Monster)
+     art-22 Frieren (Beyond Journey's End)      | art-34 Yuuichi Katagiri (Tomodachi Game)
 
-  3. Smart Multi-Filter Browse & Voice Command Search (#4).
-     - Combinable OLED filter pills on Browse: Dub Available, CC Subbed, ★ 8.0+,
-       ★ 8.5+, Airing, Completed, and top Genres alongside Format & Year chips.
-     - Native Android Voice Search mic button (RecognizerIntent, zero RECORD_AUDIO
-       permission required, with Web Speech fallback) right in the Browse bar.
-     - Richer poster badges with top-right ★ scores and bottom-left SUB | DUB
-       split count pills.
+3. Desktop Leanback Left-Rail UI (Proposal #3 — Desktop Mode Only):
+   - Activates ONLY when Settings -> Appearance and startup -> Site view -> Desktop
+     is enabled; Mobile mode keeps the standard mobile layout.
+   - Collapsible glass left navigation rail, 16:9 widescreen hero spotlight,
+     horizontal Continue Watching progress strip, and multi-column poster grid.
 
-  4. Account Section: Unified Trackers & Discord Rich Presence Hub (Account #3).
-     - Upgraded Account tab with dedicated OLED service cards for AniList and
-       MyAnimeList (@handle, last sync timestamp, episodes mirrored, offline
-       sync queue counter, Two-Way Auto-Sync switches, Sync Now & Import pills,
-       and inline match/conflict resolution).
-     - Live interactive Discord Rich Presence preview card pulling your latest
-       watched anime & saved playhead progress, with instant OLED switches for
-       Share Activity on Discord, Show Episode Progress, and Privacy Mode on
-       18+ & Titles, plus one-tap 15s Test & Presence Customization shortcuts.
-
-  5. Cleaner Browse & Detail Surface (Beta Polish).
-     - Hidden "Verify Library 11" ([data-miruro-verify]), "🎲 Surprise Me", and
-       the "Source sites · open separately" external link strip (.open-sites).
+4. Cleanups & Fixes Carried Forward:
+   - Hidden "Verify Library 11", "Surprise Me", and "Source sites · open separately"
+     across Home and Settings.
+   - Full v1.5.3 base (Miruro multi-server streaming, 1,100+ catalog, Cloud Sync,
+     Custom Accent Colors, Ambient Glow, Sleep Timer, Playback Speed, Guest Sync prompt).
