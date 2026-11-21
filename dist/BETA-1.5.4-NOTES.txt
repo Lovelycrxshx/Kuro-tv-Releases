@@ -4,48 +4,55 @@ Kuro 1.5.4-beta (Signed Beta Build — NOT Published on GitHub)
 Package:        app.lovelycrxshx.kuro
 Version Name:   1.5.4-beta
 Version Code:   96
-Size:           51,583,514 bytes (49.2 MB)
-SHA-256:        194a81753a492f4532fdda1d96895a1be7df7cbf749002fd11f48177e8375ddb
-MD5:            3f6e2f1874d53fcf11946707b70d291c
+Size:           51,658,664 bytes (49.3 MB)
+SHA-256:        c9d2146fe4edf20f096f854cc83fd371fd2202a164209f797bc5d687426edca1
+MD5:            e64e530c1d67e4dbf7a4c600391ff976
 Signer:         CN=Kuro Anime
 Signer SHA-256: 1D:37:C3:CA:28:ED:80:CC:48:46:01:A7:A7:90:7D:5C:43:97:0A:5D:57:D5:1A:A4:E9:14:75:A6:07:03:E9:3E
-Google Drive:   https://drive.google.com/file/d/1kgbW6pqQjsuYpgoU0Euc3mXYFc2RJm2-/view
-Direct DL:      https://drive.google.com/uc?id=1kgbW6pqQjsuYpgoU0Euc3mXYFc2RJm2-&export=download
+Google Drive:   https://drive.google.com/file/d/1eARL1GWjKtzZS5c-H_9tO2xqiaEjC5Ho/view
+Direct DL:      https://drive.google.com/uc?id=1eARL1GWjKtzZS5c-H_9tO2xqiaEjC5Ho&export=download
 
 Note:
 - Signed with the production Kuro Anime release certificate so it installs cleanly
   as an in-place upgrade over v1.5.3 / earlier 1.5.4-beta without wiping history.
 - GitHub Releases and main branch remain on v1.5.3 (official public release).
 
-What's Included in 1.5.4-beta:
-1. Buttery-Smooth Native Scrolling & Clean Poster Pills:
-   - Removed the top-right star rating badge from posters and kept only a smaller,
-     compact SUB | DUB pill on the bottom-left.
-   - Replaced live background glass-blur on poster pills and inline chips with
-     crisp dark tinted pills (keeping glass blur only on the main top bar and
-     pop-up menus).
-   - Disabled mid-scroll poster/banner shifting so touch flings run directly at
-     full screen smoothness while preserving the startup intro, tap animations,
-     and page transitions.
-   - Trimmed redundant background page scans, card re-checks, and catalogue batch
-     calls when new rows load.
+What's Fixed & Included in 1.5.4-beta:
+1. Fixed Theme Colours Picker (All 20 Accents):
+   - Fixed a strict-mode ReferenceError (`host is not defined`) inside
+     `theme-accent-1.1.js` `schedule()` that prevented the 20-colour Theme Accent
+     picker (`#accent-111`) from mounting inside Settings -> Appearance, leaving
+     only the legacy 8-colour dropdown. All 20 custom colours now appear and
+     switch both WebView surfaces and native Android dialogs/bars live.
 
-2. Signature Violet Default Theme Across the Entire App:
-   - Signature Violet (#a65be4) is the default colour across all screens, splash,
-     Settings accent preview, native dialogs, system bars, player controls, and
-     Android TV banner, while keeping all 20 custom colours selectable in Settings.
+2. Fixed MyAnimeList & AniList Two-Way Sync:
+   - Fixed episode watch detection across embedded iframe players (`megaplay`,
+     `vidtube`, `vidnest`, `tryembed`, `hianimes`, `zorotv`), direct HLS stream
+     playback, and native ExoPlayer so episodes mark watched & sync at >= 85%
+     playback (including when closing the player after the ending credits start)
+     instead of silently failing inside child iframes or requiring 98% end.
+   - Fixed `TrackerSync553` progress advancement when watching mid-season or
+     non-sequential episodes (`episodes.length() - 1` instead of stopping at
+     episode 1).
+   - Added automatic AniList + MyAnimeList ID resolution (`autoResolveIds154` +
+     detail-page ID stamping) so titles watched from Home / Search / Browse sync
+     automatically without getting stuck in manual `MATCH_REQUIRED`.
+   - Routed `AccountHttp` through `KuroFastNet154` (Encrypted DoH `1.1.1.1` /
+     `8.8.8.8` + pooled HTTP/2) so carrier DNS blocks never stall tracker sync.
+   - Updated `Sync Now` and `putImports` to perform true two-way sync, refreshing
+     progress & status on already-imported entries as well as pushing local updates.
 
-3. Strong Performance & Compatibility Architecture:
-   - Smart Encrypted DNS (DoH) unblock across Cloudflare (1.1.1.1/1.0.0.1), Google
-     (8.8.8.8), and Quad9 (9.9.9.9) with automatic IPv4 + IPv6 fallback and pooled
-     HTTP/2 connections across catalogue, posters, sources, and HLS playback.
-   - Automatic ExoPlayer hardware-to-software video decoder fallback in both online
-     and offline players.
-   - Non-blocking background temporary cache scanner and 1-tap "Clear temporary
-     stream cache" in Settings -> Network & compatibility.
-   - Android TV / Fire TV Leanback launcher & banner support, foldable screen
-     continuity, low-RAM cache trimming, and WebView crash-recovery shields.
+3. Fixed Discord Login & Rich Presence Account Linking:
+   - Added Android 15 (`targetSdkVersion 35`) `https` `BROWSABLE` `<queries>`
+     visibility and explicit web-browser package selection (`openInBrowser154`)
+     so the Discord Android app (`com.discord`) no longer hijacks OAuth URLs onto
+     Discord's Home screen.
+   - Wired Account Hub's "Connect Discord" button directly to native Discord
+     Social SDK PKCE OAuth (`linkDirect154` -> `discord-1569077670074122250:/authorize/callback`),
+     auto-enabling Rich Presence and updating the Account Hub live upon return,
+     plus added token-endpoint redirect preflight & dual-URI callback routing for
+     profile sign-in.
 
-4. Hardened Multi-Layer Player Ad Blocker + Android 15 Edge-to-Edge Window Fix.
-
-5. Unified Account Hub (#3) + 24 Manga Face PFPs & Matching 16:9 Banners (art-11..34).
+4. Buttery-Smooth Native Scrolling, Compact SUB | DUB Pills, Signature Violet
+   Default, Smart DoH + Decoder Fallback, Multi-Layer Ad Guard, Android 15
+   Edge-to-Edge Insets, Unified Account Hub, and 24 Manga PFPs & Banners.
