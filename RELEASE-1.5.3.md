@@ -2,24 +2,38 @@
 
 **versionCode 95 · 2026-11-19**
 
-1.5.3 switches every **Download** entry point — the repository `README`, the
-download page, and the in-app **Discord Rich Presence Download button** — to
-serve the signed APK straight from **GitHub Releases** instead of redirecting
-through a Google Drive mirror.
+1.5.3 brings the **OLED Segmented Chapters & Pills** player UI across every
+server player, a **fullscreen bottom swipe-up Up Next & Episodes sheet**, a
+non-blocking **App-UI Auto-Next floating card**, and **direct GitHub Releases
+APK downloads** across every Download button.
 
 ## What changed
 
+- **Universal OLED Segmented Chapters & Pills player skin.**
+  - Every playback path — embedded server iframes (JWPlayer, Video.js, Plyr),
+    the built-in HLS `stream-player`, the native Media3 / ExoPlayer view
+    (`KuroNativePlayer561`), and offline downloads (`KuroOfflineActivity561`) —
+    now shares the same `#0A0A0EEF` frosted-OLED floating pill HUD, rounded
+    accent scrubber with glowing thumb, segmented OP / ED chapter markers, and
+    top/bottom gesture edge guards.
+  - Adapts automatically to all twenty Kuro accents and **Pure black (OLED)**
+    mode.
+- **Fullscreen bottom swipe-up for Up Next & Episodes.**
+  - Swiping up from the bottom edge during fullscreen playback slides up an
+    accent-tinted OLED floating sheet featuring a one-tap **Up Next** card for
+    Episode *N+1* plus a horizontal episode selector strip — switch episodes
+    without leaving fullscreen, or tap **All episodes** to open the full
+    season drawer.
+- **App-UI Auto-Next floating card.**
+  - Replaces the plain modal alert at the end of an episode with a sleek
+    bottom-right OLED floating card (**Play Episode N+1**, live countdown pill,
+    and **Stay**), keeping the video canvas unobstructed.
 - **Direct GitHub Releases APK downloads everywhere.**
-  - Tapping the **Download** button on the GitHub repository `README` directly
-    downloads `Kuro-tv-1.5.3.apk` from GitHub Releases (kept automatically in
-    sync on future releases by `release-badge.yml`).
-  - Tapping **Download Kuro.tv 1.5.3** on the download page
-    (`lovelycrxshx.github.io/Kuro-tv-Releases/`) directly downloads
-    `Kuro-tv-1.5.3.apk` from GitHub Releases with no Google Drive mirror or
-    interstitial redirect.
-  - The **Discord Rich Presence Download button** (`KuroPresence564` /
-    `kuro_discord_rpc563.cpp`) now links directly to
-    `https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.3/Kuro-tv-1.5.3.apk`.
+  - Tapping **Download** on the repository `README`, on the download page
+    (`lovelycrxshx.github.io/Kuro-tv-Releases/`), or on the **Discord Rich
+    Presence Download button** (`KuroPresence564` / `kuro_discord_rpc563.cpp`)
+    serves `Kuro-tv-1.5.3.apk` straight from GitHub Releases with no Google
+    Drive mirror or interstitial redirect.
 
 ## Carried forward from 1.5.2, 1.5.1 & 1.5
 
@@ -47,7 +61,7 @@ signing key, so profiles, watch list, history, downloads and logins stay put.
 
 ```
 sha256sum Kuro-tv-1.5.3.apk
-# ae3d9d203fb42a078d338076ce4f50b411e93622f57bb574c3a56619db3ecea6
+# 67b31dccf24945d18d457efd9cbf2b063edd2f0879faaf6592db127d4870d3f7
 
 apksigner verify --print-certs Kuro-tv-1.5.3.apk
 # CN=Kuro Anime
@@ -56,4 +70,4 @@ apksigner verify --print-certs Kuro-tv-1.5.3.apk
 
 ## Notes
 
-- APK 48,714,273 bytes (46.5 MiB) · the source archive (`Kuro-tv-1.5.3-Source.zip`, 11.4 MiB) has its own `.sha256` companion.
+- APK 48,737,329 bytes (46.5 MiB) · the source archive (`Kuro-tv-1.5.3-Source.zip`, 11.4 MiB) has its own `.sha256` companion.

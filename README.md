@@ -50,6 +50,9 @@ Kuro is a player / front-end and hosts no media. The catalogue comes from these 
 * Optimized for stability and performance with integrated Discord Rich Presence (Social SDK 1.11.24259),
   including a **Download** button on your presence card for direct APK download from GitHub Releases (with Show / Hide in Settings)
 * Native Media3 / ExoPlayer playback, offline downloads and picture-in-picture
+* **OLED Segmented Chapters & Pills player skin** across all server embeds, the built-in HLS player,
+  native Media3 playback, and offline downloads — with segmented OP / ED chapter markers and accent-lit pills
+* **Fullscreen swipe-up Up Next & Episodes sheet** plus a non-blocking **Auto-Next floating card** at episode end
 * Built against Android 15 (API 35) with 16 KB page-aligned native libraries
 * Clean, ad-free navigation
 * Lightweight playback engine with subtitle support

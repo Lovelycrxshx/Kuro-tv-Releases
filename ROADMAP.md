@@ -19,9 +19,10 @@ every install by the updater.
 
 ## Shipped
 
-- **1.5.3** — Direct GitHub Releases `.apk` downloads across the repository `README`, the
-  download page (`index.html`), and the Discord Rich Presence Download button (removing the
-  Google Drive mirror redirect).
+- **1.5.3** — Universal OLED Segmented Chapters & Pills player skin across all server embeds,
+  HLS, native Media3 and offline players, fullscreen bottom swipe-up Up Next & Episodes drawer,
+  non-blocking App-UI Auto-Next floating card, and direct GitHub Releases `.apk` downloads across
+  the repository `README`, `index.html`, and the Discord Rich Presence Download button.
 - **1.5.2** — Pure black (OLED) mode across all twenty accents, Home & Browse shimmer loading
   skeletons, Hidden titles manager in Settings, full local `.json` Backup & restore (including
   profile art, theme/OLED, hidden titles, auto-clean and episode resume checkpoints), monochrome
