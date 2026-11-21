@@ -16,7 +16,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: kuro-release
+  group: kuro-release-1-5-1
   cancel-in-progress: false
 
 env:
