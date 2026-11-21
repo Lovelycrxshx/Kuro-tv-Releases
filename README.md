@@ -2,10 +2,10 @@
 
 An open-source media client designed for Android TV, Fire TV, and mobile devices.
 
-[![Latest Release](https://img.shields.io/badge/Latest_Version-1.5.2-blue)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)
+[![Latest Release](https://img.shields.io/badge/Latest_Version-1.5.3-blue)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green.svg)](LICENSE)
 
-**Current release: 1.5.2** (`versionCode` 94) — release notes in [RELEASE-1.5.2.md](RELEASE-1.5.2.md).
+**Current release: 1.5.3** (`versionCode` 95) — release notes in [RELEASE-1.5.3.md](RELEASE-1.5.3.md).
 Notes for every earlier cut are in [archive/1.x/](archive/1.x/), and the same text is on the
 [releases page](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases).
 
@@ -13,9 +13,10 @@ Notes for every earlier cut are in [archive/1.x/](archive/1.x/), and the same te
 
 ## 📥 Download
 
-[![Download](design/download-button.svg)](https://lovelycrxshx.github.io/Kuro-tv-Releases/)
+[![Download](design/download-button.svg)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.3/Kuro-tv-1.5.3.apk)
 
-* **[Download page](https://lovelycrxshx.github.io/Kuro-tv-Releases/)** — direct APK download,
+* **[Direct APK download](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.3/Kuro-tv-1.5.3.apk)** — signed APK (`Kuro-tv-1.5.3.apk`, 46.5 MiB) straight from GitHub Releases.
+* **[Download page](https://lovelycrxshx.github.io/Kuro-tv-Releases/)** — direct GitHub APK download,
   SHA-256 checksum and install steps.
 * **[Latest release](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)** — APK,
   checksum and the matching source archive on GitHub Releases.
@@ -47,8 +48,8 @@ Kuro is a player / front-end and hosts no media. The catalogue comes from these 
 ## 📺 Features
 
 * Optimized for stability and performance with integrated Discord Rich Presence (Social SDK 1.11.24259),
-  including a **Download** button on your presence card (with Show / Hide in Settings)
-* Native Media3 / ExoPlayer playback, offline downloads, Google Cast and picture-in-picture
+  including a **Download** button on your presence card for direct APK download from GitHub Releases (with Show / Hide in Settings)
+* Native Media3 / ExoPlayer playback, offline downloads and picture-in-picture
 * Built against Android 15 (API 35) with 16 KB page-aligned native libraries
 * Clean, ad-free navigation
 * Lightweight playback engine with subtitle support
@@ -92,7 +93,7 @@ Kuro TV is purely a media player / front-end interface. It does not host, upload
 
 What's next for the 1.x line — an update channel with a real beta ring, the DPAD/focus
 overhaul, the airing calendar and custom themes — lives in
-**[ROADMAP.md](ROADMAP.md)**. The 5.x line is closed, and 1.0–1.5.1 are history: both are in
+**[ROADMAP.md](ROADMAP.md)**. The 5.x line is closed, and 1.0–1.5.2 are history: both are in
 **[archive/](archive/)**.
 
 ---

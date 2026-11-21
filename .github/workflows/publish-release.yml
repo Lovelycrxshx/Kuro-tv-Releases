@@ -33,9 +33,9 @@ env:
   VERSION_CODE: ${{ inputs.version_code || '95' }}
   TAG: v${{ inputs.version || '1.5.3' }}
   APK_NAME: Kuro-tv-${{ inputs.version || '1.5.3' }}
-  APK_SHA256: "PENDING"
+  APK_SHA256: "ae3d9d203fb42a078d338076ce4f50b411e93622f57bb574c3a56619db3ecea6"
   SIGNER_SHA256: "1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e"
-  UNSIGNED_SHA256: "PENDING"
+  UNSIGNED_SHA256: "3d7df6a58b8e9dec53db4f5b50b04e81116749b6fe15855756cc0a609291bf38"
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
 
 jobs:

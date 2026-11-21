@@ -47,7 +47,7 @@ signing key, so profiles, watch list, history, downloads and logins stay put.
 
 ```
 sha256sum Kuro-tv-1.5.3.apk
-# {{APK_SHA256}}
+# ae3d9d203fb42a078d338076ce4f50b411e93622f57bb574c3a56619db3ecea6
 
 apksigner verify --print-certs Kuro-tv-1.5.3.apk
 # CN=Kuro Anime
@@ -56,4 +56,4 @@ apksigner verify --print-certs Kuro-tv-1.5.3.apk
 
 ## Notes
 
-- APK {{APK_BYTES}} bytes · the source archive's size is in its `.sha256` companion.
+- APK 48,714,273 bytes (46.5 MiB) · the source archive (`Kuro-tv-1.5.3-Source.zip`, 11.4 MiB) has its own `.sha256` companion.
