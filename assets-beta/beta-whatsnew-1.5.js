@@ -14,6 +14,7 @@
     ['Cinematic Title Detail v2', 'Full-bleed banner header with ★ score, studio & runtime pills, interactive Franchise & Watch-Order strip, Canon / Filler / Recap badges, Skip Filler switch (also skips fillers on Auto-Next), 16:9 episode rows, and ⬇ Batch Offline Download.'],
     ['Desktop-Site Left-Rail & DPAD UI', 'Turn on Settings → Site view → Desktop (or launch on Android TV / Fire TV) to unlock the frosted-OLED left navigation rail, widescreen hero & multi-column shelves, glowing accent DPAD focus halo, and remote spatial navigation.'],
     ['Smart Multi-Filter Browse & Voice Search', 'Combinable OLED filter pills on Browse (Dub Available, ★ 8.0+, Airing/Completed, Genre, Format, Year), native Android Voice Search mic pill, and compact SUB | DUB poster pills.'],
+    ['Streamlined YouTube-Style Watch Page', 'Compact 5-servers-per-page layout with an "Other servers" page switcher, 3-row scrollable YouTube-style episode playlist card, YouTube-style recommended anime video feed below Anime details, and clean header without the redundant episodes slider.'],
     ['Trackers, Discord Hub & 40 Anime/Manga Profile Sets', 'Upgraded Account tab with 40 real anime & manga face avatars and matching 16:9 banners, live AniList & MyAnimeList sync cards, Two-Way Auto-Sync switches, and an interactive Discord Rich Presence preview.']
   ];
 

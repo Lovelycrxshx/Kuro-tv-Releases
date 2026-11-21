@@ -2288,6 +2288,80 @@
     obs.observe(rootEl, { childList: true, subtree: true });
   }
 
+  /* ------------------------------------------------------------------------
+     Watch-Page YouTube-Style Recommended Anime Card Opener
+     ------------------------------------------------------------------------ */
+  window.kuroOpenRecommended154 = function (rawPayload) {
+    var rec = null;
+    try {
+      rec = typeof rawPayload === 'string' ? JSON.parse(rawPayload) : rawPayload;
+    } catch (_) {}
+    if (!rec) return;
+    var title = String(rec.title || rec.romaji || '').trim();
+    var romaji = String(rec.romaji || '').trim();
+    if (!title) return;
+
+    toast('Opening ' + title + '…');
+
+    var wantA = normTitle(title);
+    var wantB = normTitle(romaji);
+    var aid = Number(rec.anilistId) || 0;
+    var mid = Number(rec.malId) || 0;
+
+    if (typeof window.fetchCatalogPage !== 'function' || typeof window.openShow !== 'function') {
+      if (typeof window.nav === 'function') window.nav('search');
+      if (typeof window.searchPage === 'function') window.searchPage(title);
+      return;
+    }
+
+    var sources = ['ms', 'dk', 'miruro', 'zenkai'];
+    var tryIdx = 0;
+
+    function pickMatch(items) {
+      if (!Array.isArray(items) || !items.length) return null;
+      for (var i = 0; i < items.length; i++) {
+        var nt = normTitle(items[i] && items[i].title);
+        if (nt && (nt === wantA || (wantB && nt === wantB))) return items[i];
+      }
+      for (var j = 0; j < items.length; j++) {
+        var nt2 = normTitle(items[j] && items[j].title);
+        if (nt2 && ((wantA && nt2.indexOf(wantA) === 0) || (wantB && nt2.indexOf(wantB) === 0))) return items[j];
+      }
+      return items[0];
+    }
+
+    function nextSource(queryStr, usedRomaji) {
+      if (tryIdx >= sources.length) {
+        if (!usedRomaji && romaji && wantB && wantB !== wantA) {
+          tryIdx = 0;
+          nextSource(romaji, true);
+          return;
+        }
+        setCurView('search');
+        if (typeof window.searchPage === 'function') window.searchPage(title);
+        return;
+      }
+      var src = sources[tryIdx++];
+      window.fetchCatalogPage({ source: src, mode: 'search', query: queryStr }, 1)
+        .then(function (res) {
+          var hit = pickMatch(res && res.items);
+          if (hit) {
+            if (aid > 0 && !hit.anilistId) hit.anilistId = aid;
+            if (mid > 0 && !hit.malId) hit.malId = mid;
+            if (!hit.img && rec.img) hit.img = rec.img;
+            window.openShow(hit);
+          } else {
+            nextSource(queryStr, usedRomaji);
+          }
+        })
+        .catch(function () {
+          nextSource(queryStr, usedRomaji);
+        });
+    }
+
+    nextSource(title, false);
+  };
+
   function init154() {
     syncDesktopSite154();
     pruneHiddenControls154();
