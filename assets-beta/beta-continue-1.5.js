@@ -112,10 +112,21 @@
    rows.map(cardMarkup).join('') + '</div>';
  }
 
+ var lastRailRawStamp = '';
+
  function renderRail(main) {
   var spotlight = main.querySelector('#spotlight');
   var rail = document.getElementById(RAIL_ID);
-  if (!spotlight) { if (rail) rail.remove(); return; }
+  if (!spotlight) { if (rail) rail.remove(); lastRailRawStamp = ''; return; }
+
+  var rawHist = '', rawHid = '';
+  try {
+   rawHist = localStorage.getItem('kuro-episode-history-v1') || '';
+   rawHid = localStorage.getItem(HIDDEN_KEY) || '';
+  } catch (e) {}
+  var stamp = rawHist + '|' + rawHid;
+  if (stamp === lastRailRawStamp && ((rail && rail.parentNode === main) || (!rail && !rawHist))) return;
+  lastRailRawStamp = stamp;
 
   var rows = historyRows().filter(function (r) { return !isHidden(r.item.title); }).slice(0, CARD_LIMIT);
 
@@ -154,13 +165,20 @@
  /* --------------------------------------------------------- hidden cards --- */
  function applyHidden(main) {
   var list = hiddenList();
-  Array.prototype.forEach.call(main.querySelectorAll('.card'), function (card) {
+  if (!list.length) {
+   var prevHidden = main.querySelectorAll('.km-card-hidden-15');
+   for (var p = 0; p < prevHidden.length; p++) prevHidden[p].classList.remove('km-card-hidden-15');
+   return;
+  }
+  var cards = main.querySelectorAll('.card');
+  for (var i = 0; i < cards.length; i++) {
+   var card = cards[i];
    var title = card.querySelector('strong');
-   if (!title) return;
-   var hide = list.length > 0 && list.indexOf(K.norm(title.textContent)) >= 0;
+   if (!title) continue;
+   var hide = list.indexOf(K.norm(title.textContent)) >= 0;
    if (hide) card.classList.add('km-card-hidden-15');
-   else card.classList.remove('km-card-hidden-15');
-  });
+   else if (card.classList.contains('km-card-hidden-15')) card.classList.remove('km-card-hidden-15');
+  }
  }
 
  function hiddenSummaryText() {
@@ -368,7 +386,7 @@
     setTimeout(function () { fired = false; }, 400);
    }, true);
   });
-  window.addEventListener('scroll', function () { if (!fired) clear(); }, true);
+  window.addEventListener('scroll', function () { if (start && !fired) clear(); }, { capture: true, passive: true });
 
   /* a long press must not also open the title behind the sheet */
   document.addEventListener('click', function (ev) {

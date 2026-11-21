@@ -13,7 +13,7 @@
     ['Signature Violet Theme & Faster Loading', 'Default app colour restored to Signature Violet across all screens, dialogs & player controls, plus built-in Encrypted DNS (1.1.1.1 / 8.8.8.8) to unblock carrier-restricted sources without a VPN, faster 8-lane catalog loading, backup video codec support, low-RAM crash protection, and Android TV / Fire TV / foldable support.'],
     ['Cinematic Title Detail v2', 'Full-bleed banner header with ★ score, studio & runtime pills, interactive Franchise & Watch-Order strip, Canon / Filler / Recap badges, Skip Filler switch (also skips fillers on Auto-Next), 16:9 episode rows, and ⬇ Batch Offline Download.'],
     ['Desktop-Site Left-Rail & DPAD UI', 'Turn on Settings → Site view → Desktop (or launch on Android TV / Fire TV) to unlock the frosted-OLED left navigation rail, widescreen hero & multi-column shelves, glowing accent DPAD focus halo, and remote spatial navigation.'],
-    ['Smart Multi-Filter Browse & Voice Search', 'Combinable OLED filter pills on Browse (Dub Available, ★ 8.0+, Airing/Completed, Genre, Format, Year), native Android Voice Search mic pill, and richer SUB | DUB + ★ rating poster badges.'],
+    ['Smart Multi-Filter Browse & Voice Search', 'Combinable OLED filter pills on Browse (Dub Available, ★ 8.0+, Airing/Completed, Genre, Format, Year), native Android Voice Search mic pill, and compact SUB | DUB poster pills.'],
     ['Trackers, Discord Hub & 24 Manga Profile Sets', 'Upgraded Account tab with 24 real manga face avatars & matching 16:9 manga banners, live AniList & MyAnimeList sync cards, Two-Way Auto-Sync switches, and an interactive Discord Rich Presence preview.']
   ];
 
@@ -88,7 +88,7 @@
     var tries = 0;
     var t = setInterval(function () {
       tries++;
-      var intro = document.getElementById('kuro-beta-intro');
+      var intro = document.getElementById('km-intro-15') || document.getElementById('kuro-beta-intro');
       if ((!intro && tries > 3) || tries > 30) {
         clearInterval(t);
         setTimeout(show, 380);

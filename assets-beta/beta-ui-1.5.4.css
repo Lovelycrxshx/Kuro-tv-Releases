@@ -120,10 +120,9 @@ html[data-kuro-theme="light"] .k154-detail-banner-shade {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.01em;
-  background: rgba(10, 11, 16, 0.78);
+  background: rgba(10, 11, 16, 0.90);
   border: 1px solid var(--k154-border-strong);
   color: inherit;
-  backdrop-filter: blur(12px);
 }
 
 html[data-kuro-theme="light"] .k154-meta-pill {
@@ -739,59 +738,44 @@ html[data-kuro-theme="light"] .k154-meta-pill {
   cursor: pointer;
 }
 
-/* Richer Poster Badges: ★ Score top-right + SUB | DUB split pill bottom-left */
+/* Compact SUB | DUB split pill bottom-left (crisp dark tinted pill, zero live blur) */
 .card .poster {
   position: relative;
 }
 
 .k154-poster-score {
-  position: absolute;
-  top: 7px;
-  right: 7px;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 2.5px 7px;
-  border-radius: 999px;
-  background: rgba(6, 7, 11, 0.84);
-  border: 1px solid rgba(246, 196, 83, 0.44);
-  color: #f8ce68;
-  font-size: 10.5px;
-  font-weight: 700;
-  line-height: 1.2;
-  backdrop-filter: blur(8px);
-  pointer-events: none;
+  display: none !important;
 }
 
 .k154-poster-split {
   position: absolute;
-  left: 7px;
-  bottom: 7px;
+  left: 5px;
+  bottom: 5px;
   z-index: 3;
   display: inline-flex;
   align-items: center;
-  border-radius: 8px;
+  border-radius: 5.5px;
   overflow: hidden;
-  background: rgba(6, 7, 11, 0.86);
+  background: rgba(8, 9, 14, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.16);
-  font-size: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.42);
+  font-size: 8.8px;
   font-weight: 700;
+  letter-spacing: 0.01em;
   line-height: 1;
-  backdrop-filter: blur(8px);
   pointer-events: none;
 }
 
 .k154-poster-split > span {
-  padding: 4px 6px;
+  padding: 2.5px 4.5px;
 }
 
 .k154-poster-split .is-sub {
-  color: #e8edf8;
+  color: #edf1fa;
 }
 
 .k154-poster-split .is-dub {
-  background: var(--accent-soft, rgba(180, 120, 238, 0.24));
+  background: var(--accent-soft, rgba(180, 120, 238, 0.28));
   color: var(--accent, #b478ee);
   border-left: 1px solid rgba(255, 255, 255, 0.14);
 }
@@ -1520,12 +1504,11 @@ html[data-pure-black="1"] .k154-rpc-preview {
     gap: 10px;
     padding: 7px 14px;
     border-radius: 999px;
-    background: rgba(8, 9, 14, 0.86);
+    background: rgba(8, 9, 14, 0.92);
     border: 1px solid var(--k154-border-strong);
     color: rgba(238, 241, 250, 0.86);
     font-size: 11.5px;
     font-weight: 600;
-    backdrop-filter: blur(16px);
     pointer-events: none;
   }
 
