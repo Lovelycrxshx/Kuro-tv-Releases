@@ -33,9 +33,9 @@ env:
   VERSION_CODE: ${{ inputs.version_code || '95' }}
   TAG: v${{ inputs.version || '1.5.3' }}
   APK_NAME: Kuro-tv-${{ inputs.version || '1.5.3' }}
-  APK_SHA256: "ae3d9d203fb42a078d338076ce4f50b411e93622f57bb574c3a56619db3ecea6"
+  APK_SHA256: "67b31dccf24945d18d457efd9cbf2b063edd2f0879faaf6592db127d4870d3f7"
   SIGNER_SHA256: "1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e"
-  UNSIGNED_SHA256: "3d7df6a58b8e9dec53db4f5b50b04e81116749b6fe15855756cc0a609291bf38"
+  UNSIGNED_SHA256: "f931aec25230560ac3468ea0d8618d60ee64e03e4df282efd7ecaf06e6122be6"
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
 
 jobs:
@@ -88,27 +88,35 @@ jobs:
           tr -d ':' < /tmp/verify.txt | tr 'A-F' 'a-f' | grep -q "$SIGNER_SHA256" \
             || { echo "::error::the APK is not signed by the pinned Kuro Anime certificate"; exit 1; }
 
-          for f in beta-motion-1.5.css beta-motion-1.5.js theme-rich-1.5.css \
-                   beta-extras-1.5.css beta-extras-1.5.js beta-continue-1.5.js \
-                   beta-whatsnew-1.5.js beta-downloads-1.5.js \
-                   beta-polish-1.5.2.css beta-polish-1.5.2.js intro/animation.mp4; do
-            unzip -l "$APK" | grep -q "assets/$f" \
-              || { echo "::error::assets/$f is missing from the APK"; exit 1; }
-            unzip -p "$APK" classes.dex | grep -aq "/$f" \
-              || { echo "::error::$f is packed but the WebView would drop it"; exit 1; }
-          done
-          unzip -p "$APK" resources.arsc | grep -aq "ic_stat_kuro" \
-            || { echo "::error::resources.arsc missing ic_stat_kuro"; exit 1; }
-          unzip -p "$APK" assets/beta-whatsnew-1.5.js | grep -aFq "var STAMP = '${VERSION}';" \
-            || { echo "::error::beta-whatsnew-1.5.js stamp is not ${VERSION}"; exit 1; }
-          unzip -p "$APK" classes.dex | grep -aFq 'themeAmoled152' \
-            || { echo "::error::classes.dex is missing themeAmoled152"; exit 1; }
-          unzip -p "$APK" classes.dex | grep -aFq 'checkpointsExport152' \
-            || { echo "::error::classes.dex is missing checkpointsExport152"; exit 1; }
-          unzip -p "$APK" classes.dex | grep -aFq 'Update alerts are off' \
-            || { echo "::error::classes.dex is missing the update notification banner"; exit 1; }
-          unzip -p "$APK" classes.dex | grep -aFq "releases/download/v${VERSION}/Kuro-tv-${VERSION}.apk" \
-            || { echo "::error::classes.dex is missing direct GitHub APK DOWNLOAD_PAGE_URL for ${VERSION}"; exit 1; }
+          python3 - "$APK" "$VERSION" <<'PY'
+          import sys, zipfile
+          apk, version = sys.argv[1], sys.argv[2]
+          with zipfile.ZipFile(apk) as z:
+              names = set(z.namelist())
+              dex = [z.read(n) for n in z.namelist() if n.startswith("classes") and n.endswith(".dex")]
+              for f in (
+                  "beta-motion-1.5.css", "beta-motion-1.5.js", "theme-rich-1.5.css",
+                  "beta-extras-1.5.css", "beta-extras-1.5.js", "beta-continue-1.5.js",
+                  "beta-whatsnew-1.5.js", "beta-downloads-1.5.js",
+                  "beta-polish-1.5.2.css", "beta-polish-1.5.2.js", "intro/animation.mp4",
+              ):
+                  assert f"assets/{f}" in names, f"assets/{f} is missing from the APK"
+                  assert any(f"/{f}".encode() in d for d in dex), f"{f} is packed but the WebView would drop it"
+              assert b"ic_stat_kuro" in z.read("resources.arsc"), "resources.arsc missing ic_stat_kuro"
+              wn = z.read("assets/beta-whatsnew-1.5.js").decode("utf-8")
+              assert f"var STAMP = '{version}';" in wn, f"beta-whatsnew-1.5.js stamp is not {version}"
+              skin = z.read("assets/player-skin.js").decode("utf-8")
+              assert "kuro-oled-hud153" in skin, "assets/player-skin.js is missing OLED segmented player skin"
+              for tok in (
+                  "themeAmoled152",
+                  "checkpointsExport152",
+                  "Update alerts are off",
+                  f"releases/download/v{version}/Kuro-tv-{version}.apk",
+                  "KuroPlayerUi153",
+                  "KuroPlayerAction153",
+              ):
+                  assert any(tok.encode() in d for d in dex), f"dex is missing {tok}"
+          PY
           echo "All ${VERSION} artifacts sane; APK matches the signed build."
 
       - name: Build slim source archive (clean Gradle project tree only)
@@ -143,6 +151,7 @@ jobs:
           python3 tools/update_button_1.5.py "$PROJECT"
           python3 tools/offline_beta_1.5.py "$PROJECT"
           python3 tools/polish_1.5.2.py "$PROJECT"
+          python3 tools/player_1.5.3.py "$PROJECT"
           cp -f design/native-src/tests/native-panel/src/test/java/app/lovelycrxshx/kuro/KuroUpdater572Test.java \
             "$PROJECT/tests/native-panel/src/test/java/app/lovelycrxshx/kuro/KuroUpdater572Test.java"
 
@@ -155,12 +164,20 @@ jobs:
             echo "::error::Source.zip size ($SRC_SIZE bytes) out of expected 1..40 MB range (check PROJECT root)"
             exit 1
           fi
-          ! unzip -l "dist/$APK_NAME-Source.zip" | grep -qE '(^|/)\.git/|dist/.*\.apk' \
-            || { echo "::error::Source.zip accidentally contains .git or dist APKs"; exit 1; }
-          unzip -p "dist/$APK_NAME-Source.zip" '*ic_stat_kuro.xml' | grep -Fq 'viewportWidth="24"' \
-            || { echo "::error::the source archive is missing ic_stat_kuro.xml"; exit 1; }
-          unzip -p "dist/$APK_NAME-Source.zip" '*KuroUpdateDialog582.java' | grep -Fq 'notifBanner152' \
-            || { echo "::error::the source archive is missing notifBanner152"; exit 1; }
+          python3 - "dist/$APK_NAME-Source.zip" <<'PY'
+          import re, sys, zipfile
+          with zipfile.ZipFile(sys.argv[1]) as z:
+              names = z.namelist()
+              assert not any(re.search(r"(^|/)\.git/|dist/.*\.apk", n) for n in names), "Source.zip contains .git or dist APKs"
+              ic = [n for n in names if n.endswith("ic_stat_kuro.xml")]
+              assert ic and b'viewportWidth="24"' in z.read(ic[0]), "Source.zip missing ic_stat_kuro.xml"
+              ud = [n for n in names if n.endswith("KuroUpdateDialog582.java")]
+              assert ud and b"notifBanner152" in z.read(ud[0]), "Source.zip missing notifBanner152"
+              pu = [n for n in names if n.endswith("KuroPlayerUi153.java")]
+              assert pu and b"buildAutoNextDialog" in z.read(pu[0]), "Source.zip missing KuroPlayerUi153.java"
+              ps = [n for n in names if n.endswith("assets/player-skin.js")]
+              assert ps and b"kuro-oled-hud153" in z.read(ps[0]), "Source.zip missing assets/player-skin.js"
+          PY
           printf '%s  %s\n' "$(sha256sum "dist/$APK_NAME-Source.zip" | cut -d' ' -f1)" "$APK_NAME-Source.zip" \
             > "dist/$APK_NAME-Source.zip.sha256"
           ls -lh "dist/$APK_NAME-Source.zip" "dist/$APK_NAME-Source.zip.sha256"

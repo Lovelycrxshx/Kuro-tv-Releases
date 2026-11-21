@@ -1,103 +1,104 @@
-/* Kuro 1.5-beta: "What's new", shown once per version and reachable later.
- *
- * The list below is this build's own change log - it ships inside the APK, so it
- * always describes the version you are actually running. Bump STAMP together
- * with the version, or the card will not come back.
- *
- * Where it appears: one card at the top of Home, once, and a row in
- * Settings -> Developer that reopens it in a sheet at any time.
- */
+/* Kuro 1.5.3 — one-time "What's new" card, shown once after the splash on
+   first launch of 1.5.3 and never again. Self-contained, dismissible by
+   button, backdrop tap, or Escape / Android back. */
 (function () {
- 'use strict';
+  'use strict';
 
- if (!window.km15) return;
- var K = window.km15;
+  var STAMP = '1.5.3';
+  var KEY = 'kuro-beta-whatsnew-seen-1.5.3-player';
 
- var STAMP = '1.5.3';
- var SEEN_KEY = 'kuro-whatsnew-15';
- var CARD_ID = 'km-whatsnew-15';
+  try { if (localStorage.getItem(KEY) === STAMP) return; } catch (_) { return; }
 
- var ITEMS = [
-  'Direct GitHub Releases APK downloads across the README, download page, and Discord Rich Presence Download button \u2014 no Google Drive mirror redirect.',
-  'Pure black (OLED) mode in Settings > Appearance and startup pairs a #000000 floor with any of Kuro\u2019s twenty accent colours.',
-  'Shimmer loading skeletons replace blank spaces on Home and Browse while catalogues load.',
-  'Hidden titles manager in Settings > Privacy and links lets you inspect and restore anime hidden from Home.',
-  'Backup & restore (.json) preserves profile artwork, your 20-colour accent, OLED mode, hidden titles, auto-clean rules, and episode resume checkpoints.',
-  'Kuro updates prompts directly for Android 13+ notification permission when alerts are off, and all status-bar icons use a crisp monochrome glyph.'
- ];
+  var ITEMS = [
+    ['OLED Segmented Player (All Servers)', 'Pure black gradient fade, gapped chapter timeline with glowing vertical scrubber pill, OLED pill-chip controls, and live accent + Pure Black OLED sync across all embedded server players, Web HLS, and native ExoPlayer.'],
+    ['Fullscreen Swipe-Up for Next Episode', 'Drag or swipe up from the bottom while in fullscreen to pull up the themed Up Next & Episodes drawer and switch episodes without leaving fullscreen.'],
+    ['App-UI Auto-Play Next Episode', 'Redesigned floating OLED Up-Next card with episode number & title, smooth 10-second accent progress bar, Play Next & Cancel pills, and embedded server end detection.'],
+    ['Direct GitHub APK Downloads', 'Release page, Discord Rich Presence Download button, and docs link directly to the signed Kuro-tv-1.5.3.apk on GitHub Releases.'],
+    ['20 Accents + Pure Black OLED', 'Full theme palette across WebView, native dialogs, and every video player, with instant Backup & Restore checkpoints.']
+  ];
 
- function seen() {
-  try { return localStorage.getItem(SEEN_KEY) === STAMP; } catch (e) { return false; }
- }
+  function mark() {
+    try { localStorage.setItem(KEY, STAMP); } catch (_) {}
+  }
 
- function markSeen() {
-  try { localStorage.setItem(SEEN_KEY, STAMP); } catch (e) {}
- }
+  function show() {
+    if (document.getElementById('kb-whatsnew')) return;
 
- function openSheet() {
-  K.sheet("What's new", 'Kuro 1.5.3 \u00b7 this build', ITEMS.map(function (text) {
-   return { label: text };
-  }));
- }
+    var scrim = document.createElement('div');
+    scrim.id = 'kb-whatsnew';
+    scrim.className = 'kb-wn-scrim';
+    scrim.setAttribute('role', 'dialog');
+    scrim.setAttribute('aria-modal', 'true');
+    scrim.setAttribute('aria-labelledby', 'kb-wn-title');
 
- function card(main) {
-  var existing = document.getElementById(CARD_ID);
-  if (seen()) { if (existing) existing.remove(); return; }
-  var spotlight = main.querySelector('#spotlight');
-  if (!spotlight) { if (existing) existing.remove(); return; }
-  if (existing) return;
+    var card = document.createElement('div');
+    card.className = 'kb-wn-card';
 
-  var el = document.createElement('section');
-  el.id = CARD_ID;
-  el.className = 'km-whatsnew-15';
-  el.setAttribute('aria-labelledby', 'km-whatsnew-title-15');
-  el.innerHTML =
-   '<div class="overline">NEW IN 1.5.3</div>' +
-   '<h2 id="km-whatsnew-title-15">What\u2019s new</h2>' +
-   '<ul class="km-whatsnew-list-15">' + ITEMS.slice(0, 4).map(function (t) {
-    return '<li>' + K.esc(t) + '</li>';
-   }).join('') + '</ul>' +
-   '<div class="km-whatsnew-row-15">' +
-   '<button type="button" class="km-whatsnew-go-15">Got it</button>' +
-   '<button type="button" class="km-whatsnew-more-15">All changes</button>' +
-   '</div>';
+    var tag = document.createElement('div');
+    tag.className = 'kb-wn-tag';
+    tag.textContent = 'KURO.TV  \u00b7  1.5.3';
 
-  el.querySelector('.km-whatsnew-go-15').addEventListener('click', function () {
-   markSeen();
-   el.classList.add('km-whatsnew-gone-15');
-   setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 220);
-  });
-  el.querySelector('.km-whatsnew-more-15').addEventListener('click', openSheet);
+    var h = document.createElement('h2');
+    h.id = 'kb-wn-title';
+    h.className = 'kb-wn-title';
+    h.textContent = 'What\u2019s new in 1.5.3';
 
-  main.insertBefore(el, main.firstElementChild);
- }
+    var list = document.createElement('ul');
+    list.className = 'kb-wn-list';
+    for (var i = 0; i < ITEMS.length; i++) {
+      var li = document.createElement('li');
+      var b = document.createElement('strong');
+      b.textContent = ITEMS[i][0];
+      var s = document.createElement('span');
+      s.textContent = ITEMS[i][1];
+      li.appendChild(b);
+      li.appendChild(s);
+      list.appendChild(li);
+    }
 
- function settingsRow(main) {
-  var overlay = document.getElementById('settings-overlay560');
-  if (!overlay) return;
-  var group = null;
-  Array.prototype.forEach.call(overlay.querySelectorAll('.settings-group560'), function (g) {
-   var key = (g.getAttribute('data-section') || '').toLowerCase();
-   if (!group && key.indexOf('developer') === 0) group = g;
-  });
-  if (!group) return;
-  var rows = group.querySelector('.settings-rows560');
-  if (!rows || rows.querySelector('.km-wn-row-15')) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'kb-wn-ok';
+    btn.textContent = 'Got it';
 
-  var row = document.createElement('button');
-  row.type = 'button';
-  row.className = 'settings-row560 settings-action560 km-wn-row-15';
-  row.innerHTML = '<span><strong>What\u2019s new</strong><small>Changes in Kuro 1.5.3</small></span>' +
-   '<b aria-hidden="true">\u203a</b>';
-  row.addEventListener('click', openSheet);
-  rows.insertBefore(row, rows.firstChild);
- }
+    function close() {
+      mark();
+      scrim.classList.add('is-out');
+      document.removeEventListener('keydown', onKey, true);
+      setTimeout(function () { if (scrim.parentNode) scrim.parentNode.removeChild(scrim); }, 220);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); close(); }
+    }
 
- function render(main) {
-  card(main);
-  settingsRow(main);
- }
+    btn.addEventListener('click', close);
+    scrim.addEventListener('click', function (e) { if (e.target === scrim) close(); });
+    document.addEventListener('keydown', onKey, true);
 
- /* the sheet is built by km15, so it survives settings being rebuilt */
- K.observe(render);
+    card.appendChild(tag);
+    card.appendChild(h);
+    card.appendChild(list);
+    card.appendChild(btn);
+    scrim.appendChild(card);
+    document.body.appendChild(scrim);
+    setTimeout(function () { try { btn.focus(); } catch (_) {} }, 60);
+  }
+
+  function waitForIntro() {
+    var tries = 0;
+    var t = setInterval(function () {
+      tries++;
+      var intro = document.getElementById('kuro-beta-intro');
+      if ((!intro && tries > 3) || tries > 30) {
+        clearInterval(t);
+        setTimeout(show, 380);
+      }
+    }, 250);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', waitForIntro);
+  } else {
+    waitForIntro();
+  }
 })();
