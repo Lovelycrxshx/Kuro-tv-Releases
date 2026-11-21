@@ -4,13 +4,13 @@ Kuro 1.5.4-beta (Signed Beta Build — NOT Published on GitHub)
 Package:        app.lovelycrxshx.kuro
 Version Name:   1.5.4-beta
 Version Code:   96
-Size:           51,562,530 bytes (49.2 MB)
-SHA-256:        1b37ef37b4d18919878cc70a989e100de4d1a32cc2a06b931f3a5d7e4a7997d8
-MD5:            357e230a7a26098266c3ed8f8970986d
+Size:           51,584,618 bytes (49.2 MB)
+SHA-256:        d4b661405a37c6c599736276390554c8ba0f95ff71c96ba4c20161a1f4ec2554
+MD5:            b2adfeaef6281ca204f719b93859ae43
 Signer:         CN=Kuro Anime
 Signer SHA-256: 1D:37:C3:CA:28:ED:80:CC:48:46:01:A7:A7:90:7D:5C:43:97:0A:5D:57:D5:1A:A4:E9:14:75:A6:07:03:E9:3E
-Google Drive:   https://drive.google.com/file/d/1TGjU0aAJd9t48lHeV3FCE8hXHV_4rUE5/view
-Direct DL:      https://drive.google.com/uc?id=1TGjU0aAJd9t48lHeV3FCE8hXHV_4rUE5&export=download
+Google Drive:   https://drive.google.com/file/d/1RlbsUnFdD8-4L-47HscHPlPWsOWGrPO_/view
+Direct DL:      https://drive.google.com/uc?id=1RlbsUnFdD8-4L-47HscHPlPWsOWGrPO_&export=download
 
 Note:
 - Signed with the production Kuro Anime release certificate so it installs cleanly
@@ -18,32 +18,33 @@ Note:
 - GitHub Releases and main branch remain on v1.5.3 (official public release).
 
 What's Included in 1.5.4-beta:
-1. Hardened Multi-Layer Player Popup & In-Page-Push Ad Blocker:
+1. Performance & Device Compatibility Upgrade:
+   - 90Hz / 120Hz High-Refresh Screen Unlock while browsing + automatic step-down
+     during fullscreen video playback to save battery and prevent heat.
+   - Built-in Encrypted DNS-over-HTTPS (Cloudflare 1.1.1.1 & Google 8.8.8.8) ISP
+     Unblocker: automatically bypasses carrier DNS blocks (Jio, Airtel, VI, campus
+     Wi-Fi) with no VPN needed, plus retry-on-timeout/poison protection.
+   - 8-Worker HTTP/2 Connection Pool + 90s AniList Metadata Cache + 12 MB Poster
+     RAM Cache (RGB_565): much faster Home, Search, Browse, and Episode loading.
+   - Hardware + Automatic Software Video Decoder Fallback (ExoPlayer Media3) so
+     tricky HEVC/AVC streams play instead of showing a black screen on budget chips.
+   - Low-RAM WebView Crash Shield (onRenderProcessGone) so heavy third-party video
+     embeds cannot force-close the whole app on 3-4 GB RAM phones.
+   - Offscreen Scroll Virtualization (content-visibility: auto), Auto Lite-GPU Mode
+     on low-RAM phones & TVs, Instant Startup toggle, and 1-Tap Temp Cache Cleaner
+     inside Settings -> Performance & compatibility.
+   - Full Android TV, Google TV, Fire TV Stick (Leanback Launcher + TV Banner +
+     auto Desktop/DPAD mode on TVs) and Foldable / Split-Screen continuity.
+
+2. Hardened Multi-Layer Player Popup & In-Page-Push Ad Blocker:
    - Blocks Adsterra Social Bar, ExoClick In-Page Push, Monetag, Galaksion, AdCash,
-     AdSpyglass, Clickadu, HilltopAds, and adult fake-notification floating banners
-     at both the WebView network layer (50+ expanded ad/IPP CDN domains) and the
-     document-start cosmetic layer.
-   - Hooks Element.prototype.attachShadow at document-start so open and closed
-     Shadow DOM ad widgets are hidden along with their outer host container.
-   - Eliminates floating Ad/Sponsored banners with SVG/CSS close icons, neutralizes
-     window.open and invisible click-hijack overlays, and hides cross-origin ad
-     banner iframes while keeping video, subtitles, controls, and Cloudflare
-     verification untouched.
+     AdSpyglass, Clickadu, HilltopAds, and floating Ad-badged banners across Light
+     DOM, open/closed Shadow DOM, and banner iframes.
 
-2. Android 15 (targetSdk 35) Edge-to-Edge Status Bar & Gesture Bar Window Fix:
-   - Applies native WindowInsetsCompat (systemBars | displayCutout | ime) padding
-     to MainActivity and KuroOfflineActivity561 when not in fullscreen/PiP, so the
-     top Kuro header never overlaps the system clock, network speed, Bluetooth,
-     5G, or battery icons, and switches cleanly to true edge-to-edge in fullscreen.
+3. Android 15 (targetSdk 35) Edge-to-Edge Status Bar & Gesture Bar Window Fix:
+   - Applies native WindowInsetsCompat safe-area padding so the Kuro header never
+     overlaps system clock/network/battery icons, while keeping true fullscreen video.
 
-3. Unified Account, Trackers & Discord Rich Presence Hub (Proposal #3):
-   - Kuro Cloud Account card, AniList 2-Way Sync, MyAnimeList Sync, Discord Rich
-     Presence card, and granular sync toggles.
-
-4. 24 Real Manga Face PFPs & Matching 16:9 Banners (art-11 .. art-34):
-   - Replaced all legacy art-01..10 overlays with 24 authentic manga/manhwa face
-     PFPs and matching 16:9 banners + one-tap "Match banner" pairing.
-
-5. Desktop Leanback Left-Rail UI (Desktop Site Mode Only) & UI Cleanups:
-   - Activates only when Settings -> Site view -> Desktop is enabled.
-   - Hidden "Verify Library 11", "Surprise Me", and "Source sites · open separately".
+4. Unified Account, Trackers & Discord Rich Presence Hub + 24 Manga PFPs/Banners:
+   - Kuro Cloud Account card, AniList & MAL 2-Way Sync, Discord Rich Presence hub,
+     and 24 real manga face PFPs + matching 16:9 banners (art-11 .. art-34).
