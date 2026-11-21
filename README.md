@@ -46,7 +46,8 @@ Kuro is a player / front-end and hosts no media. The catalogue comes from these 
 
 ## 📺 Features
 
-* Optimized for stability and performance with integrated Discord Rich Presence (Social SDK 1.11.24259)
+* Optimized for stability and performance with integrated Discord Rich Presence (Social SDK 1.11.24259),
+  including a **Download** button on your presence card (with Show / Hide in Settings)
 * Native Media3 / ExoPlayer playback, offline downloads, Google Cast and picture-in-picture
 * Built against Android 15 (API 35) with 16 KB page-aligned native libraries
 * Clean, ad-free navigation

@@ -42,6 +42,10 @@ you can hold.
 - **One update button.** The header arrow is the only entry point to the updater.
   The Account "Keep Kuro current" card and the LOCAL/private profile card are gone
   — removed, not hidden.
+- **Download button on Discord Rich Presence.** Your Discord activity now includes a
+  **Download** button linking to the [download page](https://lovelycrxshx.github.io/Kuro-tv-Releases/),
+  enabled by default with a Show / Hide toggle in Settings → Discord Rich Presence →
+  Presence customization.
 
 ## Honest notes
 
