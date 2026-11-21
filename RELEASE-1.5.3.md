@@ -70,4 +70,4 @@ apksigner verify --print-certs Kuro-tv-1.5.3.apk
 
 ## Notes
 
-- APK 48,737,329 bytes (46.5 MiB) · the source archive (`Kuro-tv-1.5.3-Source.zip`, 11.4 MiB) has its own `.sha256` companion.
+- APK 48,737,329 bytes (46.5 MiB) · the source archive (`Kuro-tv-1.5.3-Source.zip`, 11.5 MiB) has its own `.sha256` companion.
