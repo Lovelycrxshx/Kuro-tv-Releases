@@ -339,6 +339,8 @@
    start = null;
   }
 
+  var CAP_PASSIVE = { capture: true, passive: true };
+
   main.addEventListener('pointerdown', function (ev) {
    if (ev.button != null && ev.button !== 0) return;
    var card = ev.target.closest && ev.target.closest('#main .card, #main .km-continue-card-15');
@@ -353,12 +355,12 @@
     clear();
     openCardSheet(cardEl);
    }, 460);
-  }, true);
+  }, CAP_PASSIVE);
 
   main.addEventListener('pointermove', function (ev) {
    if (!start) return;
    if (Math.abs(ev.clientX - start.x) > 12 || Math.abs(ev.clientY - start.y) > 12) clear();
-  }, true);
+  }, CAP_PASSIVE);
 
   ['pointerup', 'pointercancel'].forEach(function (type) {
    main.addEventListener(type, function () {
@@ -366,9 +368,9 @@
     /* the finger lifted: let the release click through the guard, but do not
        keep swallowing taps if Android never sends that click at all */
     setTimeout(function () { fired = false; }, 400);
-   }, true);
+   }, CAP_PASSIVE);
   });
-  window.addEventListener('scroll', function () { if (!fired) clear(); }, true);
+  window.addEventListener('scroll', function () { if (!fired) clear(); }, CAP_PASSIVE);
 
   /* a long press must not also open the title behind the sheet */
   document.addEventListener('click', function (ev) {

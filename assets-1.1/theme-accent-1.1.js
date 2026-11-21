@@ -210,6 +210,7 @@
  var queued = false;
  function schedule() {
   if (queued) return;
+  if (!host && !document.getElementById('settings-overlay560')) return;
   queued = true;
   setTimeout(function () { queued = false; paint(); }, 0);
  }

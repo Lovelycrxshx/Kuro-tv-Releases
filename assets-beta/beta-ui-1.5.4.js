@@ -967,62 +967,105 @@
     return true;
   }
 
+  var scrollingUntil154 = 0;
+  var afterScrollTimer154 = 0;
+  var pendingPosterDecorate154 = false;
+
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('scroll', function () {
+      scrollingUntil154 = Date.now() + 180;
+      if (afterScrollTimer154) clearTimeout(afterScrollTimer154);
+      afterScrollTimer154 = setTimeout(function () {
+        afterScrollTimer154 = 0;
+        if (pendingPosterDecorate154) {
+          pendingPosterDecorate154 = false;
+          decorateRenderedPosters154();
+        }
+      }, 195);
+    }, { passive: true });
+  }
+
   /* Batch Metadata Enrichment + Rich Poster Badges (SUB | DUB + ★ Score) */
   function decorateRenderedPosters154() {
+    if (Date.now() < scrollingUntil154) {
+      pendingPosterDecorate154 = true;
+      return;
+    }
     var cards = document.querySelectorAll('.card');
     if (!cards.length) return;
 
     var toLookup = [];
-    cards.forEach(function (card) {
-      var poster = card.querySelector('.poster');
-      var titleEl = card.querySelector('strong');
-      if (!poster || !titleEl) return;
-      var title = titleEl.textContent.trim();
-      var nt = normTitle(title);
-      if (!nt) return;
+    for (var idx = 0; idx < cards.length; idx++) {
+      var card = cards[idx];
+      if (card.__k154SplitDone && card.__k154ScoreDone) continue;
+
+      var poster = card.__k154Poster || (card.__k154Poster = card.querySelector('.poster'));
+      var titleEl = card.__k154TitleEl || (card.__k154TitleEl = card.querySelector('strong'));
+      if (!poster || !titleEl) continue;
+
+      var title = card.__k154Title;
+      var nt = card.__k154Norm;
+      if (!nt) {
+        title = titleEl.textContent.trim();
+        nt = normTitle(title);
+        if (!nt) continue;
+        card.__k154Title = title;
+        card.__k154Norm = nt;
+      }
 
       var meta = metaStore.byTitle[nt] || null;
-      if (!meta && !inflightTitles.has(nt) && toLookup.length < 8 && toLookup.indexOf(title) < 0) {
+      if (!meta && !inflightTitles.has(nt) && toLookup.length < 12 && toLookup.indexOf(title) < 0) {
         toLookup.push(title);
       }
 
       // 1. ★ Rating pill (top-right)
-      var oldScore = poster.querySelector('.k154-poster-score');
-      if (meta && meta.score >= 50) {
-        var scoreStr = '★ ' + (meta.score / 10).toFixed(1);
-        if (!oldScore) {
-          oldScore = document.createElement('span');
-          oldScore.className = 'k154-poster-score';
-          poster.appendChild(oldScore);
+      if (meta) {
+        if (meta.score >= 50) {
+          var scoreStr = '★ ' + (meta.score / 10).toFixed(1);
+          var oldScore = poster.querySelector('.k154-poster-score');
+          if (!oldScore) {
+            oldScore = document.createElement('span');
+            oldScore.className = 'k154-poster-score';
+            poster.appendChild(oldScore);
+          }
+          if (oldScore.textContent !== scoreStr) oldScore.textContent = scoreStr;
         }
-        if (oldScore.textContent !== scoreStr) oldScore.textContent = scoreStr;
+        card.__k154ScoreDone = true;
       }
 
       // 2. SUB | DUB split pill (bottom-left) upgraded from existing .counts
-      if (!poster.querySelector('.k154-poster-split')) {
-        var countsEl = poster.querySelector('.counts');
-        if (countsEl) {
-          var subNode = countsEl.querySelector('.subcount');
-          var dubNode = countsEl.querySelector('.dubcount');
-          var subNum = subNode ? (subNode.textContent || '').replace(/^CC\s*/i, '').trim() : '';
-          var dubNum = dubNode ? (dubNode.textContent || '').trim() : '';
-          if (subNum || dubNum) {
-            var split = document.createElement('span');
-            split.className = 'k154-poster-split';
-            split.innerHTML =
-              (subNum ? '<span class="is-sub">SUB ' + esc(subNum) + '</span>' : '') +
-              (dubNum ? '<span class="is-dub">DUB ' + esc(dubNum) + '</span>' : '');
-            poster.classList.add('k154-has-split');
-            poster.appendChild(split);
+      if (!card.__k154SplitDone) {
+        if (poster.querySelector('.k154-poster-split')) {
+          card.__k154SplitDone = true;
+        } else {
+          var countsEl = poster.querySelector('.counts');
+          if (countsEl) {
+            var subNode = countsEl.querySelector('.subcount');
+            var dubNode = countsEl.querySelector('.dubcount');
+            var subNum = subNode ? (subNode.textContent || '').replace(/^CC\s*/i, '').trim() : '';
+            var dubNum = dubNode ? (dubNode.textContent || '').trim() : '';
+            if (subNum || dubNum) {
+              var split = document.createElement('span');
+              split.className = 'k154-poster-split';
+              split.innerHTML =
+                (subNum ? '<span class="is-sub">SUB ' + esc(subNum) + '</span>' : '') +
+                (dubNum ? '<span class="is-dub">DUB ' + esc(dubNum) + '</span>' : '');
+              poster.classList.add('k154-has-split');
+              poster.appendChild(split);
+            }
+            card.__k154SplitDone = true;
+          } else if (meta) {
+            if (meta.episodes > 0) {
+              var epSplit = document.createElement('span');
+              epSplit.className = 'k154-poster-split';
+              epSplit.innerHTML = '<span class="is-sub">' + esc(meta.episodes) + ' EPS</span>';
+              poster.appendChild(epSplit);
+            }
+            card.__k154SplitDone = true;
           }
-        } else if (meta && meta.episodes > 0) {
-          var epSplit = document.createElement('span');
-          epSplit.className = 'k154-poster-split';
-          epSplit.innerHTML = '<span class="is-sub">' + esc(meta.episodes) + ' EPS</span>';
-          poster.appendChild(epSplit);
         }
       }
-    });
+    }
 
     if (toLookup.length > 0 && window.KuroNative && typeof window.KuroNative.catalog573 === 'function') {
       toLookup.forEach(function (t) { inflightTitles.add(normTitle(t)); });
@@ -1035,7 +1078,7 @@
             if (m && !m.isAdult) recordMediaMeta(m, toLookup[i]);
           }
           decorateRenderedPosters154();
-          if (activeBrowsePager154 && typeof window.renderChips581 === 'function') {
+          if (activeBrowsePager154 && typeof window.renderChips581 === 'function' && Date.now() >= scrollingUntil154) {
             renderSmartFilterBar154(activeBrowsePager154);
           }
         })
@@ -2159,16 +2202,39 @@
     renderPerfGroup();
   }
 
+  function isBadgeOnlyMutation154(records) {
+    if (!records || !records.length) return false;
+    for (var i = 0; i < records.length; i++) {
+      var rec = records[i];
+      var added = rec.addedNodes;
+      var removed = rec.removedNodes;
+      if ((!added || !added.length) && (!removed || !removed.length)) continue;
+      if (removed && removed.length) return false;
+      for (var j = 0; j < added.length; j++) {
+        var n = added[j];
+        if (!n || n.nodeType !== 1 || !n.classList) return false;
+        if (!n.classList.contains('k154-poster-score') && !n.classList.contains('k154-poster-split')) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   /* Observe DOM mutations so Home shelves, Browse grids, Account Hub, Settings & Player overlays stay clean */
   function startObserver154() {
     var rootEl = document.body || document.getElementById('main');
     if (!rootEl) return;
     var rafPending = false;
-    var obs = new MutationObserver(function () {
-      if (rafPending) return;
+    var obs = new MutationObserver(function (records) {
+      if (rafPending || isBadgeOnlyMutation154(records)) return;
       rafPending = true;
       requestAnimationFrame(function () {
         rafPending = false;
+        if (Date.now() < scrollingUntil154) {
+          pendingPosterDecorate154 = true;
+          return;
+        }
         pruneHiddenControls154();
         if (document.getElementById('discover-search')) {
           enhanceBrowseCommandBar154();

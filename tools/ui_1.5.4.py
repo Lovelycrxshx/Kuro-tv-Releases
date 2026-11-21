@@ -65,7 +65,7 @@ def patch_catalog(root: pathlib.Path) -> None:
         text,
         "metaBatch154",
         'if(input==null||input.length()>300)throw new IOException("Invalid request");',
-        'if(input==null||input.length()>("metaBatch154".equals(action)?2400:300))throw new IOException("Invalid request");',
+        'if(input==null||input.length()>("metaBatch154".equals(action)?3600:300))throw new IOException("Invalid request");',
         "KuroCatalog573 input limit",
     )
     extra_actions = (
@@ -85,7 +85,7 @@ def patch_catalog(root: pathlib.Path) -> None:
         '    if(cleanIds.length()==0)throw new IOException("Empty IDs");v.put("ids",cleanIds);\n'
         '    query="query($ids:[Int]){Page(page:1,perPage:36){media(id_in:$ids,type:ANIME,isAdult:false){id idMal isAdult title{romaji english} averageScore format status episodes season seasonYear genres}}}";\n'
         '   }else if(p.optJSONArray("titles")!=null){\n'
-        '    JSONArray names=p.optJSONArray("titles");if(names.length()==0||names.length()>8)throw new IOException("Invalid title batch");\n'
+        '    JSONArray names=p.optJSONArray("titles");if(names.length()==0||names.length()>12)throw new IOException("Invalid title batch");\n'
         '    StringBuilder params=new StringBuilder("query("),body=new StringBuilder("{");int count=0;\n'
         '    for(int i=0;i<names.length();i++){String name=names.optString(i,"").trim();if(name.length()<2||name.length()>140)continue;if(count>0)params.append(",");params.append("$q").append(count).append(":String");body.append("m").append(count).append(":Media(search:$q").append(count).append(",type:ANIME,isAdult:false,sort:SEARCH_MATCH){id idMal isAdult title{romaji english} averageScore format status episodes season seasonYear genres} ");v.put("q"+count,name);count++;}\n'
         '    if(count==0)throw new IOException("Empty title batch");\n'
@@ -1461,6 +1461,39 @@ def patch_perf_and_compat_154(root: pathlib.Path) -> None:
  private void initPerf154(){
   SharedPreferences sp=perfPrefs154();
   KuroFastNet154.setDohMode(sp.getString("dohMode","auto"));
+  if(ui!=null){
+   ui.setVerticalScrollBarEnabled(false);
+   ui.setHorizontalScrollBarEnabled(false);
+   ui.setOverScrollMode(View.OVER_SCROLL_NEVER);
+   if(Build.VERSION.SDK_INT>=26){
+    try{ui.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT,true);}catch(RuntimeException ignored){}
+   }
+  }
+  if(!isTelevisionDevice154()){
+   try{
+    Window w=getWindow();
+    android.view.Display d=Build.VERSION.SDK_INT>=30?getDisplay():(w!=null?w.getWindowManager().getDefaultDisplay():null);
+    if(w!=null&&d!=null){
+     android.view.Display.Mode cur=d.getMode();
+     float bestHz=cur!=null?cur.getRefreshRate():60f;
+     android.view.Display.Mode[] modes=d.getSupportedModes();
+     if(cur!=null&&modes!=null){
+      for(android.view.Display.Mode m:modes){
+       if(m.getPhysicalWidth()==cur.getPhysicalWidth()&&m.getPhysicalHeight()==cur.getPhysicalHeight()&&m.getRefreshRate()>bestHz){
+        bestHz=m.getRefreshRate();
+       }
+      }
+     }
+     if(bestHz>62f){
+      WindowManager.LayoutParams lp=w.getAttributes();
+      if(Math.abs(lp.preferredRefreshRate-bestHz)>0.5f){
+       lp.preferredRefreshRate=bestHz;
+       w.setAttributes(lp);
+      }
+     }
+    }
+   }catch(RuntimeException ignored){}
+  }
  }
  private long folderBytes154(File f){
   if(f==null||!f.exists())return 0L;

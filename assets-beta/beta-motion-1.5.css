@@ -194,7 +194,7 @@
  * The hidden state exists only inside the keyframe, so an element can never
  * be left invisible by this layer.  6 steps x 38 ms.
  * --------------------------------------------------------------------- */
-.km-reveal{animation:km-card-in .44s var(--ku-ease-out,cubic-bezier(.16,1,.3,1)) both}
+.km-reveal{animation:km-card-in .4s var(--ku-ease-out,cubic-bezier(.16,1,.3,1)) backwards}
 .km-reveal.km-d1{animation-delay:0s}
 .km-reveal.km-d2{animation-delay:.038s}
 .km-reveal.km-d3{animation-delay:.076s}
@@ -203,14 +203,13 @@
 .km-reveal.km-d6{animation-delay:.19s}
 .km-reveal.km-d2,.km-reveal.km-d5{--km-rot:-1deg}
 @keyframes km-card-in{
- 0%{opacity:0;transform:translateY(18px) scale(.93) rotate(var(--km-rot,.8deg))}
- 62%{opacity:1;transform:translateY(-2px) scale(1.006) rotate(0)}
+ 0%{opacity:0;transform:translateY(14px) scale(.96)}
  100%{opacity:1;transform:none}
 }
 
 /* ------------------------------------------------ press spring ------- */
 .card,.history-card,.hero-slide,.shelf .grid>*,.info .poster{
- transition:transform 250ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1))}
+ transition:transform 160ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1))}
 .card:active,.history-card:active,.shelf .grid>*:active{transform:scale(.96)}
 .hero-slide:active,.info .poster:active{transform:scale(.985)}
 
@@ -249,30 +248,33 @@
  * ====================================================================== */
 
 /* --- press spring ------------------------------------------------------ */
-button,.btn,.chip,.card,.history-card,.poster,.info .poster,.hero-slide,
+button,.btn,.chip,.card,.history-card,.info .poster,.hero-slide,
 .kuro-dock button,.header-icon,.login-button,.sourcebar button,.tabs button,
 .episode-row button,.episodeList button,.popup-result,.genre-back,.clear-recent,
 .next-episode,.back,.preset-choice571,.profile-card547,.air-source-trigger,
 .seasonal-open573,.queue-open571{
- transition:transform 200ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1))}
+ transition:transform 160ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1))}
 button:active,.btn:active,.chip:active,.card:active,.history-card:active,
 .kuro-dock button:active,.header-icon:active,.login-button:active,.sourcebar button:active,
 .tabs button:active,.episode-row button:active,.episodeList button:active,.popup-result:active,
 .genre-back:active,.clear-recent:active,.next-episode:active,.back:active,
 .preset-choice571:active,.profile-card547:active,.air-source-trigger:active,
-.seasonal-open573:active,.queue-open571:active,.info .poster:active{transform:scale(.955)}
+.seasonal-open573:active,.queue-open571:active,.info .poster:active{transform:scale(.965)}
 .hero-slide:active{transform:scale(.99)}
+@media (hover:none) and (pointer:coarse){
+ .card:active,.history-card:active,.shelf .grid>*:active,
+ .episode-row button:active,.episodeList button:active{transition-delay:55ms}
+}
 
 /* --- every screen springs in ------------------------------------------ */
-main > *{animation:km-block-in .32s var(--ku-ease-out,cubic-bezier(.16,1,.3,1)) both}
+main > *{animation:km-block-in .28s var(--ku-ease-out,cubic-bezier(.16,1,.3,1)) backwards}
 main > *:nth-child(2){animation-delay:.016s}
 main > *:nth-child(3){animation-delay:.032s}
 main > *:nth-child(4){animation-delay:.048s}
 main > *:nth-child(5){animation-delay:.064s}
 main > *:nth-child(n+6){animation-delay:.08s}
 @keyframes km-block-in{
- 0%{opacity:0;transform:translateY(14px) scale(.996)}
- 62%{opacity:1;transform:translateY(-2px) scale(1)}
+ 0%{opacity:0;transform:translateY(10px)}
  100%{opacity:1;transform:none}
 }
 
@@ -280,7 +282,7 @@ main > *:nth-child(n+6){animation-delay:.08s}
 .episode-row:nth-child(-n+12),.episodeList>button:nth-child(-n+12),
 .popup-result:nth-child(-n+12),.air-source-line,.home-rail-heading,
 .anime-facts div:nth-child(-n+10),.detail-badges span:nth-child(-n+8){
- animation:km-item-in .3s var(--ku-ease-out,cubic-bezier(.16,1,.3,1)) both}
+ animation:km-item-in .26s var(--ku-ease-out,cubic-bezier(.16,1,.3,1)) backwards}
 .episode-row:nth-child(2),.episodeList>button:nth-child(2),.popup-result:nth-child(2){animation-delay:.025s}
 .episode-row:nth-child(3),.episodeList>button:nth-child(3),.popup-result:nth-child(3){animation-delay:.05s}
 .episode-row:nth-child(4),.episodeList>button:nth-child(4),.popup-result:nth-child(4){animation-delay:.075s}
@@ -297,30 +299,15 @@ main > *:nth-child(n+6){animation-delay:.08s}
 
 /* --------------------------------------------------------------------- */
 
-/* ======================================================================
- * SCROLL-LINKED MOTION
- *
- * The reel's motion is not "things fade in once" - it is continuous: cards
- * sit smaller at the edges and come up to full size as they reach the middle
- * of the screen, banners drift inside their frame, headings travel at their
- * own rate.  That is what this block does, driven from the scroll position by
- * one rAF loop in the script.
- *
- * Nothing here hides content: every value is a continuous function of where
- * the element sits on screen, and it is all transform only.
- * ====================================================================== */
-.poster,.hero-slide img,.shelf .poster{
- transform-origin:50% 60%;backface-visibility:hidden}
-
 /* header condenses once the page is scrolled (transform only - no reflow) */
-header{transition:box-shadow 260ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1)),background-color 260ms linear}
-body.km-scrolled header{box-shadow:0 10px 30px -12px #000000cc}
-body.km-scrolled header .brand-logo{transform:scale(.9);transform-origin:left center;
- transition:transform 260ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1))}
+header{transition:box-shadow 220ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1)),background-color 220ms linear}
+header.km-scrolled,body.km-scrolled header{box-shadow:0 10px 30px -12px #000000cc}
+header.km-scrolled .brand-logo,body.km-scrolled header .brand-logo{transform:scale(.92);transform-origin:left center;
+ transition:transform 220ms var(--ku-ease-out,cubic-bezier(.16,1,.3,1))}
 
 /* scroll position, as a hairline under the header */
 #km-scrollbar-15{position:fixed;left:0;right:0;top:0;height:2px;z-index:9997;pointer-events:none;
- background:var(--ku-accent,#b478ee);opacity:.55;transform:scaleX(0);transform-origin:left}
+ background:var(--ku-accent,#b478ee);opacity:.55;transform:scaleX(0);transform-origin:left;will-change:transform}
 #km-scrollbar-15.km-idle{opacity:0;transition:opacity .3s linear}
 
 /* ------------------------------------------------- reduced motion ----- */
@@ -330,7 +317,7 @@ body.km-scrolled header .brand-logo{transform:scale(.9);transform-origin:left ce
  .card,.history-card,.hero-slide,.shelf .grid>*,.info .poster{transition:none}
  .poster,.hero-slide img{transform:none!important}
  #km-scrollbar-15{display:none}
- body.km-scrolled header .brand-logo{transform:none}
+ header.km-scrolled .brand-logo,body.km-scrolled header .brand-logo{transform:none}
  #km-sweep-15{display:none}
  main > *,.episode-row,.episodeList>button,.popup-result,.air-source-line,.home-rail-heading,
  .anime-facts div,.detail-badges span{animation:none}
