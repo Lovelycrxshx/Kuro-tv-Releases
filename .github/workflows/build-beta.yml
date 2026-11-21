@@ -328,13 +328,13 @@ jobs:
           python3 "$GITHUB_WORKSPACE/out/tools/discord_rpc_download_1.5.py" "$PROJECT"
 
           PKG="$PROJECT/src/app/lovelycrxshx/kuro"
-          grep -q 'btn.SetLabel("Download")' "$PROJECT/native/kuro_discord_rpc563.cpp" \
+          grep -Fq 'btn.SetLabel("Download")' "$PROJECT/native/kuro_discord_rpc563.cpp" \
             || { echo "::error::native Discord RPC Download button missing."; exit 1; }
-          grep -q 'DOWNLOAD_PAGE_URL="https://lovelycrxshx.github.io/Kuro-tv-Releases/"' "$PKG/KuroPresence564.java" \
+          grep -Fq 'DOWNLOAD_PAGE_URL="https://lovelycrxshx.github.io/Kuro-tv-Releases/"' "$PKG/KuroPresence564.java" \
             || { echo "::error::KuroPresence564 DOWNLOAD_PAGE_URL missing."; exit 1; }
-          grep -q 'utf8(s.downloadUrl)' "$PKG/KuroDiscordRpc563.java" \
+          grep -Fq 'utf8(s.downloadUrl)' "$PKG/KuroDiscordRpc563.java" \
             || { echo "::error::KuroDiscordRpc563 does not forward s.downloadUrl."; exit 1; }
-          grep -q "['download','Download button'" "$PROJECT/assets/settings560.js" \
+          grep -Fq "['download','Download button'" "$PROJECT/assets/settings560.js" \
             || { echo "::error::settings560.js Download button toggle missing."; exit 1; }
 
           chmod +x "$PROJECT/tests/test-discord-native564.sh" \
