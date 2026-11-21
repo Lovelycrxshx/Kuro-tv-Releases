@@ -12,9 +12,6 @@
    Shared OLED Glass Tokens (inherits active 20-colour --accent & Pure Black)
    -------------------------------------------------------------------------- */
 :root {
-  --accent: var(--ku-accent, #b478ee);
-  --accent-soft: color-mix(in srgb, var(--ku-accent, #b478ee) 18%, transparent);
-  --accent-line: color-mix(in srgb, var(--ku-accent, #b478ee) 44%, transparent);
   --k154-surface: rgba(16, 17, 23, 0.88);
   --k154-surface-elev: rgba(22, 24, 32, 0.94);
   --k154-border: rgba(255, 255, 255, 0.09);
@@ -120,9 +117,10 @@ html[data-kuro-theme="light"] .k154-detail-banner-shade {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.01em;
-  background: rgba(11, 9, 18, 0.9);
+  background: rgba(10, 11, 16, 0.78);
   border: 1px solid var(--k154-border-strong);
   color: inherit;
+  backdrop-filter: blur(12px);
 }
 
 html[data-kuro-theme="light"] .k154-meta-pill {
@@ -135,8 +133,8 @@ html[data-kuro-theme="light"] .k154-meta-pill {
 }
 
 .k154-meta-pill.is-airing {
-  color: var(--accent, #b478ee);
-  border-color: var(--accent-line, rgba(180, 120, 238, 0.45));
+  color: var(--accent, #7fd8d1);
+  border-color: var(--accent-line, rgba(127, 216, 209, 0.45));
 }
 
 /* Franchise / Watch-Order Pill Strip */
@@ -161,7 +159,7 @@ html[data-kuro-theme="light"] .k154-meta-pill {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--accent, #b478ee);
+  color: var(--accent, #7fd8d1);
 }
 
 .k154-franchise-sub {
@@ -200,13 +198,13 @@ html[data-kuro-theme="light"] .k154-meta-pill {
 }
 
 .k154-franchise-pill:hover {
-  border-color: var(--accent, #b478ee);
+  border-color: var(--accent, #7fd8d1);
 }
 
 .k154-franchise-pill.is-current {
-  background: var(--accent-soft, rgba(180, 120, 238, 0.16));
-  border-color: var(--accent, #b478ee);
-  color: var(--accent, #b478ee);
+  background: var(--accent-soft, rgba(127, 216, 209, 0.16));
+  border-color: var(--accent, #7fd8d1);
+  color: var(--accent, #7fd8d1);
 }
 
 .k154-franchise-step {
@@ -223,7 +221,7 @@ html[data-kuro-theme="light"] .k154-meta-pill {
 }
 
 .k154-franchise-pill.is-current .k154-franchise-step {
-  background: var(--accent, #b478ee);
+  background: var(--accent, #7fd8d1);
   color: #05070a;
 }
 
@@ -273,9 +271,9 @@ html[data-kuro-theme="light"] .k154-meta-pill {
 }
 
 .k154-skip-filler-btn[aria-pressed="true"] {
-  background: var(--accent-soft, rgba(180, 120, 238, 0.18));
-  border-color: var(--accent, #b478ee);
-  color: var(--accent, #b478ee);
+  background: var(--accent-soft, rgba(127, 216, 209, 0.18));
+  border-color: var(--accent, #7fd8d1);
+  color: var(--accent, #7fd8d1);
 }
 
 .k154-switch-dot {
@@ -301,7 +299,7 @@ html[data-kuro-theme="light"] .k154-meta-pill {
 }
 
 .k154-skip-filler-btn[aria-pressed="true"] .k154-switch-dot {
-  background: var(--accent, #b478ee);
+  background: var(--accent, #7fd8d1);
 }
 
 .k154-skip-filler-btn[aria-pressed="true"] .k154-switch-dot::after {
@@ -310,12 +308,12 @@ html[data-kuro-theme="light"] .k154-meta-pill {
 }
 
 .k154-batch-dl-btn {
-  background: var(--accent-soft, rgba(180, 120, 238, 0.14));
-  border-color: var(--accent-line, rgba(180, 120, 238, 0.38));
+  background: var(--accent-soft, rgba(127, 216, 209, 0.14));
+  border-color: var(--accent-line, rgba(127, 216, 209, 0.38));
 }
 
 .k154-batch-dl-btn:hover {
-  border-color: var(--accent, #b478ee);
+  border-color: var(--accent, #7fd8d1);
 }
 
 .k154-filler-summary {
@@ -398,7 +396,7 @@ html[data-kuro-theme="light"] .k154-meta-pill {
 
 .k154-ep-prog-fill {
   height: 100%;
-  background: var(--accent, #b478ee);
+  background: var(--accent, #7fd8d1);
   width: 0%;
 }
 
@@ -576,7 +574,7 @@ html[data-kuro-theme="light"] .k154-meta-pill {
 }
 
 .k154-sheet-option:hover {
-  border-color: var(--accent, #b478ee);
+  border-color: var(--accent, #7fd8d1);
 }
 
 .k154-sheet-option strong {
@@ -593,7 +591,7 @@ html[data-kuro-theme="light"] .k154-meta-pill {
 .k154-sheet-status {
   margin: 10px 0 0;
   font-size: 12.5px;
-  color: var(--accent, #b478ee);
+  color: var(--accent, #7fd8d1);
 }
 
 /* ==========================================================================
@@ -640,20 +638,20 @@ html[data-kuro-theme="light"] .k154-meta-pill {
 }
 
 .k154-mic-btn.is-listening {
-  border-color: var(--accent, #b478ee);
-  background: var(--accent-soft, rgba(180, 120, 238, 0.22));
-  color: var(--accent, #b478ee);
-  box-shadow: 0 0 0 3px var(--accent-soft, rgba(180, 120, 238, 0.2));
+  border-color: var(--accent, #7fd8d1);
+  background: var(--accent-soft, rgba(127, 216, 209, 0.22));
+  color: var(--accent, #7fd8d1);
+  box-shadow: 0 0 0 3px var(--accent-soft, rgba(127, 216, 209, 0.2));
 }
 
 .k154-surprise-btn {
-  background: var(--accent-soft, rgba(180, 120, 238, 0.13));
-  border-color: var(--accent-line, rgba(180, 120, 238, 0.36));
+  background: var(--accent-soft, rgba(127, 216, 209, 0.13));
+  border-color: var(--accent-line, rgba(127, 216, 209, 0.36));
 }
 
 .k154-surprise-btn:hover,
 .k154-mic-btn:hover {
-  border-color: var(--accent, #b478ee);
+  border-color: var(--accent, #7fd8d1);
 }
 
 /* Smart Multi-Filter Pill Bar */
@@ -708,9 +706,9 @@ html[data-kuro-theme="light"] .k154-meta-pill {
 }
 
 .k154-pill[aria-pressed="true"] {
-  background: var(--accent-soft, rgba(180, 120, 238, 0.18));
-  border-color: var(--accent, #b478ee);
-  color: var(--accent, #b478ee);
+  background: var(--accent-soft, rgba(127, 216, 209, 0.18));
+  border-color: var(--accent, #7fd8d1);
+  color: var(--accent, #7fd8d1);
 }
 
 .k154-pill.is-score[aria-pressed="true"] {
@@ -732,7 +730,7 @@ html[data-kuro-theme="light"] .k154-meta-pill {
   border-radius: 999px;
   border: 1px solid var(--k154-border-strong);
   background: transparent;
-  color: var(--accent, #b478ee);
+  color: var(--accent, #7fd8d1);
   font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
@@ -753,12 +751,13 @@ html[data-kuro-theme="light"] .k154-meta-pill {
   gap: 3px;
   padding: 2.5px 7px;
   border-radius: 999px;
-  background: rgba(9, 7, 15, 0.9);
+  background: rgba(6, 7, 11, 0.84);
   border: 1px solid rgba(246, 196, 83, 0.44);
   color: #f8ce68;
   font-size: 10.5px;
   font-weight: 700;
   line-height: 1.2;
+  backdrop-filter: blur(8px);
   pointer-events: none;
 }
 
@@ -771,11 +770,12 @@ html[data-kuro-theme="light"] .k154-meta-pill {
   align-items: center;
   border-radius: 8px;
   overflow: hidden;
-  background: rgba(9, 7, 15, 0.92);
+  background: rgba(6, 7, 11, 0.86);
   border: 1px solid rgba(255, 255, 255, 0.16);
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
+  backdrop-filter: blur(8px);
   pointer-events: none;
 }
 
@@ -788,8 +788,8 @@ html[data-kuro-theme="light"] .k154-meta-pill {
 }
 
 .k154-poster-split .is-dub {
-  background: var(--accent-soft, rgba(180, 120, 238, 0.24));
-  color: var(--accent, #b478ee);
+  background: var(--accent-soft, rgba(127, 216, 209, 0.24));
+  color: var(--accent, #7fd8d1);
   border-left: 1px solid rgba(255, 255, 255, 0.14);
 }
 
@@ -824,7 +824,7 @@ html[data-kuro-theme="light"] .k154-meta-pill {
   height: 22px;
   margin-top: 2px;
   flex: 0 0 22px;
-  color: var(--accent, #b478ee);
+  color: var(--accent, #7fd8d1);
 }
 
 .k154-hub-head-icon svg {
@@ -954,7 +954,7 @@ html[data-pure-black="1"] .k154-hub-card {
 }
 
 .k154-hub-state.is-on {
-  color: var(--accent, #b478ee);
+  color: var(--accent, #7fd8d1);
 }
 
 .k154-hub-handle {
@@ -981,8 +981,8 @@ html[data-pure-black="1"] .k154-hub-card {
   height: 8px;
   border-radius: 50%;
   flex: 0 0 8px;
-  background: var(--accent, #b478ee);
-  box-shadow: 0 0 8px var(--accent, #b478ee);
+  background: var(--accent, #7fd8d1);
+  box-shadow: 0 0 8px var(--accent, #7fd8d1);
 }
 
 .k154-live-dot.is-off {
@@ -991,7 +991,7 @@ html[data-pure-black="1"] .k154-hub-card {
 }
 
 .k154-hub-mini-icon {
-  color: var(--accent, #b478ee);
+  color: var(--accent, #7fd8d1);
   font-size: 12px;
   font-weight: 800;
   line-height: 1;
@@ -1037,7 +1037,7 @@ html[data-pure-black="1"] .k154-hub-card {
   width: 20px;
   height: 20px;
   flex: 0 0 20px;
-  color: var(--accent, #b478ee);
+  color: var(--accent, #7fd8d1);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1094,8 +1094,8 @@ html[data-pure-black="1"] .k154-hub-card {
 }
 
 .k154-oled-switch[aria-checked="true"] {
-  background: var(--accent, #b478ee);
-  border-color: var(--accent, #b478ee);
+  background: var(--accent, #7fd8d1);
+  border-color: var(--accent, #7fd8d1);
 }
 
 .k154-oled-switch[aria-checked="true"]::after {
@@ -1112,9 +1112,9 @@ html[data-pure-black="1"] .k154-hub-card {
   min-height: 40px;
   padding: 8px 12px;
   border-radius: 999px;
-  border: 1px solid var(--accent-line, rgba(180, 120, 238, 0.42));
-  background: rgba(180, 120, 238, 0.06);
-  color: var(--accent, #b478ee);
+  border: 1px solid var(--accent-line, rgba(127, 216, 209, 0.42));
+  background: rgba(127, 216, 209, 0.06);
+  color: var(--accent, #7fd8d1);
   font-size: 12.5px;
   font-weight: 700;
   display: inline-flex;
@@ -1126,8 +1126,8 @@ html[data-pure-black="1"] .k154-hub-card {
 }
 
 .k154-hub-btn.is-primary {
-  background: var(--accent-soft, rgba(180, 120, 238, 0.18));
-  border-color: var(--accent, #b478ee);
+  background: var(--accent-soft, rgba(127, 216, 209, 0.18));
+  border-color: var(--accent, #7fd8d1);
 }
 
 .k154-hub-btn.is-muted {
@@ -1182,9 +1182,9 @@ html[data-pure-black="1"] .k154-hub-card {
 .k154-hub-review-btns button {
   padding: 5px 10px;
   border-radius: 999px;
-  border: 1px solid var(--accent-line, rgba(180, 120, 238, 0.42));
-  background: var(--accent-soft, rgba(180, 120, 238, 0.14));
-  color: var(--accent, #b478ee);
+  border: 1px solid var(--accent-line, rgba(127, 216, 209, 0.42));
+  background: var(--accent-soft, rgba(127, 216, 209, 0.14));
+  color: var(--accent, #7fd8d1);
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -1212,7 +1212,7 @@ html[data-pure-black="1"] .k154-rpc-preview {
   flex: 0 0 74px;
   border-radius: 12px;
   overflow: hidden;
-  background: radial-gradient(circle at 30% 25%, rgba(180, 120, 238, 0.28), #0b0f17 75%);
+  background: radial-gradient(circle at 30% 25%, rgba(127, 216, 209, 0.28), #0b0f17 75%);
   border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
@@ -1249,9 +1249,9 @@ html[data-pure-black="1"] .k154-rpc-preview {
   width: 17px;
   height: 17px;
   border-radius: 5px;
-  background: rgba(180, 120, 238, 0.16);
-  border: 1px solid var(--accent-line, rgba(180, 120, 238, 0.45));
-  color: var(--accent, #b478ee);
+  background: rgba(127, 216, 209, 0.16);
+  border: 1px solid var(--accent-line, rgba(127, 216, 209, 0.45));
+  color: var(--accent, #7fd8d1);
   font-size: 10.5px;
   font-weight: 900;
   display: inline-flex;
@@ -1271,9 +1271,9 @@ html[data-pure-black="1"] .k154-rpc-preview {
 }
 
 .k154-rpc-pill.is-live {
-  border-color: var(--accent-line, rgba(180, 120, 238, 0.5));
-  background: var(--accent-soft, rgba(180, 120, 238, 0.16));
-  color: var(--accent, #b478ee);
+  border-color: var(--accent-line, rgba(127, 216, 209, 0.5));
+  background: var(--accent-soft, rgba(127, 216, 209, 0.16));
+  color: var(--accent, #7fd8d1);
 }
 
 .k154-rpc-title {
@@ -1292,7 +1292,7 @@ html[data-pure-black="1"] .k154-rpc-preview {
   margin-top: 2px;
   font-size: 12.5px;
   font-weight: 700;
-  color: var(--accent, #b478ee);
+  color: var(--accent, #7fd8d1);
 }
 
 .k154-rpc-ep {
@@ -1317,8 +1317,8 @@ html[data-pure-black="1"] .k154-rpc-preview {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: var(--accent, #b478ee);
-  box-shadow: 0 0 8px var(--accent, #b478ee);
+  background: var(--accent, #7fd8d1);
+  box-shadow: 0 0 8px var(--accent, #7fd8d1);
 }
 
 .k154-rpc-bar > i.k154-pct-10 { width: 10%; }
@@ -1394,6 +1394,7 @@ html[data-pure-black="1"] .k154-rpc-preview {
     border-radius: 22px !important;
     background: var(--k154-surface-elev) !important;
     border: 1px solid var(--k154-border-strong) !important;
+    backdrop-filter: blur(24px);
     box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55);
     z-index: 60;
   }
@@ -1420,9 +1421,9 @@ html[data-pure-black="1"] .k154-rpc-preview {
   }
 
   html[data-site-view="desktop"] nav.kuro-dock > button[data-nav][aria-current="page"] {
-    background: var(--accent-soft, rgba(180, 120, 238, 0.18)) !important;
-    color: var(--accent, #b478ee) !important;
-    box-shadow: inset 3px 0 0 var(--accent, #b478ee);
+    background: var(--accent-soft, rgba(127, 216, 209, 0.18)) !important;
+    color: var(--accent, #7fd8d1) !important;
+    box-shadow: inset 3px 0 0 var(--accent, #7fd8d1);
   }
 
   /* Pin Kuro.tv brand mark into the top of the left rail; keep utility icons top-right */
@@ -1462,8 +1463,8 @@ html[data-pure-black="1"] .k154-rpc-preview {
   }
 
   html[data-site-view="desktop"] .k154-rail-badge:hover {
-    border-color: var(--accent, #b478ee);
-    color: var(--accent, #b478ee);
+    border-color: var(--accent, #7fd8d1);
+    color: var(--accent, #7fd8d1);
   }
 
   /* Widescreen Main Canvas, Hero, Continue Watching & Multi-Column Grids */
@@ -1516,11 +1517,12 @@ html[data-pure-black="1"] .k154-rpc-preview {
     gap: 10px;
     padding: 7px 14px;
     border-radius: 999px;
-    background: rgba(9, 7, 15, 0.92);
+    background: rgba(8, 9, 14, 0.86);
     border: 1px solid var(--k154-border-strong);
     color: rgba(238, 241, 250, 0.86);
     font-size: 11.5px;
     font-weight: 600;
+    backdrop-filter: blur(16px);
     pointer-events: none;
   }
 
@@ -1528,9 +1530,9 @@ html[data-pure-black="1"] .k154-rpc-preview {
     display: inline-block;
     padding: 2px 6px;
     border-radius: 6px;
-    background: var(--accent-soft, rgba(180, 120, 238, 0.2));
-    border: 1px solid var(--accent-line, rgba(180, 120, 238, 0.45));
-    color: var(--accent, #b478ee);
+    background: var(--accent-soft, rgba(127, 216, 209, 0.2));
+    border: 1px solid var(--accent-line, rgba(127, 216, 209, 0.45));
+    color: var(--accent, #7fd8d1);
     font-family: inherit;
     font-size: 10.5px;
     font-weight: 700;
@@ -1541,45 +1543,9 @@ html[data-pure-black="1"] .k154-rpc-preview {
 /* High-Visibility Glowing Accent Focus Ring (Desktop / TV Mode) */
 html[data-site-view="desktop"] :is(button, a, input, select, [tabindex]):focus-visible,
 html[data-site-view="desktop"] .k154-dpad-focus {
-  outline: 2.5px solid var(--accent, #b478ee) !important;
+  outline: 2.5px solid var(--accent, #7fd8d1) !important;
   outline-offset: 2px !important;
-  box-shadow: 0 0 0 5px var(--accent-soft, rgba(180, 120, 238, 0.26)), 0 12px 28px rgba(0, 0, 0, 0.52) !important;
-}
-
-/* ==========================================================================
-   NETWORK, CACHE & DEVICE COMPATIBILITY (1.5.4-BETA):
-   - Device & DNS status chips in Settings -> Network & compatibility
-   ========================================================================== */
-.k154-perf-summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  margin-bottom: 8px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid var(--k154-border, rgba(255, 255, 255, 0.09));
-}
-
-.k154-perf-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 9px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--fg, #eef2fa);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.k154-perf-chip.is-accent {
-  background: var(--accent-soft, rgba(180, 120, 238, 0.16));
-  color: var(--accent, #b478ee);
-  border-color: var(--accent-line, rgba(180, 120, 238, 0.36));
+  box-shadow: 0 0 0 5px var(--accent-soft, rgba(127, 216, 209, 0.26)), 0 12px 28px rgba(0, 0, 0, 0.52) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1593,42 +1559,4 @@ html[data-site-view="desktop"] .k154-dpad-focus {
     transition: none !important;
     animation: none !important;
   }
-}
-
-/* ==========================================================================
-   NATIVE COMPOSITOR SCROLL SMOOTHNESS (1.5.4-BETA):
-   - Disable CSS smooth-scroll interpolation so route jumps & flings never fight
-   - Remove per-frame backdrop-filter GPU readbacks from sticky header & dock
-   - Hardware touch-gliding on all horizontal rails & instant tap manipulation
-   ========================================================================== */
-html {
-  scroll-behavior: auto !important;
-}
-
-header,
-nav.kuro-dock {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-.shelf,
-.chip-row581,
-.k154-franchise-strip,
-.k154-cast-strip,
-.k154-filter-bar,
-.km-continue-row-15 {
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-x: contain;
-  touch-action: pan-x pan-y;
-  scroll-behavior: auto;
-}
-
-button,
-a,
-input,
-select,
-.card,
-.chip,
-[role="button"] {
-  touch-action: manipulation;
 }

@@ -967,105 +967,62 @@
     return true;
   }
 
-  var scrollingUntil154 = 0;
-  var afterScrollTimer154 = 0;
-  var pendingPosterDecorate154 = false;
-
-  if (typeof window !== 'undefined' && window.addEventListener) {
-    window.addEventListener('scroll', function () {
-      scrollingUntil154 = Date.now() + 180;
-      if (afterScrollTimer154) clearTimeout(afterScrollTimer154);
-      afterScrollTimer154 = setTimeout(function () {
-        afterScrollTimer154 = 0;
-        if (pendingPosterDecorate154) {
-          pendingPosterDecorate154 = false;
-          decorateRenderedPosters154();
-        }
-      }, 195);
-    }, { passive: true });
-  }
-
   /* Batch Metadata Enrichment + Rich Poster Badges (SUB | DUB + ★ Score) */
   function decorateRenderedPosters154() {
-    if (Date.now() < scrollingUntil154) {
-      pendingPosterDecorate154 = true;
-      return;
-    }
     var cards = document.querySelectorAll('.card');
     if (!cards.length) return;
 
     var toLookup = [];
-    for (var idx = 0; idx < cards.length; idx++) {
-      var card = cards[idx];
-      if (card.__k154SplitDone && card.__k154ScoreDone) continue;
-
-      var poster = card.__k154Poster || (card.__k154Poster = card.querySelector('.poster'));
-      var titleEl = card.__k154TitleEl || (card.__k154TitleEl = card.querySelector('strong'));
-      if (!poster || !titleEl) continue;
-
-      var title = card.__k154Title;
-      var nt = card.__k154Norm;
-      if (!nt) {
-        title = titleEl.textContent.trim();
-        nt = normTitle(title);
-        if (!nt) continue;
-        card.__k154Title = title;
-        card.__k154Norm = nt;
-      }
+    cards.forEach(function (card) {
+      var poster = card.querySelector('.poster');
+      var titleEl = card.querySelector('strong');
+      if (!poster || !titleEl) return;
+      var title = titleEl.textContent.trim();
+      var nt = normTitle(title);
+      if (!nt) return;
 
       var meta = metaStore.byTitle[nt] || null;
-      if (!meta && !inflightTitles.has(nt) && toLookup.length < 12 && toLookup.indexOf(title) < 0) {
+      if (!meta && !inflightTitles.has(nt) && toLookup.length < 8 && toLookup.indexOf(title) < 0) {
         toLookup.push(title);
       }
 
       // 1. ★ Rating pill (top-right)
-      if (meta) {
-        if (meta.score >= 50) {
-          var scoreStr = '★ ' + (meta.score / 10).toFixed(1);
-          var oldScore = poster.querySelector('.k154-poster-score');
-          if (!oldScore) {
-            oldScore = document.createElement('span');
-            oldScore.className = 'k154-poster-score';
-            poster.appendChild(oldScore);
-          }
-          if (oldScore.textContent !== scoreStr) oldScore.textContent = scoreStr;
+      var oldScore = poster.querySelector('.k154-poster-score');
+      if (meta && meta.score >= 50) {
+        var scoreStr = '★ ' + (meta.score / 10).toFixed(1);
+        if (!oldScore) {
+          oldScore = document.createElement('span');
+          oldScore.className = 'k154-poster-score';
+          poster.appendChild(oldScore);
         }
-        card.__k154ScoreDone = true;
+        if (oldScore.textContent !== scoreStr) oldScore.textContent = scoreStr;
       }
 
       // 2. SUB | DUB split pill (bottom-left) upgraded from existing .counts
-      if (!card.__k154SplitDone) {
-        if (poster.querySelector('.k154-poster-split')) {
-          card.__k154SplitDone = true;
-        } else {
-          var countsEl = poster.querySelector('.counts');
-          if (countsEl) {
-            var subNode = countsEl.querySelector('.subcount');
-            var dubNode = countsEl.querySelector('.dubcount');
-            var subNum = subNode ? (subNode.textContent || '').replace(/^CC\s*/i, '').trim() : '';
-            var dubNum = dubNode ? (dubNode.textContent || '').trim() : '';
-            if (subNum || dubNum) {
-              var split = document.createElement('span');
-              split.className = 'k154-poster-split';
-              split.innerHTML =
-                (subNum ? '<span class="is-sub">SUB ' + esc(subNum) + '</span>' : '') +
-                (dubNum ? '<span class="is-dub">DUB ' + esc(dubNum) + '</span>' : '');
-              poster.classList.add('k154-has-split');
-              poster.appendChild(split);
-            }
-            card.__k154SplitDone = true;
-          } else if (meta) {
-            if (meta.episodes > 0) {
-              var epSplit = document.createElement('span');
-              epSplit.className = 'k154-poster-split';
-              epSplit.innerHTML = '<span class="is-sub">' + esc(meta.episodes) + ' EPS</span>';
-              poster.appendChild(epSplit);
-            }
-            card.__k154SplitDone = true;
+      if (!poster.querySelector('.k154-poster-split')) {
+        var countsEl = poster.querySelector('.counts');
+        if (countsEl) {
+          var subNode = countsEl.querySelector('.subcount');
+          var dubNode = countsEl.querySelector('.dubcount');
+          var subNum = subNode ? (subNode.textContent || '').replace(/^CC\s*/i, '').trim() : '';
+          var dubNum = dubNode ? (dubNode.textContent || '').trim() : '';
+          if (subNum || dubNum) {
+            var split = document.createElement('span');
+            split.className = 'k154-poster-split';
+            split.innerHTML =
+              (subNum ? '<span class="is-sub">SUB ' + esc(subNum) + '</span>' : '') +
+              (dubNum ? '<span class="is-dub">DUB ' + esc(dubNum) + '</span>' : '');
+            poster.classList.add('k154-has-split');
+            poster.appendChild(split);
           }
+        } else if (meta && meta.episodes > 0) {
+          var epSplit = document.createElement('span');
+          epSplit.className = 'k154-poster-split';
+          epSplit.innerHTML = '<span class="is-sub">' + esc(meta.episodes) + ' EPS</span>';
+          poster.appendChild(epSplit);
         }
       }
-    }
+    });
 
     if (toLookup.length > 0 && window.KuroNative && typeof window.KuroNative.catalog573 === 'function') {
       toLookup.forEach(function (t) { inflightTitles.add(normTitle(t)); });
@@ -1078,7 +1035,7 @@
             if (m && !m.isAdult) recordMediaMeta(m, toLookup[i]);
           }
           decorateRenderedPosters154();
-          if (activeBrowsePager154 && typeof window.renderChips581 === 'function' && Date.now() >= scrollingUntil154) {
+          if (activeBrowsePager154 && typeof window.renderChips581 === 'function') {
             renderSmartFilterBar154(activeBrowsePager154);
           }
         })
@@ -1965,282 +1922,19 @@
     }
   }
 
-  /* ==========================================================================
-     NETWORK, CACHE & COMPATIBILITY (1.5.4-BETA):
-     - Encrypted DNS-over-HTTPS (1.1.1.1 / 8.8.8.8) ISP Unblock control
-     - 1-tap safe temporary cache cleaner in Settings
-     ========================================================================== */
-  var PERF_KEY_154 = 'kuro-perf-154';
-  var perfDefaults154 = {
-    dohMode: 'auto',
-    isTv: false,
-    lowRam: false,
-    ramMb: 4096,
-    cacheMb: 0
-  };
-
-  function readPerf154() {
-    var local = {};
-    try { local = JSON.parse(localStorage.getItem(PERF_KEY_154) || '{}') || {}; } catch (_) {}
-    var nat = {};
-    if (window.KuroNative && typeof window.KuroNative.perfGet154 === 'function') {
-      try { nat = JSON.parse(window.KuroNative.perfGet154() || '{}') || {}; } catch (_) {}
-    }
-    var merged = Object.assign({}, perfDefaults154, local, nat);
-    try {
-      localStorage.setItem(PERF_KEY_154, JSON.stringify({
-        dohMode: merged.dohMode
-      }));
-    } catch (_) {}
-    return merged;
-  }
-
-  function savePerf154(patch) {
-    var cur = readPerf154();
-    var next = {
-      dohMode: patch.dohMode !== undefined ? patch.dohMode : cur.dohMode
-    };
-    try { localStorage.setItem(PERF_KEY_154, JSON.stringify(next)); } catch (_) {}
-    var updated = Object.assign({}, cur, next);
-    if (window.KuroNative && typeof window.KuroNative.perfSet154 === 'function') {
-      try {
-        var fromNative = JSON.parse(window.KuroNative.perfSet154(JSON.stringify(next)) || '{}');
-        updated = Object.assign(updated, fromNative);
-      } catch (_) {}
-    }
-    return updated;
-  }
-
-  function openPerfChoiceSheet154(overlayRoot, titleText, options, currentVal, onPick, triggerBtn) {
-    if (!overlayRoot || !overlayRoot.isConnected) return;
-    var prev = overlayRoot.querySelector('.choice-backdrop567');
-    if (prev) prev.remove();
-
-    var backdrop = document.createElement('div');
-    backdrop.className = 'choice-backdrop567';
-
-    var panel = document.createElement('section');
-    panel.className = 'choice-panel567';
-    panel.setAttribute('role', 'dialog');
-    panel.setAttribute('aria-modal', 'true');
-
-    var heading = document.createElement('div');
-    heading.className = 'choice-head567';
-    var copy = document.createElement('div');
-    var eye = document.createElement('small');
-    eye.textContent = 'KURO.TV \u00b7 NETWORK';
-    var h2 = document.createElement('h2');
-    h2.id = 'k154-choice-title';
-    h2.textContent = titleText;
-    panel.setAttribute('aria-labelledby', h2.id);
-    copy.appendChild(eye);
-    copy.appendChild(h2);
-
-    var closeBtn = document.createElement('button');
-    closeBtn.type = 'button';
-    closeBtn.className = 'choice-close567';
-    closeBtn.setAttribute('aria-label', 'Close choices');
-    closeBtn.textContent = '\u00d7';
-    heading.appendChild(copy);
-    heading.appendChild(closeBtn);
-    panel.appendChild(heading);
-
-    var list = document.createElement('div');
-    list.className = 'choice-list567';
-    list.setAttribute('role', 'radiogroup');
-    list.setAttribute('aria-label', titleText);
-
-    function closeSheet() {
-      if (!backdrop.isConnected) return;
-      backdrop.remove();
-      if (triggerBtn && triggerBtn.isConnected) {
-        triggerBtn.setAttribute('aria-expanded', 'false');
-        triggerBtn.focus();
-      }
-    }
-
-    options.forEach(function (opt) {
-      var row = document.createElement('button');
-      row.type = 'button';
-      row.className = 'choice-option567';
-      row.setAttribute('role', 'radio');
-      var active = String(opt.value) === String(currentVal);
-      row.setAttribute('aria-checked', String(active));
-      var span = document.createElement('span');
-      span.textContent = opt.label;
-      var dot = document.createElement('i');
-      dot.setAttribute('aria-hidden', 'true');
-      row.appendChild(span);
-      row.appendChild(dot);
-      row.onclick = function () {
-        onPick(opt.value);
-        closeSheet();
-      };
-      list.appendChild(row);
-    });
-
-    panel.appendChild(list);
-    backdrop.appendChild(panel);
-    overlayRoot.appendChild(backdrop);
-    if (triggerBtn) triggerBtn.setAttribute('aria-expanded', 'true');
-
-    closeBtn.onclick = closeSheet;
-    backdrop.onclick = function (e) { if (e.target === backdrop) closeSheet(); };
-    backdrop.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        closeSheet();
-      }
-    });
-    var activeOpt = list.querySelector('[aria-checked="true"]') || closeBtn;
-    if (activeOpt) activeOpt.focus();
-  }
-
-  function mountPerfSettingsGroup154() {
-    var overlay = document.getElementById('settings-overlay560');
-    if (!overlay) return;
-    var body = overlay.querySelector('.settings-body560');
-    if (!body || body.querySelector('#k154-perf-group')) return;
-
-    var sec = document.createElement('section');
-    sec.id = 'k154-perf-group';
-    sec.className = 'settings-group560';
-    sec.setAttribute('data-section', 'network & compatibility dns isp unblock cache storage tv');
-
-    var appearance = body.querySelector('.settings-group560[data-section="appearance and startup"]');
-    if (appearance && appearance.nextSibling) {
-      body.insertBefore(sec, appearance.nextSibling);
-    } else {
-      body.appendChild(sec);
-    }
-
-    function renderPerfGroup() {
-      var p = readPerf154();
-      var devLabel = p.isTv ? 'Android TV / Fire TV' : (p.ramMb ? (Math.max(1, Math.round(p.ramMb / 1024)) + ' GB RAM') : 'Phone / Tablet');
-      var dnsChip = p.dohMode === 'always' ? 'DNS: Always Encrypted' : (p.dohMode === 'auto' ? 'DNS: Smart Unblock' : 'DNS: System');
-      var cacheLabel = (typeof p.cacheMb === 'number' ? p.cacheMb.toFixed(1) : '0.0') + ' MB temp';
-
-      var specs = [
-        {
-          key: 'dohMode',
-          title: 'Network & ISP unblock (DNS)',
-          desc: 'Uses encrypted Cloudflare 1.1.1.1 / Google 8.8.8.8 DNS when your carrier blocks anime sources.',
-          filter: 'network isp unblock dns doh cloudflare 1.1.1.1 jio airtel wifi blocked',
-          current: p.dohMode,
-          options: [
-            { value: 'auto', label: 'Smart Auto (recommended)' },
-            { value: 'always', label: 'Always Encrypted DNS' },
-            { value: 'off', label: 'System default DNS' }
-          ]
-        }
-      ];
-
-      var rowsHtml = specs.map(function (sp) {
-        var found = sp.options.find(function (o) { return String(o.value) === String(sp.current); }) || sp.options[0];
-        return '<div class="settings-row560" data-filter="' + esc(sp.filter) + '">' +
-          '<span><strong>' + esc(sp.title) + '</strong><small>' + esc(sp.desc) + '</small></span>' +
-          '<button type="button" class="settings-choice567" data-k154-perf-key="' + esc(sp.key) + '" aria-haspopup="dialog" aria-expanded="false" aria-label="' + esc(sp.title + ': ' + found.label) + '">' +
-            '<span class="choice-value567">' + esc(found.label) + '</span>' +
-            '<span class="choice-chevron567" aria-hidden="true">\u2304</span>' +
-          '</button>' +
-        '</div>';
-      }).join('');
-
-      var clearHtml = '<button type="button" class="settings-row560 settings-action560" data-k154-clear-cache data-filter="clear temporary stream cache storage memory free space">' +
-        '<span><strong>Clear temporary stream cache</strong>' +
-        '<small>Frees temporary web & poster files (' + esc(cacheLabel) + '). Keeps accounts, lists, history & offline downloads.</small></span>' +
-        '<b aria-hidden="true">\u203a</b>' +
-      '</button>';
-
-      sec.innerHTML =
-        '<div class="settings-group-head560">' +
-          '<h3>Network &amp; compatibility</h3>' +
-          '<p>Built-in carrier DNS unblock, temporary cache cleanup, and TV/low-RAM stability</p>' +
-        '</div>' +
-        '<div class="k154-perf-summary">' +
-          '<span class="k154-perf-chip is-accent">' + esc(dnsChip) + '</span>' +
-          '<span class="k154-perf-chip">' + esc(devLabel) + '</span>' +
-          '<span class="k154-perf-chip">' + esc(cacheLabel) + '</span>' +
-        '</div>' +
-        '<div class="settings-rows560">' + rowsHtml + clearHtml + '</div>';
-
-      specs.forEach(function (sp) {
-        var btn = sec.querySelector('[data-k154-perf-key="' + sp.key + '"]');
-        if (!btn) return;
-        btn.onclick = function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          openPerfChoiceSheet154(overlay, sp.title, sp.options, sp.current, function (picked) {
-            var patch = {};
-            patch[sp.key] = picked;
-            savePerf154(patch);
-            renderPerfGroup();
-            toast(sp.title + ' saved.');
-          }, btn);
-        };
-      });
-
-      var clearBtn = sec.querySelector('[data-k154-clear-cache]');
-      if (clearBtn) {
-        clearBtn.onclick = function () {
-          var freedText = '';
-          if (window.KuroNative && typeof window.KuroNative.clearTempCache154 === 'function') {
-            try {
-              var res = JSON.parse(window.KuroNative.clearTempCache154() || '{}');
-              if (typeof res.freedMb === 'number' && res.freedMb > 0) {
-                freedText = ' (' + res.freedMb.toFixed(1) + ' MB freed)';
-              }
-            } catch (_) {}
-          }
-          renderPerfGroup();
-          toast('Temporary cache cleared' + freedText + '. Accounts, lists & downloads kept.');
-        };
-      }
-    }
-
-    renderPerfGroup();
-  }
-
-  function isBadgeOnlyMutation154(records) {
-    if (!records || !records.length) return false;
-    for (var i = 0; i < records.length; i++) {
-      var rec = records[i];
-      var added = rec.addedNodes;
-      var removed = rec.removedNodes;
-      if ((!added || !added.length) && (!removed || !removed.length)) continue;
-      if (removed && removed.length) return false;
-      for (var j = 0; j < added.length; j++) {
-        var n = added[j];
-        if (!n || n.nodeType !== 1 || !n.classList) return false;
-        if (!n.classList.contains('k154-poster-score') && !n.classList.contains('k154-poster-split')) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  /* Observe DOM mutations so Home shelves, Browse grids, Account Hub, Settings & Player overlays stay clean */
+  /* Observe DOM mutations so Home shelves, Browse grids, Account Hub & Player overlays stay clean */
   function startObserver154() {
     var rootEl = document.body || document.getElementById('main');
     if (!rootEl) return;
     var rafPending = false;
-    var obs = new MutationObserver(function (records) {
-      if (rafPending || isBadgeOnlyMutation154(records)) return;
+    var obs = new MutationObserver(function () {
+      if (rafPending) return;
       rafPending = true;
       requestAnimationFrame(function () {
         rafPending = false;
-        if (Date.now() < scrollingUntil154) {
-          pendingPosterDecorate154 = true;
-          return;
-        }
         pruneHiddenControls154();
         if (document.getElementById('discover-search')) {
           enhanceBrowseCommandBar154();
-        }
-        if (document.getElementById('settings-overlay560')) {
-          mountPerfSettingsGroup154();
         }
         if (document.querySelector('#main > .profile-page547')) {
           renderAccountHub154(false);
@@ -2252,16 +1946,12 @@
   }
 
   function init154() {
-    readPerf154();
     syncDesktopSite154();
     pruneHiddenControls154();
     hookDetailView154();
     hookBrowseFilters154();
     hookAccountTrackerHub154();
     startObserver154();
-    if (document.getElementById('settings-overlay560')) {
-      mountPerfSettingsGroup154();
-    }
     if (document.querySelector('#main > .profile-page547')) {
       renderAccountHub154(false);
     }

@@ -28,8 +28,8 @@ from theme_gen import ACCENTS as THEMES  # noqa: E402  (single source of truth)
 # accent's own colour, not the lifted --ku-accent token, so it reads as a solid
 # chip against the dark card.
 TABLE = [
-    ("violet",   "Violet",   "Signature", "#a65be4"),
     ("teal",     "Teal",     "Signature", "#27d7c5"),
+    ("violet",   "Violet",   "Signature", "#a65be4"),
     ("plum",     "Plum",     "Signature", "#d252e6"),
     ("graphite", "Graphite", "Signature", "#989898"),
     ("sky",      "Sky",      "Cool",      "#2e92d9"),

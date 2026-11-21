@@ -142,25 +142,16 @@ function later() {
   retry = setTimeout(function () { retry = null; armAll(); }, 420);
 }
 
-function cleanReveal(ev) {
-  var t = ev && ev.currentTarget;
-  if (!t || !t.classList) return;
-  t.classList.remove('km-reveal', 'km-d1', 'km-d2', 'km-d3', 'km-d4', 'km-d5', 'km-d6');
-}
-
-var UNARMED_CARD = '.card:not([data-km-anim]), .history-card:not([data-km-anim])';
-
 function armAll() {
   if (reduced) return;
   var nodes, now = Date.now();
-  try { nodes = document.querySelectorAll(UNARMED_CARD); } catch (e) { return; }
-  if (!nodes.length) return;
+  try { nodes = document.querySelectorAll(CARD); } catch (e) { return; }
   for (var i = 0; i < nodes.length; i++) {
    var el = nodes[i];
+   if (el.getAttribute('data-km-anim')) continue;
    if (!el.getAttribute('data-km-born')) { el.setAttribute('data-km-born', String(now)); }
    if (ready(el)) {
     el.setAttribute('data-km-anim', 'done');
-    el.addEventListener('animationend', cleanReveal, { once: true });
     el.classList.add('km-reveal', 'km-d' + ((seq++ % 6) + 1));
    } else if (now - Number(el.getAttribute('data-km-born')) > SETTLE) {
     /* image still not decoded: never animate it, so it can never look stuck */
@@ -193,54 +184,84 @@ function armAll() {
 
  
 
-/* ------------------------------------------------------- scroll-linked chrome
- * Zero-reflow rAF handler: tracks scroll progress on the hairline indicator and
- * condenses the sticky header without touching any scrolling card or poster
- * transforms, keeping scrolling locked to Android's native compositor thread.
+/* ------------------------------------------------------- scroll-linked motion
+ * One rAF loop, driven by the scroll position.  Cards sit slightly small at
+ * the edges of the screen and come up to full size in the middle; banner art
+ * drifts inside its frame; headings travel at their own rate; a hairline under
+ * the header shows how far down you are; the header condenses once you move.
+ *
+ * Only transform is written, nothing is hidden, and elements far off screen
+ * are skipped entirely, so this stays cheap on a TV box.
  */
+var parEls = null;
 var parFrame = 0;
 var barEl = null;
-var headerEl = null;
-var maxScroll = 0;
 var scrolled = false;
-var scrollBusyUntil = 0;
 
-function refreshScrollMetrics() {
+function collectPar() {
   if (reduced) return;
-  var vh = window.innerHeight || 640;
-  var se = document.scrollingElement || document.documentElement;
-  maxScroll = Math.max(0, ((se && se.scrollHeight) || 0) - vh);
-  if (!headerEl || !headerEl.isConnected) {
-   headerEl = document.querySelector('header');
-  }
+  var out = [];
+  try {
+   var sel = '.shelf .poster, .grid .poster, .spotlight > img, .hero-slide img, ' +
+             '.home-rail-heading, .heading, .discover-head';
+   var list = document.querySelectorAll(sel);
+   for (var i = 0; i < list.length && out.length < 90; i++) out.push(list[i]);
+  } catch (e) {}
+  parEls = out;
 }
 
 function paintPar() {
   parFrame = 0;
   if (reduced) return;
-  var y = window.pageYOffset || 0;
+  var vh = window.innerHeight || 640;
+  var se = document.scrollingElement || document.documentElement;
+  var y = window.pageYOffset || se.scrollTop || 0;
 
   if (barEl) {
-   var p = maxScroll > 8 ? Math.min(1, Math.max(0, y / maxScroll)) : 0;
-   if (p > 0.004) {
-    barEl.classList.remove('km-idle');
-    barEl.style.transform = 'scaleX(' + p.toFixed(4) + ')';
-   } else {
-    barEl.classList.add('km-idle');
-    barEl.style.transform = 'scaleX(0)';
-   }
+   var max = (se.scrollHeight || 0) - vh;
+   var p = max > 8 ? Math.min(1, y / max) : 0;
+   barEl.style.transform = 'scaleX(' + p.toFixed(4) + ')';
+   if (p > 0.004) barEl.classList.remove('km-idle');
+   else { barEl.classList.add('km-idle'); barEl.style.transform = 'scaleX(0)'; }
   }
 
   var nowScrolled = y > 18;
   if (nowScrolled !== scrolled) {
    scrolled = nowScrolled;
-   if (!headerEl || !headerEl.isConnected) headerEl = document.querySelector('header');
-   if (headerEl) headerEl.classList.toggle('km-scrolled', scrolled);
+   if (document.body) document.body.classList.toggle('km-scrolled', scrolled);
+  }
+
+  if (!parEls) return;
+  for (var i = 0; i < parEls.length; i++) {
+   var el = parEls[i], r;
+   try { r = el.getBoundingClientRect(); } catch (e) { continue; }
+   if (!r.height) continue;
+   if (r.bottom < -140 || r.top > vh + 140) continue;
+   var d = ((r.top + r.height / 2) - vh / 2) / (vh / 2);
+   if (d < -1) d = -1;
+   if (d > 1) d = 1;
+   if (el.tagName === 'IMG') {
+    el.style.transform = 'translate3d(0,' + (d * 11).toFixed(2) + 'px,0) scale(1.07)';
+   } else if (el.classList && el.classList.contains('poster')) {
+    /* rails get the reel's focus-scale; grid posters only drift, because a
+     * scaled poster next to an unscaled one reads as a broken grid */
+    var inRail = el.parentNode && el.parentNode.parentNode &&
+      el.parentNode.parentNode.parentNode &&
+      el.parentNode.parentNode.parentNode.closest &&
+      el.parentNode.parentNode.parentNode.closest('.shelf');
+    if (inRail) {
+     el.style.transform = 'translate3d(0,' + (d * 4).toFixed(2) + 'px,0) scale(' +
+       (1 - Math.abs(d) * 0.05).toFixed(3) + ')';
+    } else {
+     el.style.transform = 'translate3d(0,' + (d * 3).toFixed(2) + 'px,0)';
+    }
+   } else {
+    el.style.transform = 'translate3d(0,' + (d * -13).toFixed(2) + 'px,0)';
+   }
   }
 }
 
 function queuePar() {
-  scrollBusyUntil = Date.now() + 160;
   if (parFrame) return;
   parFrame = window.requestAnimationFrame ? window.requestAnimationFrame(paintPar)
                                           : setTimeout(paintPar, 16);
@@ -255,9 +276,9 @@ function bindScroll() {
    barEl.setAttribute('aria-hidden', 'true');
    document.body.appendChild(barEl);
   }
-  refreshScrollMetrics();
+  collectPar();
   window.addEventListener('scroll', queuePar, { passive: true });
-  window.addEventListener('resize', function () { refreshScrollMetrics(); queuePar(); }, { passive: true });
+  window.addEventListener('resize', function () { collectPar(); queuePar(); });
   queuePar();
 }
 
@@ -333,22 +354,17 @@ function dropPrivateCard() {
    }, 200);
   }
   if (window.MutationObserver && document.body) {
-   var runMutated = function () {
-    if (Date.now() < scrollBusyUntil) {
-     setTimeout(runMutated, 140);
-     return;
-    }
-    queued = false;
-    armAll();
-    dropPrivateCard();
-    updateButton();
-    refreshScrollMetrics();
-    queuePar();
-   };
    new MutationObserver(function () {
     if (queued) return;
     queued = true;
-    setTimeout(runMutated, 110);
+    setTimeout(function () {
+     queued = false;
+     armAll();
+     dropPrivateCard();
+     updateButton();
+     collectPar();
+     queuePar();
+    }, 110);
    }).observe(document.body, { childList: true, subtree: true });
 
    var mainEl = document.getElementById('main') || document.querySelector('main');

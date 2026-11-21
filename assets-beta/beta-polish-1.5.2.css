@@ -90,13 +90,13 @@ html[data-amoled="1"]:not([data-theme="light"]) .km-continue-art-15 {
 }
 
 .km-amoled-row-152[aria-pressed="true"] .km-amoled-pill-152 {
- border-color: var(--ku-accent, var(--cyan, #a65be4));
- background: color-mix(in srgb, var(--ku-accent, var(--cyan, #a65be4)) 18%, transparent);
+ border-color: var(--ku-accent, var(--cyan, #27d7c5));
+ background: color-mix(in srgb, var(--ku-accent, var(--cyan, #27d7c5)) 18%, transparent);
  color: var(--ku-accent-soft, var(--ink, #ffffff));
 }
 
 .km-amoled-row-152[aria-pressed="true"] .km-amoled-pill-152::before {
- background: var(--ku-accent, var(--cyan, #a65be4));
+ background: var(--ku-accent, var(--cyan, #27d7c5));
  opacity: 1;
 }
 
