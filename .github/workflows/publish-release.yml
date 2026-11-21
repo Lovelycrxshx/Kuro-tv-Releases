@@ -109,11 +109,15 @@ jobs:
               assert f"var STAMP = '{version}';" in wn, f"beta-whatsnew-1.5.js stamp is not {version}"
               skin = z.read("assets/player-skin.js").decode("utf-8")
               assert "kuro-oled-hud153" in skin, "assets/player-skin.js is missing OLED segmented player skin"
+              sjs = z.read("assets/settings560.js").decode("utf-8")
+              assert "Contact developer & notice for bugs and error" in sjs, "assets/settings560.js missing updated developer section title"
+              assert not any(b"825998094067615616" in d for d in dex), "dex still contains typo Discord user ID"
               for tok in (
                   "themeAmoled152",
                   "checkpointsExport152",
                   "Update alerts are off",
                   f"releases/download/v{version}/Kuro-tv-{version}.apk",
+                  "https://discord.com/users/825998094067695616",
                   "KuroPlayerUi153",
                   "KuroPlayerAction153",
                   "KuroFastNet154",

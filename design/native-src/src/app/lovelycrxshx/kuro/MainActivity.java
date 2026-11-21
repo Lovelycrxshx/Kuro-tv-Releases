@@ -155,7 +155,7 @@ public class MainActivity extends Activity {
  private void settingsAction560(String action){
   switch(action){case "cache":new AlertDialog.Builder(KuroDialogs581.themed(this)).setTitle("Clear cached files?").setMessage("This keeps cookies, account connections, profile, lists and history. Pages may load more slowly next time.").setNegativeButton("Cancel",null).setPositiveButton("Clear cache",(d,w)->{if(ui!=null)ui.clearCache(true);Toast.makeText(this,"Cached files cleared; saved data was kept.",Toast.LENGTH_SHORT).show();}).show();break;
    case "downloads":KuroOffline561.showDownloads(this);break;
-   case "developer":openUserLink560("https://discord.com/users/825998094067615616");break;
+   case "developer":openUserLink560("https://discord.com/users/825998094067695616");break;
    case "licenses":try{new AlertDialog.Builder(KuroDialogs581.themed(this)).setTitle("Third-party notices").setMessage(assetText("THIRD_PARTY_NOTICES.txt")+"\n\n"+assetText("DISCORD-SOCIAL-SDK-NOTICES.txt")).setPositiveButton("Close",null).show();}catch(IOException e){Toast.makeText(this,"Could not open the notices.",Toast.LENGTH_SHORT).show();}break;
    case "updates572":showUpdater572();break;
    case "updatesAuto582":showUpdateAuto582();break;
