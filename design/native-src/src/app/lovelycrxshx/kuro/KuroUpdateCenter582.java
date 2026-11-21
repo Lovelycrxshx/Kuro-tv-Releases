@@ -151,6 +151,9 @@ public final class KuroUpdateCenter582 {
         }
         if (!KuroUpdater572.isNewer(release.version, KuroUpdater572.installedVersionName(c))) {
             p.edit().putString("stage", "").putString("lastError", "")
+                    .putString("tag", "").putString("version", "")
+                    .putLong("dlBytes", 0).putLong("dlTotal", 0).putLong("dlSpeed", 0)
+                    .putLong("assetSize", 0)
                     .putString("latestSeen", release.version).putString("latestTag", release.tag).apply();
             return false;
         }
@@ -159,6 +162,7 @@ public final class KuroUpdateCenter582 {
             startDownload(c, release);
         } else if (!autoEnabled(c)) {
             // Reminders-only mode keeps its 5.72 behaviour; nothing is scheduled here.
+            p.edit().putString("stage", "").apply();
             return true;
         } else {
             KuroUpdateSchedule583.defer(c, release);
@@ -186,19 +190,26 @@ public final class KuroUpdateCenter582 {
     // -------------------------------------------------------------------- snapshot
 
     static final class Snapshot {
-        final String stage, version, error;
+        final String stage, version, error, installed, latestSeen;
         final long bytes, total, speed, updatedAt, dueAt;
         final int percent;
 
         Snapshot(String stage, String version, String error, long bytes, long total, long speed, long updatedAt) {
-            this(stage, version, error, bytes, total, speed, updatedAt, 0L);
+            this(stage, version, error, bytes, total, speed, updatedAt, 0L, "", "");
         }
 
         Snapshot(String stage, String version, String error, long bytes, long total, long speed, long updatedAt, long dueAt) {
+            this(stage, version, error, bytes, total, speed, updatedAt, dueAt, "", "");
+        }
+
+        Snapshot(String stage, String version, String error, long bytes, long total, long speed, long updatedAt,
+                 long dueAt, String installed, String latestSeen) {
             this.dueAt = dueAt;
             this.stage = stage == null ? "" : stage;
             this.version = version == null ? "" : version;
             this.error = error == null ? "" : error;
+            this.installed = installed == null ? "" : installed;
+            this.latestSeen = latestSeen == null ? "" : latestSeen;
             this.bytes = bytes;
             this.total = total;
             this.speed = speed;
@@ -217,6 +228,12 @@ public final class KuroUpdateCenter582 {
             return DOWNLOADING.equals(stage) || QUEUED.equals(stage) || WAITING_WIFI.equals(stage);
         }
 
+        /** True when a check completed and GitHub has no newer release than what is installed. */
+        boolean upToDate() {
+            return stage.isEmpty() && error.isEmpty() && !latestSeen.isEmpty()
+                    && !KuroUpdater572.isNewer(latestSeen, installed);
+        }
+
         /** Anything the update screen should stay open for. */
         boolean busy() { return checking() || transferring() || verifying(); }
     }
@@ -229,7 +246,8 @@ public final class KuroUpdateCenter582 {
         return new Snapshot(p.getString("stage", ""), p.getString("version", ""),
                 p.getString("lastError", ""), bytes, total,
                 p.getLong("dlSpeed", 0), p.getLong("dlUpdatedAt", 0),
-                p.getLong("dueAt583", 0));
+                p.getLong("dueAt583", 0), KuroUpdater572.installedVersionName(c),
+                p.getString("latestSeen", ""));
     }
 
     // ---------------------------------------------------------------------- strings
@@ -286,6 +304,12 @@ public final class KuroUpdateCenter582 {
             if (!eta.isEmpty()) text.append("  ·  ").append(eta);
             return text.toString();
         }
+        if (s.upToDate()) {
+            String cur = s.installed.isEmpty() ? s.latestSeen : s.installed;
+            return cur.isEmpty()
+                    ? "No newer release was found on GitHub."
+                    : "Kuro " + cur + " is installed — no newer release was found.";
+        }
         return "Kuro checks the public release page about once a day.";
     }
 
@@ -311,9 +335,10 @@ public final class KuroUpdateCenter582 {
         if (s.verifying()) return "Checking Kuro " + s.version + " before installing.";
         if (s.checking()) return "Checking the public release page now…";
         if (s.failed() && !s.error.isEmpty()) return s.error;
+        int dh = KuroUpdateSchedule583.delayHours(c);
+        String when = dh <= 0 ? "as soon as a release is published" : ("after " + dh + " hours from publication");
         return autoEnabled(c)
-                ? "New releases install by themselves " + KuroUpdateSchedule583.delayLabel(KuroUpdateSchedule583.delayHours(c))
-                        + " after publication, or on the next check once that window has passed."
+                ? "New releases install by themselves " + when + ", or on the next check once that window has passed."
                 : "Kuro checks for new releases and reminds you; you start the download.";
     }
 }

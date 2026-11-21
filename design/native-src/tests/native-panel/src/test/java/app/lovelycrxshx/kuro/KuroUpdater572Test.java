@@ -246,4 +246,37 @@ public class KuroUpdater572Test {
         assertFalse(KuroUpdater572.wifiOnly(context));KuroUpdater572.setWifiOnly(context,true);assertTrue(KuroUpdater572.wifiOnly(context));prefs.edit().putInt("downloadFailures",1).putLong("lastDownloadAt",100).commit();KuroUpdater572.waitForWifi(context);assertEquals("waiting_wifi",prefs.getString("stage",""));assertEquals(1,prefs.getInt("downloadFailures",0));assertEquals(0,prefs.getLong("lastDownloadAt",-1));assertTrue(KuroUpdater572.describe(context).contains("Waiting for Wi-Fi"));KuroUpdater572.setWifiOnly(context,false);assertFalse(KuroUpdater572.wifiOnly(context));
     }
 
+    @Test public void patchRelease151IsNewerThan15AndUpToDateClearsStale100Percent() {
+        assertEquals("1.5.1", KuroUpdater572.versionFromTag("v1.5.1"));
+        assertTrue(KuroUpdater572.isNewer("1.5.1", "1.5"));
+        assertFalse(KuroUpdater572.isNewer("1.5.1", "1.5.1"));
+
+        prefs.edit()
+                .putLong("dlBytes", 48706154L)
+                .putLong("dlTotal", 48706154L)
+                .putLong("assetSize", 48706154L)
+                .putLong("dlSpeed", 500000L)
+                .putString("latestSeen", "1.5.1")
+                .commit();
+
+        KuroUpdater572.Step step = KuroUpdater572.advance(prefs, 1_000_000L, releaseObject("1.5.1"), "1.5.1", true);
+        assertEquals("up_to_date", step.reason);
+        assertEquals(0L, prefs.getLong("dlBytes", -1));
+        assertEquals(0L, prefs.getLong("dlTotal", -1));
+        assertEquals(0L, prefs.getLong("assetSize", -1));
+
+        KuroUpdateCenter582.Snapshot upToDate = new KuroUpdateCenter582.Snapshot(
+                "", "", "", 0L, 0L, 0L, 0L, 0L, "1.5.1", "1.5.1");
+        assertTrue(upToDate.upToDate());
+        assertEquals(-1, upToDate.percent);
+        assertEquals("UP TO DATE", KuroUpdateDialog582.chip(upToDate));
+        assertEquals("up_to_date", KuroUpdateDialog582.key(upToDate));
+        assertEquals("Kuro 1.5.1 is installed — no newer release was found.", KuroUpdateCenter582.detail(upToDate));
+
+        KuroUpdateCenter582.Snapshot neverChecked = new KuroUpdateCenter582.Snapshot(
+                "", "", "", 0L, 0L, 0L, 0L, 0L, "1.5.1", "");
+        assertFalse(neverChecked.upToDate());
+        assertEquals("IDLE", KuroUpdateDialog582.chip(neverChecked));
+    }
+
 }

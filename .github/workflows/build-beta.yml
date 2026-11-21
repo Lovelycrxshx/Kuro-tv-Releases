@@ -1,4 +1,4 @@
-name: build Kuro 1.5 beta
+name: build Kuro 1.5.1
 
 # Builds the CURRENT Kuro version from the source zip stored in Drive, commits the
 # *aligned but unsigned* APK back to this branch, and never sees the signing key — the
@@ -30,10 +30,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  APK_NAME: Kuro-tv-beta-1.5
+  APK_NAME: Kuro-tv-1.5.1
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
-  EXPECT_VERSION_NAME: "1.5"
-  EXPECT_VERSION_CODE: "92"
+  EXPECT_VERSION_NAME: "1.5.1"
+  EXPECT_VERSION_CODE: "93"
 
 jobs:
   apk:
@@ -127,8 +127,8 @@ jobs:
           done
 
           # The version bump lives here until the Drive source itself is regenerated.
-          sed -i -E "s/versionCode +[0-9]+/versionCode 92/" "$PROJECT/build.gradle"
-          sed -i -E "s/versionName +'[^']*'/versionName '1.5'/" "$PROJECT/build.gradle"
+          sed -i -E "s/versionCode +[0-9]+/versionCode ${EXPECT_VERSION_CODE}/" "$PROJECT/build.gradle"
+          sed -i -E "s/versionName +'[^']*'/versionName '${EXPECT_VERSION_NAME}'/" "$PROJECT/build.gradle"
           grep -nE "versionName|versionCode" "$PROJECT/build.gradle"
 
           grep -qF 'theme-teal-1.1.css' "$PROJECT/assets/index.html" \
@@ -284,22 +284,30 @@ jobs:
             || { echo "::error::the old developer case survived the patch."; exit 1; }
           echo "developer row -> discord://-/users/<id>, explicit com.discord intent, then web"
 
-      - name: Add the in-app update button bridge (1.5-beta)
+      - name: Add the in-app update button bridge and up-to-date dialog state (1.5.1)
         run: |
           set -euo pipefail
-          # The header button and the Account card call KuroNative.updateButton15().
-          # It runs a check immediately and opens the existing theme-aware update
-          # screen; download/install stay in the shell's own pipeline.
+          # The header button calls KuroNative.updateButton15(). It checks off the main
+          # thread via checkAndMaybeInstall582(), clears leftover download bytes when
+          # already current, and shows "You are on the latest version" ("UP TO DATE").
           python3 "$GITHUB_WORKSPACE/out/tools/update_button_1.5.py" "$PROJECT"
 
           PKG="$PROJECT/src/app/lovelycrxshx/kuro"
           grep -q 'updateButton15' "$PKG/MainActivity.java" \
             || { echo "::error::the update bridge was not added."; exit 1; }
-          grep -q 'KuroUpdateCenter582.checkNow(this,true)' "$PKG/MainActivity.java" \
-            || { echo "::error::the update button does not run a check."; exit 1; }
+          grep -q 'checkAndMaybeInstall582' "$PKG/MainActivity.java" \
+            || { echo "::error::the update button does not run checkAndMaybeInstall582."; exit 1; }
           grep -q '@JavascriptInterface public void updateButton15()' "$PKG/MainActivity.java" \
             || { echo "::error::updateButton15 is not exposed to the WebView."; exit 1; }
-          echo "update button -> checkNow(immediate) + update screen"
+          grep -Fq 'You are on the latest version' "$PKG/KuroUpdateDialog582.java" \
+            || { echo "::error::KuroUpdateDialog582 is missing the up-to-date message."; exit 1; }
+          grep -Fq 'UP TO DATE' "$PKG/KuroUpdateDialog582.java" \
+            || { echo "::error::KuroUpdateDialog582 is missing the UP TO DATE chip."; exit 1; }
+          grep -Fq 'boolean upToDate()' "$PKG/KuroUpdateCenter582.java" \
+            || { echo "::error::KuroUpdateCenter582 is missing Snapshot.upToDate()."; exit 1; }
+          grep -Fq 'dismissEntry15' "$PKG/MainActivity.java" \
+            || { echo "::error::MainActivity boot veil was not updated."; exit 1; }
+          echo "update button -> worker-thread check + You are on the latest version + boot veil"
 
       - name: Add progress readback and download housekeeping (1.5-beta)
         run: |
@@ -569,7 +577,14 @@ jobs:
               dex_blobs = [z.read(n) for n in z.namelist() if n.startswith("classes") and n.endswith(".dex")]
               assert any(b"https://lovelycrxshx.github.io/Kuro-tv-Releases/" in d for d in dex_blobs), "dex missing DOWNLOAD_PAGE_URL"
               assert any(b"option-download15" in d for d in dex_blobs), "dex missing option-download15"
-          print("APK Discord RPC Download button verified across all 4 ABIs, DEX, and settings560.js")
+              assert any(b"You are on the latest version" in d for d in dex_blobs), "dex missing You are on the latest version"
+              assert any(b"UP TO DATE" in d for d in dex_blobs), "dex missing UP TO DATE chip"
+              assert any(b"dismissEntry15" in d for d in dex_blobs), "dex missing dismissEntry15"
+              motion_js = z.read("assets/beta-motion-1.5.js").decode("utf-8")
+              assert "INTRO_HOLD = 3600;" in motion_js, "beta-motion-1.5.js missing 3600ms INTRO_HOLD"
+              motion_css = z.read("assets/beta-motion-1.5.css").decode("utf-8")
+              assert "km-iris .54s cubic-bezier(.62,.02,.9,.4) 3s forwards" in motion_css, "beta-motion-1.5.css missing 3s iris timing"
+          print("APK 1.5.1 verified: Discord RPC Download button, up-to-date dialog, and 3.6s intro")
           PY
           sha256sum "$RUNNER_TEMP/$APK_NAME-aligned.apk"
 

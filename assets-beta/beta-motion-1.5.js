@@ -19,18 +19,18 @@
  *    attributes, and everything re-tints from the accent the user picked.
  *  - prefers-reduced-motion removes all of it: no film, no springs.
  *
- * Timeline of the film (~2 s, skippable, once per app session):
- *   0.00 dot grid          0.16 browser frame springs up
- *   0.12 pill rail         0.22 ticker band drops in
- *   0.38 cards (one sweeps across the type)
- *   0.42 "KURO" letter by letter, 0.62 tracked-out "TV"
- *   1.46 iris closes       2.01 overlay gone, cards spring in behind it
+ * Timeline of the film (~3.6 s, skippable, once per app session):
+ *   0.00 dot grid          0.24 browser frame springs up
+ *   0.18 pill rail         0.36 ticker band drops in
+ *   0.48-0.76 cards fan out (one sweeps across the type)
+ *   0.72 "KURO" letter by letter, 1.10 tracked-out "TV"
+ *   3.00 iris closes       3.60 overlay gone, cards spring in behind it
  */
 (function () {
  'use strict';
 
  var SEEN = 'kuro-intro-15';
- var INTRO_HOLD = 2010;
+ var INTRO_HOLD = 3600;
  var CARD = '.card, .history-card';
  var SETTLE = 360;          /* a card whose poster has not decoded by now is left alone */
 
@@ -101,7 +101,7 @@
  }
 
  function putImage(slot, src) {
-  if (!slot || !src || slot.getAttribute('data-km-filled')) return;
+  if (!slot || !src || slot.getAttribute('data-km-filled') === '1') return;
   slot.setAttribute('data-km-filled', '1');
   var img = document.createElement('img');
   img.alt = '';
@@ -393,6 +393,8 @@ function dropPrivateCard() {
    fillArt();
    setTimeout(fillArt, 220);
    setTimeout(fillArt, 620);
+   setTimeout(fillArt, 1150);
+   setTimeout(fillArt, 1800);
 
    var skip = function () { finish(); };
    introEl.addEventListener('pointerdown', skip);

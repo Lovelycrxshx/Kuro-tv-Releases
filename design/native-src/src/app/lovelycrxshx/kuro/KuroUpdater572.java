@@ -332,9 +332,14 @@ public final class KuroUpdater572 {
     static Step advance(SharedPreferences p, long now, Release release, String installedVersion, boolean canNotify) {
         if (release == null) return Step.none("no_release");
         if (!isNewer(release.version, installedVersion)) {
-            if (p.getInt("notifications", 0) != 0 || !p.getString("stage", "").isEmpty() || !p.getString("tag", "").isEmpty()) {
+            if (p.getInt("notifications", 0) != 0 || !p.getString("stage", "").isEmpty()
+                    || !p.getString("tag", "").isEmpty()
+                    || p.getLong("dlBytes", 0) != 0 || p.getLong("dlTotal", 0) != 0
+                    || p.getLong("assetSize", 0) != 0) {
                 p.edit().putInt("notifications", 0).putLong("lastNotifyAt", 0).putInt("downloadFailures", 0)
                         .putString("stage", "").putString("tag", "").putString("version", "")
+                        .putLong("dlBytes", 0).putLong("dlTotal", 0).putLong("dlSpeed", 0)
+                        .putLong("assetSize", 0)
                         .putString("lastError", "").putLong("lastDownloadAt", 0).apply();
             }
             return Step.none("up_to_date");
