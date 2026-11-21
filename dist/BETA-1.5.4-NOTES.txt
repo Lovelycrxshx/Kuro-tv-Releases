@@ -4,13 +4,13 @@ Kuro 1.5.4-beta (Signed Beta Build — NOT Published on GitHub)
 Package:        app.lovelycrxshx.kuro
 Version Name:   1.5.4-beta
 Version Code:   96
-Size:           51,583,218 bytes (49.2 MB)
-SHA-256:        920974d860380eb8e584f6bcaeff13cbb8331c46d185b5a2c518f905d2c302aa
-MD5:            d8c7a011afd9e0900fe54a0baeb1a8bc
+Size:           51,583,478 bytes (49.2 MB)
+SHA-256:        72f8f7cd9e654911e0a7312936e1a68dd5ebb1dd40a8b4c37f82fd3fbf427a24
+MD5:            b241f012ce34ba641995d9ce4d0ce41f
 Signer:         CN=Kuro Anime
 Signer SHA-256: 1D:37:C3:CA:28:ED:80:CC:48:46:01:A7:A7:90:7D:5C:43:97:0A:5D:57:D5:1A:A4:E9:14:75:A6:07:03:E9:3E
-Google Drive:   https://drive.google.com/file/d/1DKHbB1yGNf6D6i2Y3WBfo_VacG3zwVdW/view
-Direct DL:      https://drive.google.com/uc?id=1DKHbB1yGNf6D6i2Y3WBfo_VacG3zwVdW&export=download
+Google Drive:   https://drive.google.com/file/d/1KgdFqxZ8_G_O_sFnsmzsCa7ctftxxz6-/view
+Direct DL:      https://drive.google.com/uc?id=1KgdFqxZ8_G_O_sFnsmzsCa7ctftxxz6-&export=download
 
 Note:
 - Signed with the production Kuro Anime release certificate so it installs cleanly
@@ -18,16 +18,22 @@ Note:
 - GitHub Releases and main branch remain on v1.5.3 (official public release).
 
 What's Included in 1.5.4-beta:
-1. Signature Violet Default Theme Across Entire App:
-   - Restored Signature Violet (#a65be4) as the default app colour across all
-     WebView screens, splash intro, Detail v2 badges/buttons, Browse pills,
-     Account Hub, native dialogs, status/navigation bars, and video player HUD
-     (including automatic one-time switch from Teal to Violet on upgrade).
+1. Butter-Smooth 60–120fps Scrolling Across Every Screen & Shelf:
+   - Eliminated per-frame scroll layout thrashing & CSS transform collisions on
+     posters and headings so scrolling stays locked to Android's native compositor.
+   - Removed 60–120 per-frame real-time blur passes from tiny poster badges and
+     fixed bars while keeping crisp rich surfaces.
+   - Released lingering GPU card layers after entrance animations finish, paused
+     background badge lookups while actively flinging, made all touch/scroll
+     listeners passive, and unlocked flicker-free native 90/120Hz scrolling.
 
-2. Network Unblock, Faster Loading & Device Compatibility:
-   - Removed forced display-Hz switching, off-screen card virtualization, and
-     auto Lite-GPU glass stripping so scrolling, glass blur, and card animations
-     feel 100% natural again.
+2. Signature Violet Default Theme Across Entire App:
+   - Signature Violet (#a65be4) is the default app colour across all WebView
+     screens, splash intro, Detail v2 badges/buttons, Browse pills, Account Hub,
+     native dialogs, status/navigation bars, and video player HUD (with all 20
+     accents still selectable in Settings).
+
+3. Network Unblock, Faster Loading & Device Compatibility:
    - Built-in Encrypted DNS-over-HTTPS (Cloudflare 1.1.1.1 & Google 8.8.8.8) ISP
      Unblocker: automatically bypasses carrier DNS blocks with no VPN needed.
    - 8-Worker HTTP/2 Connection Pool + 90s AniList Metadata Cache + 12 MB Poster
@@ -37,10 +43,10 @@ What's Included in 1.5.4-beta:
      Banner + auto Desktop/DPAD mode on TVs), Foldable continuity, and Low-RAM
      WebView Crash Shield.
 
-3. Hardened Multi-Layer Player Popup & In-Page-Push Ad Blocker + Android 15 Insets:
+4. Hardened Multi-Layer Player Popup & In-Page-Push Ad Blocker + Android 15 Insets:
    - Blocks Adsterra, ExoClick, Monetag, Galaksion, AdCash, AdSpyglass, Clickadu,
      HilltopAds, and Shadow-DOM floating banners; keeps header clear of status bar.
 
-4. Unified Account, Trackers & Discord Rich Presence Hub + 24 Manga PFPs/Banners:
+5. Unified Account, Trackers & Discord Rich Presence Hub + 24 Manga PFPs/Banners:
    - Kuro Cloud Account card, AniList & MAL 2-Way Sync, Discord Rich Presence hub,
      and 24 real manga face PFPs + matching 16:9 banners (art-11 .. art-34).
