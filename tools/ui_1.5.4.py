@@ -39,8 +39,9 @@ def patch_manifest(root: pathlib.Path) -> None:
         "android.speech.action.RECOGNIZE_SPEECH",
         "<intent><action android:name=\"com.discord.socialsdk.rpc.IDiscordRpcService\"/></intent></queries>",
         "<intent><action android:name=\"com.discord.socialsdk.rpc.IDiscordRpcService\"/></intent>"
-        "<intent><action android:name=\"android.speech.action.RECOGNIZE_SPEECH\"/></intent></queries>",
-        "AndroidManifest.xml RECOGNIZE_SPEECH query",
+        "<intent><action android:name=\"android.speech.action.RECOGNIZE_SPEECH\"/></intent>"
+        "<intent><action android:name=\"android.intent.action.VIEW\"/><category android:name=\"android.intent.category.BROWSABLE\"/><data android:scheme=\"https\"/></intent></queries>",
+        "AndroidManifest.xml RECOGNIZE_SPEECH & https browser queries",
     )
     path.write_text(text, encoding="utf-8")
 
@@ -944,6 +945,10 @@ KURO_TV_BANNER_XML = """<?xml version="1.0" encoding="utf-8"?>
 
 KURO_FAST_NET_154_JAVA = r"""package app.lovelycrxshx.kuro;
 
+import android.app.Activity;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -1318,6 +1323,222 @@ final class KuroFastNet154 {
         }
         throw new IOException("Catalogue unavailable");
     }
+
+    private static final MediaType FORM_MEDIA = MediaType.parse("application/x-www-form-urlencoded; charset=utf-8");
+
+    private static final OkHttpClient ACCOUNT_CLIENT = CLIENT.newBuilder()
+            .connectTimeout(12, TimeUnit.SECONDS)
+            .readTimeout(20, TimeUnit.SECONDS)
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .build();
+
+    private static final OkHttpClient PREFLIGHT_CLIENT = CLIENT.newBuilder()
+            .connectTimeout(3, TimeUnit.SECONDS)
+            .readTimeout(4, TimeUnit.SECONDS)
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .build();
+
+    private static volatile String cachedDiscordRedirect154 = null;
+
+    static JSONObject accountRequest(String method, URI u, Map<String, String> headers, String body) throws Exception {
+        String host = u.getHost();
+        if (!"https".equals(u.getScheme()) || host == null || u.getUserInfo() != null || u.getPort() != -1
+                || !(host.equals("myanimelist.net") || host.equals("api.myanimelist.net")
+                || host.equals("discord.com") || host.equals("graphql.anilist.co"))) {
+            throw new AccountError("Blocked an unsafe account request.");
+        }
+        if (!("GET".equals(method) || "POST".equals(method) || "PUT".equals(method))) {
+            throw new AccountError("Blocked an unsupported account request.");
+        }
+        if ("PUT".equals(method) && !("api.myanimelist.net".equals(host)
+                && u.getPath() != null && u.getPath().matches("/v2/anime/[0-9]{1,10}/my_list_status"))) {
+            throw new AccountError("Blocked an unsafe tracker update.");
+        }
+        byte[] rawBody = null;
+        MediaType bodyType = JSON_MEDIA;
+        if (body != null) {
+            rawBody = body.getBytes(StandardCharsets.UTF_8);
+            if (rawBody.length > 30000) throw new AccountError("Request too large.");
+            if (headers != null) {
+                for (Map.Entry<String, String> e : headers.entrySet()) {
+                    if (e.getKey() != null && "content-type".equalsIgnoreCase(e.getKey()) && e.getValue() != null) {
+                        MediaType parsed = MediaType.parse(e.getValue());
+                        if (parsed != null) bodyType = parsed;
+                        break;
+                    }
+                }
+            }
+        }
+        String lowerHost = host.toLowerCase(Locale.ROOT);
+        for (int attempt = 0; attempt < 2; attempt++) {
+            RequestBody reqBody = null;
+            if (rawBody != null) {
+                reqBody = RequestBody.create(bodyType, rawBody);
+            } else if ("POST".equals(method) || "PUT".equals(method)) {
+                reqBody = RequestBody.create((MediaType) null, new byte[0]);
+            }
+            Request.Builder rb = new Request.Builder()
+                    .url(u.toURL())
+                    .method(method, reqBody)
+                    .header("Accept", "application/json")
+                    .header("User-Agent", "Kuro.tv/1.5.4 (Android)");
+            if (headers != null) {
+                for (Map.Entry<String, String> h : headers.entrySet()) {
+                    if (h.getKey() != null && h.getValue() != null) rb.header(h.getKey(), h.getValue());
+                }
+            }
+            try (Response resp = ACCOUNT_CLIENT.newCall(rb.build()).execute()) {
+                int status = resp.code();
+                if (status < 200 || status >= 300) {
+                    if (status == 429) {
+                        long seconds = 60;
+                        try {
+                            seconds = Math.max(1, Math.min(86400, Long.parseLong(resp.header("Retry-After", "60"))));
+                        } catch (Exception ignored) {}
+                        throw new AccountError("Provider rate-limited the request (HTTP 429); retry after " + seconds + " seconds.");
+                    }
+                    if (status == 403) throw new AccountError("Provider blocked the request (HTTP 403). Check access before retrying manually.");
+                    if (status == 401) throw new AccountError("Sign-in was rejected or the session expired (HTTP 401). Check your setup or sign in again.");
+                    if (status >= 300 && status < 400) throw new AccountError("The provider sent an unexpected redirect. No credentials were forwarded.");
+                    throw new AccountError("The provider rejected the request (HTTP " + status + "). Check the account details and provider settings.");
+                }
+                ResponseBody respBody = resp.body();
+                if (respBody == null) return new JSONObject();
+                byte[] bytes;
+                try {
+                    bytes = readCapped(respBody, 3000000);
+                } catch (IOException tooLarge) {
+                    throw new AccountError("Provider response too large.");
+                }
+                String text = new String(bytes, StandardCharsets.UTF_8).trim();
+                return text.isEmpty() ? new JSONObject() : new JSONObject(text);
+            } catch (IOException ioe) {
+                if (attempt == 0 && shouldRetryWithDoh(ioe, lowerHost)) {
+                    markPoisoned(lowerHost);
+                    dnsCache.remove(lowerHost);
+                    continue;
+                }
+                throw new AccountError("Could not reach the provider. Check your connection and setup.");
+            }
+        }
+        throw new AccountError("Could not reach the provider. Check your connection and setup.");
+    }
+
+    static String resolveDiscordRedirect154(String clientId) {
+        if (!"1569077670074122250".equals(clientId)) {
+            return AccountOAuth.DISCORD_REDIRECT;
+        }
+        String hit = cachedDiscordRedirect154;
+        if (hit != null) return hit;
+        String[] candidates = new String[] {
+            KuroDiscordOAuth564.REDIRECT,
+            AccountOAuth.DISCORD_REDIRECT
+        };
+        for (String cand : candidates) {
+            for (int attempt = 0; attempt < 2; attempt++) {
+                try {
+                    String form = "client_id=" + Uri.encode(clientId)
+                            + "&grant_type=authorization_code"
+                            + "&code=kuro_preflight_probe_154"
+                            + "&redirect_uri=" + Uri.encode(cand)
+                            + "&code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
+                    Request req = new Request.Builder()
+                            .url("https://discord.com/api/oauth2/token")
+                            .header("Accept", "application/json")
+                            .header("User-Agent", "Kuro.tv/1.5.4 (Android)")
+                            .post(RequestBody.create(FORM_MEDIA, form.getBytes(StandardCharsets.UTF_8)))
+                            .build();
+                    try (Response resp = PREFLIGHT_CLIENT.newCall(req).execute()) {
+                        ResponseBody rb = resp.body();
+                        String txt = rb == null ? "" : new String(readCapped(rb, 16384), StandardCharsets.UTF_8);
+                        if (txt.contains("invalid_grant")) {
+                            cachedDiscordRedirect154 = cand;
+                            return cand;
+                        }
+                        break;
+                    }
+                } catch (IOException ioe) {
+                    if (attempt == 0 && shouldRetryWithDoh(ioe, "discord.com")) {
+                        markPoisoned("discord.com");
+                        dnsCache.remove("discord.com");
+                        continue;
+                    }
+                    break;
+                } catch (Exception ignored) {
+                    break;
+                }
+            }
+        }
+        return KuroDiscordOAuth564.REDIRECT;
+    }
+
+    private static boolean validBrowserPackage154(String pkg, String selfPkg) {
+        if (pkg == null || pkg.isEmpty()) return false;
+        if (pkg.equals(selfPkg) || "android".equals(pkg) || pkg.startsWith("com.android.internal")) return false;
+        if ("com.discord".equals(pkg) || pkg.startsWith("com.discord.")) return false;
+        return true;
+    }
+
+    static boolean openInBrowser154(Activity a, String target) {
+        if (a == null || target == null || target.isEmpty()) return false;
+        try {
+            Uri uri = Uri.parse(target);
+            Intent browser = new Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE);
+            PackageManager pm = a.getPackageManager();
+            String selfPkg = a.getPackageName();
+            String chosenPkg = null;
+            if (pm != null) {
+                Intent probe = new Intent(Intent.ACTION_VIEW, Uri.parse("https://example.org/")).addCategory(Intent.CATEGORY_BROWSABLE);
+                ResolveInfo def = pm.resolveActivity(probe, PackageManager.MATCH_DEFAULT_ONLY);
+                if (def != null && def.activityInfo != null && validBrowserPackage154(def.activityInfo.packageName, selfPkg)) {
+                    chosenPkg = def.activityInfo.packageName;
+                }
+                if (chosenPkg == null) {
+                    List<ResolveInfo> list = pm.queryIntentActivities(probe, PackageManager.MATCH_ALL);
+                    if (list == null || list.isEmpty()) list = pm.queryIntentActivities(probe, 0);
+                    if (list != null) {
+                        String[] preferred = new String[] {
+                            "com.android.chrome", "com.brave.browser", "com.sec.android.app.sbrowser",
+                            "org.mozilla.firefox", "com.microsoft.emmx", "com.opera.browser",
+                            "com.vivaldi.browser", "com.kiwibrowser.browser"
+                        };
+                        for (String pref : preferred) {
+                            for (ResolveInfo ri : list) {
+                                if (ri != null && ri.activityInfo != null && pref.equals(ri.activityInfo.packageName)) {
+                                    chosenPkg = pref;
+                                    break;
+                                }
+                            }
+                            if (chosenPkg != null) break;
+                        }
+                        if (chosenPkg == null) {
+                            for (ResolveInfo ri : list) {
+                                if (ri != null && ri.activityInfo != null && validBrowserPackage154(ri.activityInfo.packageName, selfPkg)) {
+                                    chosenPkg = ri.activityInfo.packageName;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (chosenPkg != null) {
+                browser.setPackage(chosenPkg);
+                try {
+                    a.startActivity(browser);
+                    return true;
+                } catch (Exception ignored) {
+                    browser.setPackage(null);
+                }
+            }
+            a.startActivity(browser);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }
 """
 
@@ -1678,6 +1899,492 @@ def patch_perf_and_compat_154(root: pathlib.Path) -> None:
     main_path.write_text(text, encoding="utf-8")
 
 
+PLAYER_ENDED_154_JS = """'use strict';
+(()=>{
+ if(window.__kuroEnded553)return;
+ window.__kuroEnded553=true;
+ let sent154=false,lastCheck154=0;
+ function checkVideo154(v){
+  if(sent154||!(v instanceof HTMLVideoElement))return;
+  if(!Number.isFinite(v.duration)||v.duration<180)return;
+  if(v.ended||v.currentTime>=v.duration*0.85){
+   sent154=true;
+   try{window.KuroFinished553?.postMessage('ended')}catch(_){}
+  }
+ }
+ document.addEventListener('ended',e=>checkVideo154(e.target),true);
+ document.addEventListener('timeupdate',e=>{
+  const now=Date.now();
+  if(now-lastCheck154<2000)return;
+  lastCheck154=now;
+  checkVideo154(e.target);
+ },true);
+})();
+"""
+
+
+def patch_accounts_and_sync_154(root: pathlib.Path) -> None:
+    # 1. AccountHttp.java -> route through KuroFastNet154 (Encrypted DoH + HTTP/2 pool)
+    ah_path = root / "src/app/lovelycrxshx/kuro/AccountHttp.java"
+    ah_text = ah_path.read_text(encoding="utf-8")
+    if "KuroFastNet154.accountRequest" not in ah_text:
+        ah_new = """package app.lovelycrxshx.kuro;
+
+import org.json.JSONObject;
+import java.net.URI;
+import java.util.Map;
+
+interface AccountTransport {
+ JSONObject request(String method,String url,Map<String,String> headers,String body) throws Exception;
+}
+
+/** Authenticated requests never follow redirects and never leave known HTTPS hosts. */
+final class AccountHttp implements AccountTransport {
+ public JSONObject request(String method,String address,Map<String,String> headers,String body) throws Exception {
+  URI u=new URI(address);
+  return KuroFastNet154.accountRequest(method,u,headers,body);
+ }
+}
+"""
+        ah_path.write_text(ah_new, encoding="utf-8")
+
+    # 2. AccountOAuth.java -> support both Social SDK redirect and custom scheme redirect for Discord
+    ao_path = root / "src/app/lovelycrxshx/kuro/AccountOAuth.java"
+    ao_text = ao_path.read_text(encoding="utf-8")
+    ao_text = patch_once(
+        ao_text,
+        "authorizeDiscord154",
+        '  if("discord".equals(provider)){\n'
+        '   if(!publicId(provider,id))throw new AccountError("Add your Discord application ID in Account setup first.");\n'
+        '   return "https://discord.com/oauth2/authorize?"+form(map("response_type","code","client_id",id,"redirect_uri",DISCORD_REDIRECT,"scope","identify","state",state,"code_challenge",challenge(verifier),"code_challenge_method","S256"));\n'
+        '  }',
+        '  if("discord".equals(provider)){\n'
+        '   return authorizeDiscord154(id,DISCORD_REDIRECT,state,verifier);\n'
+        '  }',
+        "AccountOAuth.authorize discord delegate",
+    )
+    ao_text = patch_once(
+        ao_text,
+        "static String authorizeDiscord154(",
+        " static final class Callback {",
+        ' static String authorizeDiscord154(String id,String redirect,String state,String verifier) throws Exception {\n'
+        '  if(!publicId("discord",id))throw new AccountError("Add your Discord application ID in Account setup first.");\n'
+        '  String redir=(redirect==null||redirect.isEmpty())?DISCORD_REDIRECT:redirect;\n'
+        '  return "https://discord.com/oauth2/authorize?"+form(map("response_type","code","client_id",id,"redirect_uri",redir,"scope","identify","state",state,"code_challenge",challenge(verifier),"code_challenge_method","S256"));\n'
+        ' }\n'
+        " static final class Callback {",
+        "AccountOAuth.authorizeDiscord154 helper",
+    )
+    ao_text = patch_once(
+        ao_text,
+        "KuroDiscordOAuth564.SCHEME.equalsIgnoreCase",
+        '  if(!SCHEME.equals(u.getScheme())||!"oauth".equals(u.getHost())||u.getUserInfo()!=null||u.getPort()!=-1||u.getRawFragment()!=null)throw new AccountError("Invalid sign-in return link.");\n'
+        '  String p=u.getPath(),kind;\n'
+        '  if("/mal".equals(p))kind="mal";else if("/discord".equals(p))kind="discord";else throw new AccountError("Invalid sign-in return link.");',
+        '  String p=u.getPath(),kind;\n'
+        '  if(KuroDiscordOAuth564.SCHEME.equalsIgnoreCase(u.getScheme())&&u.getRawAuthority()==null&&"/authorize/callback".equals(p)&&u.getRawFragment()==null)kind="discord";\n'
+        '  else if(SCHEME.equals(u.getScheme())&&"oauth".equals(u.getHost())&&u.getUserInfo()==null&&u.getPort()==-1&&u.getRawFragment()==null){if("/mal".equals(p))kind="mal";else if("/discord".equals(p))kind="discord";else throw new AccountError("Invalid sign-in return link.");}\n'
+        '  else throw new AccountError("Invalid sign-in return link.");',
+        "AccountOAuth.parseCallback dual Discord redirect",
+    )
+    ao_path.write_text(ao_text, encoding="utf-8")
+
+    # 3. KuroAccounts.java -> auto-detect registered Discord redirect URI & preserve it across token exchange
+    ka_path = root / "src/app/lovelycrxshx/kuro/KuroAccounts.java"
+    ka_text = ka_path.read_text(encoding="utf-8")
+    ka_text = patch_once(
+        ka_text,
+        "resolveDiscordRedirect154",
+        '  JSONObject pending=pending(provider,id);\n'
+        '  return AccountOAuth.authorize(provider,id,str(pending,"state"),str(pending,"verifier"));',
+        '  JSONObject pending=pending(provider,id);\n'
+        '  if("discord".equals(provider)){String redirect154=KuroFastNet154.resolveDiscordRedirect154(id);pending.put("redirect",redirect154);write("pending."+provider,pending);return AccountOAuth.authorizeDiscord154(id,redirect154,str(pending,"state"),str(pending,"verifier"));}\n'
+        '  return AccountOAuth.authorize(provider,id,str(pending,"state"),str(pending,"verifier"));',
+        "KuroAccounts.begin discord redirect resolution",
+    )
+    ka_text = patch_once(
+        ka_text,
+        'String redirect154=str(pending,"redirect");',
+        '  }else if("discord".equals(provider))response=token("https://discord.com/api/oauth2/token",formHeaders(""),AccountOAuth.map("client_id",str(pending,"id"),"grant_type","authorization_code","code",cb.code,"redirect_uri",AccountOAuth.DISCORD_REDIRECT,"code_verifier",str(pending,"verifier")));',
+        '  }else if("discord".equals(provider)){String redirect154=str(pending,"redirect");if(redirect154.isEmpty())redirect154=AccountOAuth.DISCORD_REDIRECT;response=token("https://discord.com/api/oauth2/token",formHeaders(""),AccountOAuth.map("client_id",str(pending,"id"),"grant_type","authorization_code","code",cb.code,"redirect_uri",redirect154,"code_verifier",str(pending,"verifier")));}',
+        "KuroAccounts.callback discord redirect exchange",
+    )
+    ka_path.write_text(ka_text, encoding="utf-8")
+
+    # 4. KuroDiscordOAuth564.java -> explicit web browser selection + pending state discriminator
+    kd_path = root / "src/app/lovelycrxshx/kuro/KuroDiscordOAuth564.java"
+    kd_text = kd_path.read_text(encoding="utf-8")
+    kd_text = patch_once(
+        kd_text,
+        "KuroFastNet154.openInBrowser154",
+        '   Intent browser=new Intent(Intent.ACTION_VIEW,uri).addCategory(Intent.CATEGORY_BROWSABLE);\n'
+        '   // Prefer the user\'s default web browser, so they can sign in there as a different account.\n'
+        '   Intent probe=new Intent(Intent.ACTION_VIEW,Uri.parse("https://example.org/")).addCategory(Intent.CATEGORY_BROWSABLE);\n'
+        '   ResolveInfo ri=a.getPackageManager().resolveActivity(probe,PackageManager.MATCH_DEFAULT_ONLY);\n'
+        '   if(ri!=null&&ri.activityInfo!=null&&!a.getPackageName().equals(ri.activityInfo.packageName)&&!"android".equals(ri.activityInfo.packageName))browser.setPackage(ri.activityInfo.packageName);\n'
+        '   a.startActivity(browser);return true;',
+        '   if(!KuroFastNet154.openInBrowser154(a,uri.toString())){KuroDiscordVault564.remove(a,"pending");return false;}\n'
+        '   return true;',
+        "KuroDiscordOAuth564.begin browser bypass",
+    )
+    kd_text = patch_once(
+        kd_text,
+        "hasMatchingPending154",
+        " static Result consume(Context c,Intent intent){",
+        ' static boolean hasMatchingPending154(Context c,Intent intent){\n'
+        '  if(!isCallback(intent))return false;\n'
+        '  try{\n'
+        '   byte[] raw=KuroDiscordVault564.load(c,"pending");if(raw==null)return false;\n'
+        '   String pending=new String(raw,StandardCharsets.UTF_8);Arrays.fill(raw,(byte)0);\n'
+        '   JSONObject p=new JSONObject(pending);String expected=p.optString("state",""),received=one(intent.getData(),"state");\n'
+        '   return !expected.isEmpty()&&!received.isEmpty()&&MessageDigest.isEqual(expected.getBytes(StandardCharsets.US_ASCII),received.getBytes(StandardCharsets.US_ASCII));\n'
+        '  }catch(Exception ignored){return false;}\n'
+        ' }\n'
+        " static Result consume(Context c,Intent intent){",
+        "KuroDiscordOAuth564.hasMatchingPending154",
+    )
+    kd_path.write_text(kd_text, encoding="utf-8")
+
+    # 5. TrackerSync553.java -> fix episode jump progress + automatic AniList/MAL ID resolution
+    ts_path = root / "src/app/lovelycrxshx/kuro/TrackerSync553.java"
+    ts_text = ts_path.read_text(encoding="utf-8")
+    ts_text = patch_once(
+        ts_text,
+        "season$1",
+        '.replaceAll("(?i)\\\\b(?:dub|sub|dubbed|subbed)\\\\b","")',
+        '.replaceAll("(?i)\\\\b(?:dub|sub|dubbed|subbed)\\\\b","")\n   .replaceAll("(?i)\\\\b([2-9])(?:nd|rd|th)\\\\s+season\\\\b","season$1")',
+        "TrackerSync553.normalized season ordinal",
+    )
+    ts_text = patch_once(
+        ts_text,
+        "episodes.length()-1",
+        " private static int nextProgress(int existing,BitSet episodes){int n=existing;while(n<MAX_EPISODE&&episodes.get(n+1))n++;return n;}",
+        " private static int nextProgress(int existing,BitSet episodes){int highest=episodes.length()-1;return Math.max(existing,Math.max(0,Math.min(MAX_EPISODE,highest)));}",
+        "TrackerSync553.nextProgress non-contiguous episode support",
+    )
+    auto_resolve_helper = """ private JSONObject autoResolveIds154(String provider,JSONObject request,String access){
+  String rawTitle=request.optString("title","").trim();
+  String qTitle=rawTitle.replaceAll("(?i)\\\\s*[\\\\(\\\\[]\\\\s*(?:dub|sub|dubbed|subbed)\\\\s*[\\\\)\\\\]]\\\\s*"," ").trim();
+  if(qTitle.length()<2)qTitle=rawTitle;
+  if(qTitle.length()<2||qTitle.length()>160)return null;
+  Set<String> wanted=requestedNames(request);
+  try{
+   String q="query($s:String!){Page(page:1,perPage:10){media(search:$s,type:ANIME,isAdult:false,sort:SEARCH_MATCH){id idMal type format episodes title{english romaji native} synonyms}}}";
+   JSONObject page=graph("",q,new JSONObject().put("s",qTitle)).optJSONObject("Page");
+   JSONArray media=page==null?null:page.optJSONArray("media");
+   if(media!=null){
+    JSONObject first=null;
+    for(int i=0;i<media.length();i++){
+     JSONObject m=media.optJSONObject(i);if(m==null||m.optInt("id",0)<=0)continue;
+     if(first==null)first=m;
+     Set<String> cand=new HashSet<>();metadataNames(cand,m);
+     for(String w:wanted){if(cand.contains(w))return new JSONObject().put("aid",m.optInt("id",0)).put("mid",Math.max(0,m.optInt("idMal",0)));}
+    }
+    if(first!=null){
+     Set<String> cand=new HashSet<>();metadataNames(cand,first);
+     for(String w:wanted)for(String c:cand){if(w.length()>=6&&c.length()>=6&&(w.startsWith(c)||c.startsWith(w)))return new JSONObject().put("aid",first.optInt("id",0)).put("mid",Math.max(0,first.optInt("idMal",0)));}
+    }
+   }
+  }catch(Exception ignored){}
+  if("mal".equals(provider)&&access!=null&&!access.isEmpty()){
+   try{
+    String shortQ=qTitle.length()>64?qTitle.substring(0,64):qTitle;
+    String addr="https://api.myanimelist.net/v2/anime?"+AccountOAuth.form(AccountOAuth.map("q",shortQ,"limit","8","fields","title,alternative_titles,media_type,num_episodes"));
+    JSONObject res=http.request("GET",addr,headers(access,false),null);
+    JSONArray data=res.optJSONArray("data");
+    if(data!=null){
+     for(int i=0;i<data.length();i++){
+      JSONObject row=data.optJSONObject(i);JSONObject node=row==null?null:row.optJSONObject("node");
+      if(node==null||node.optInt("id",0)<=0)continue;
+      Set<String> cand=new HashSet<>();metadataNames(cand,node);
+      for(String w:wanted){
+       if(cand.contains(w))return new JSONObject().put("aid",0).put("mid",node.optInt("id",0));
+       for(String c:cand){if(w.length()>=6&&c.length()>=6&&(w.startsWith(c)||c.startsWith(w)))return new JSONObject().put("aid",0).put("mid",node.optInt("id",0));}
+      }
+     }
+    }
+   }catch(Exception ignored){}
+  }
+  return null;
+ }
+"""
+    ts_text = patch_once(
+        ts_text,
+        "autoResolveIds154(",
+        " JSONObject update(String provider,JSONObject request,String access) throws Exception {\n"
+        '  if(!"mal".equals(provider)&&!"anilist".equals(provider))throw new AccountError("Choose MyAnimeList or AniList to sync.");\n'
+        '  int aid=id(request,"anilistId"),mid=id(request,"malId");if(aid==0&&mid==0)throw new AccountError("MATCH_REQUIRED: Choose the exact anime before syncing.");',
+        auto_resolve_helper
+        + " JSONObject update(String provider,JSONObject request,String access) throws Exception {\n"
+        '  if(!"mal".equals(provider)&&!"anilist".equals(provider))throw new AccountError("Choose MyAnimeList or AniList to sync.");\n'
+        '  int aid=id(request,"anilistId"),mid=id(request,"malId");boolean autoMatched154=false;\n'
+        '  if(aid==0&&mid==0){JSONObject res154=autoResolveIds154(provider,request,access);if(res154!=null){aid=res154.optInt("aid",0);mid=res154.optInt("mid",0);autoMatched154=(aid>0||mid>0);}}\n'
+        '  if(aid==0&&mid==0)throw new AccountError("MATCH_REQUIRED: Choose the exact anime before syncing.");',
+        "TrackerSync553.update autoResolveIds154",
+    )
+    ts_text = patch_once(
+        ts_text,
+        "if(!autoMatched154)verifyNames(request,ani,mal);",
+        "  verifyNames(request,ani,mal);",
+        "  if(!autoMatched154)verifyNames(request,ani,mal);",
+        "TrackerSync553.update autoMatched154 verify bypass",
+    )
+    ts_path.write_text(ts_text, encoding="utf-8")
+
+    # 6. MainActivity.java -> browser bypass, dual Discord OAuth routing, and 85% episode completion sync
+    ma_path = root / "src/app/lovelycrxshx/kuro/MainActivity.java"
+    ma_text = ma_path.read_text(encoding="utf-8")
+    ma_text = patch_once(
+        ma_text,
+        "||KuroDiscordOAuth564.isCallback(intent));}",
+        'private static boolean isAccountIntent(Intent intent){return intent!=null&&Intent.ACTION_VIEW.equals(intent.getAction())&&intent.getData()!=null&&AccountOAuth.SCHEME.equals(intent.getData().getScheme())&&"oauth".equals(intent.getData().getHost());}',
+        'private static boolean isAccountIntent(Intent intent){return intent!=null&&intent.getData()!=null&&((Intent.ACTION_VIEW.equals(intent.getAction())&&AccountOAuth.SCHEME.equals(intent.getData().getScheme())&&"oauth".equals(intent.getData().getHost()))||KuroDiscordOAuth564.isCallback(intent));}',
+        "MainActivity.isAccountIntent Discord callback fallback",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "KuroFastNet154.openInBrowser154(this,target)",
+        ' private void openAccountBrowser(String target){\n'
+        '  try{Intent i=new Intent(Intent.ACTION_VIEW,Uri.parse(target));i.addCategory(Intent.CATEGORY_BROWSABLE);startActivity(i);}catch(Exception e){try{postAccountEvent(new JSONObject().put("error","No browser is available to open the provider sign-in."));}catch(Exception ignored){}}\n'
+        ' }',
+        ' private void openAccountBrowser(String target){\n'
+        '  if(!KuroFastNet154.openInBrowser154(this,target)){try{postAccountEvent(new JSONObject().put("error","No browser is available to open the provider sign-in."));}catch(Exception ignored){}}\n'
+        ' }',
+        "MainActivity.openAccountBrowser explicit browser",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "discordLinkStatus154()",
+        '  @JavascriptInterface public void discordAction564(String action){if(Arrays.asList("clear","current","linked","test","link","unlink").contains(action))main.post(()->{if(!isFinishing()&&!isDestroyed())MainActivity.this.discordAction564(action);});}',
+        '  @JavascriptInterface public void discordAction564(String action){if(Arrays.asList("clear","current","linked","test","link","linkDirect154","unlink").contains(action))main.post(()->{if(!isFinishing()&&!isDestroyed())MainActivity.this.discordAction564(action);});}\n'
+        '  @JavascriptInterface public String discordLinkStatus154(){try{boolean linked=KuroDiscordVault564.hasStored(MainActivity.this,"refresh");boolean appInstalled=false;try{getPackageManager().getPackageInfo("com.discord",0);appInstalled=true;}catch(Exception ignored){}return new JSONObject().put("linked",linked).put("enabled",discordEnabled563()).put("appInstalled",appInstalled).put("status",discordRpc563==null?"":discordRpc563.status()).toString();}catch(Exception e){return "{}";}}',
+        "MainActivity.Bridge discordLinkStatus154 + linkDirect154",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "KuroDiscordOAuth564.hasMatchingPending154(this,intent)",
+        ' private void handleDiscordOAuth564(Intent intent){\n'
+        '  KuroDiscordOAuth564.Result r=KuroDiscordOAuth564.consume(this,intent);if(r==null)return;\n'
+        '  if(!r.error.isEmpty()){Toast.makeText(this,r.error,Toast.LENGTH_LONG).show();return;}\n'
+        '  if(!discordEnabled563()){Toast.makeText(this,"Turn on Discord Rich Presence, then link again.",Toast.LENGTH_LONG).show();return;}\n'
+        '  if(discordRpc563!=null){discordRpc563.start();discordRpc563.exchange(r.code,r.verifier);Toast.makeText(this,"Connecting the linked Discord account…",Toast.LENGTH_LONG).show();}\n'
+        ' }',
+        ' private void handleDiscordOAuth564(Intent intent){\n'
+        '  if(!KuroDiscordOAuth564.hasMatchingPending154(this,intent))return;\n'
+        '  KuroDiscordOAuth564.Result r=KuroDiscordOAuth564.consume(this,intent);if(r==null)return;\n'
+        '  if(!r.error.isEmpty()){Toast.makeText(this,r.error,Toast.LENGTH_LONG).show();return;}\n'
+        '  if(discordPrefs564!=null)discordPrefs564.set("linked","on");\n'
+        '  if(!discordEnabled563()){getSharedPreferences("kuro-discord-rpc563",MODE_PRIVATE).edit().putBoolean("enabled",true).apply();discordEnabledChanged563(true);}\n'
+        '  if(discordRpc563!=null){discordRpc563.start();discordRpc563.exchange(r.code,r.verifier);Toast.makeText(this,"Connecting the linked Discord account…",Toast.LENGTH_LONG).show();Runnable notify154=()->{if(ui!=null&&!isFinishing()&&!isDestroyed())ui.evaluateJavascript("window.dispatchEvent(new CustomEvent(\'kuro-discord-rpc-changed154\'))",null);};main.post(notify154);main.postDelayed(notify154,1800);main.postDelayed(notify154,4500);}\n'
+        ' }',
+        "MainActivity.handleDiscordOAuth564 pending state routing + auto-enable + UI notify",
+    )
+    ma_text = patch_once(
+        ma_text,
+        'if("linkDirect154".equals(action))',
+        '  if(!discordEnabled563()){Toast.makeText(this,"Turn on Discord Rich Presence first.",Toast.LENGTH_SHORT).show();return;}',
+        '  if("linkDirect154".equals(action)){if(discordPrefs564!=null)discordPrefs564.set("linked","on");if(!discordEnabled563()){getSharedPreferences("kuro-discord-rpc563",MODE_PRIVATE).edit().putBoolean("enabled",true).apply();discordEnabledChanged563(true);}if(!KuroDiscordOAuth564.begin(this))Toast.makeText(this,"Could not open secure Discord authorization on this phone.",Toast.LENGTH_LONG).show();return;}\n'
+        '  if(!discordEnabled563()){if("link".equals(action)){getSharedPreferences("kuro-discord-rpc563",MODE_PRIVATE).edit().putBoolean("enabled",true).apply();discordEnabledChanged563(true);}else{Toast.makeText(this,"Turn on Discord Rich Presence first.",Toast.LENGTH_SHORT).show();return;}}',
+        "MainActivity.discordAction564 linkDirect154 + auto-enable on link",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "kuro-discord-rpc-changed154-unlink",
+        'discordRpc563.unlink();Toast.makeText(this,"Linked account disconnected on this phone.",Toast.LENGTH_SHORT).show();',
+        'discordRpc563.unlink();Toast.makeText(this,"Linked account disconnected on this phone.",Toast.LENGTH_SHORT).show();/* kuro-discord-rpc-changed154-unlink */if(ui!=null)ui.evaluateJavascript("window.dispatchEvent(new CustomEvent(\'kuro-discord-rpc-changed154\'))",null);',
+        "MainActivity.discordAction564 unlink UI notify",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "/* k154 iframe+85pct completion */",
+        '   WebViewCompat.addWebMessageListener(view,"KuroFinished553",Collections.singleton("*"),(sender,message,origin,isMainFrame,reply)->{\n'
+        '    if(sender!=player||!isMainFrame||!activityResumed||sent[0]||verification[0]||message.getType()!=WebMessageCompat.TYPE_STRING||!"ended".equals(message.getData())||origin==null||!"https".equals(origin.getScheme())||!playerHost(origin.getHost())||!session.equals(watchSession))return;\n'
+        '    String loaded=sender.getUrl();Uri current=loaded==null?null:Uri.parse(loaded);if(current==null||!"https".equals(current.getScheme())||!origin.getHost().equals(current.getHost()))return;\n'
+        '    long attempt=playerAttempt;String check="(function(){try{var a=document.querySelectorAll(\'video\');if(a.length!==1)return false;var v=a[0];return !!(v.ended&&Number.isFinite(v.duration)&&v.duration>=180&&v.currentTime>=v.duration*.98)}catch(e){return false}})()";\n'
+        '    sender.evaluateJavascript(check,result->{if(!"true".equals(result)||sender!=player||attempt!=playerAttempt||!session.equals(watchSession)||verification[0]||sent[0]||ui==null)return;sent[0]=true;ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(session)+","+JSONObject.quote(number)+")",null);});\n'
+        '   });',
+        '   WebViewCompat.addWebMessageListener(view,"KuroFinished553",Collections.singleton("*"),(sender,message,origin,isMainFrame,reply)->{\n'
+        '    /* k154 iframe+85pct completion */\n'
+        '    if(sender!=player||!activityResumed||sent[0]||verification[0]||message.getType()!=WebMessageCompat.TYPE_STRING||!"ended".equals(message.getData())||origin==null||!"https".equals(origin.getScheme())||!playerHost(origin.getHost())||!session.equals(watchSession))return;\n'
+        '    if(ui==null)return;sent[0]=true;ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(session)+","+JSONObject.quote(number)+")",null);\n'
+        '   });',
+        "MainActivity.setupCompletionFrames iframe + 85pct completion",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "position<duration*.85)return;",
+        "long duration=nativePlayer561.duration(),position=nativePlayer561.position();if(duration<180000||position<duration*.98)return;",
+        "long duration=nativePlayer561.duration(),position=nativePlayer561.position();if(duration<180000||position<duration*.85)return;",
+        "MainActivity.nativeEnded561 85pct threshold",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "dur154>=180000L&&pos154>=dur154*85L/100L",
+        "void closePlayer(){cancelAutoNext573();",
+        'void closePlayer(){cancelAutoNext573();if(nativePlayer561!=null&&watchInfo561!=null&&!watchSession.isEmpty()&&ui!=null){long dur154=nativePlayer561.duration(),pos154=nativePlayer561.position();String ep154=watchInfo561.optString("episode","");if(dur154>=180000L&&pos154>=dur154*85L/100L&&ep154.matches("[1-9][0-9]{0,3}"))ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(watchSession)+","+JSONObject.quote(ep154)+")",null);}',
+        "MainActivity.closePlayer 85pct native watch mark",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "/* k154 stream-player 85pct */",
+        'if(v.optBoolean("ended",false)&&duration>=5000&&position>=duration*.98)KuroPlayback561.completed(MainActivity.this,resumeKey561);else KuroPlayback561.save(MainActivity.this,resumeKey561,position,duration);',
+        '/* k154 stream-player 85pct */ if(duration>=180000&&position>=duration*.85&&watchInfo561!=null&&!watchSession.isEmpty()&&ui!=null){String ep154=watchInfo561.optString("episode","");if(ep154.matches("[1-9][0-9]{0,3}"))ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(watchSession)+","+JSONObject.quote(ep154)+")",null);}if(v.optBoolean("ended",false)&&duration>=5000&&position>=duration*.98)KuroPlayback561.completed(MainActivity.this,resumeKey561);else KuroPlayback561.save(MainActivity.this,resumeKey561,position,duration);',
+        "MainActivity.setupProgress561 85pct direct HLS watch mark",
+    )
+    ma_path.write_text(ma_text, encoding="utf-8")
+
+    # 7. assets/player-ended553.js -> 85% episode completion in top-level & embedded player frames
+    pe_path = root / "assets/player-ended553.js"
+    pe_path.write_text(PLAYER_ENDED_154_JS, encoding="utf-8")
+
+    # 8. assets/tracker-sync553.js -> auto-resolve IDs without premature 'match' trap + live Sync Now API
+    ts_js_path = root / "assets/tracker-sync553.js"
+    ts_js = ts_js_path.read_text(encoding="utf-8")
+    ts_js = patch_once(
+        ts_js,
+        "autoTried154",
+        "if(!state)state={v:1,queue:[],links:{},initialized:{},auto:{anilist:true,mal:true},cooldown:{},seq:0};",
+        "if(!state)state={v:1,queue:[],links:{},initialized:{},auto:{anilist:true,mal:true},cooldown:{},seq:0};\n"
+        " else{for(const j of state.queue){if(j&&j.state==='match'&&!j.autoTried154){j.state='pending';j.error='';j.retryAt=0;j.autoTried154=true}}}",
+        "tracker-sync553.js promote untried match jobs",
+    )
+    ts_js = patch_once(
+        ts_js,
+        "/* k154 native auto-resolve */",
+        "  const ident=identity(item);if(!ident.anilistId&&!ident.malId)job.state='match';\n  job.rev=++state.seq;",
+        "  /* k154 native auto-resolve */ job.autoTried154=true;\n  job.rev=++state.seq;",
+        "tracker-sync553.js upsert allow pending without pre-existing ID",
+    )
+    ts_js = patch_once(
+        ts_js,
+        "/* k154 drain auto-resolve */",
+        "  const ident=identity(job.item);\n  if(!ident.anilistId&&!ident.malId){job.state='match';job.error='Choose the exact anime.';persist();paint();schedule();return}",
+        "  const ident=identity(job.item); /* k154 drain auto-resolve */",
+        "tracker-sync553.js drain delegate ID lookup to TrackerSync553",
+    )
+    ts_js = patch_once(
+        ts_js,
+        "kuro-tracker-last-sync-154",
+        "    if(result.conflict){current.state='conflict';current.error='An existing provider status differs from Kuro.';current.tries=0}\n    else state.queue=state.queue.filter(j=>j!==current);",
+        "    if(result.conflict){current.state='conflict';current.error='An existing provider status differs from Kuro.';current.tries=0}\n    else{state.queue=state.queue.filter(j=>j!==current);try{let m=JSON.parse(localStorage.getItem('kuro-tracker-last-sync-154')||'{}');m[captured.provider]=Date.now();localStorage.setItem('kuro-tracker-last-sync-154',JSON.stringify(m))}catch(_){}}",
+        "tracker-sync553.js record last sync timestamp",
+    )
+    ts_js = patch_once(
+        ts_js,
+        "nextAt=Date.now()+1200;schedule(1200);",
+        "nextAt=Date.now()+6500;schedule(6500);",
+        "nextAt=Date.now()+1200;schedule(1200);",
+        "tracker-sync553.js faster queue drain",
+    )
+    ts_js = patch_once(
+        ts_js,
+        "kuro-tracker-sync-paint154",
+        " window.kuroSyncPaint553=paint;",
+        " const origPaint154=paint;paint=function(){origPaint154();try{window.dispatchEvent(new CustomEvent('kuro-tracker-sync-paint154'))}catch(_){}};\n"
+        " window.kuroSyncPaint553=paint;\n"
+        " window.kuroTrackerSyncNow154=async function(provider){\n"
+        "  if(unreadable)return {ok:false};\n"
+        "  background=false;nextAt=0;\n"
+        "  if(window.kuroTrackerRequest553){try{const s=await window.kuroTrackerRequest553('status',{});connections=s.connections||{}}catch(_){}}\n"
+        "  const targets=provider?[provider]:providers;\n"
+        "  for(const p of targets){\n"
+        "   state.cooldown[p]=0;\n"
+        "   const o=owner(p);\n"
+        "   if(o&&enabled(p)){delete state.initialized[p+'|'+o];backfill(p,o)}\n"
+        "   for(const j of state.queue){if(j&&j.provider===p&&(j.state==='blocked'||j.state==='pending'||(j.state==='match'&&!j.userSkipped154))){j.state='pending';j.retryAt=0;j.error='';j.rev=++state.seq}}\n"
+        "  }\n"
+        "  persist();paint();\n"
+        "  await drain();\n"
+        "  return {ok:true};\n"
+        " };",
+        "tracker-sync553.js kuroTrackerSyncNow154 + paint event",
+    )
+    ts_js_path.write_text(ts_js, encoding="utf-8")
+
+    # 9. assets/accounts542.js -> update existing import progress/status + direct 1-tap Connect & Silent Import APIs
+    ac_path = root / "assets/accounts542.js"
+    ac_text = ac_path.read_text(encoding="utf-8")
+    old_put_imports = (
+        "  let old=readImports(),keys=new Set(old.map(x=>String(x.provider)+':'+String(x.sourceId))),added=0,skipped=0,rows=old.slice();\n"
+        "  for(const x of response.items){\n"
+        "   if(!x||x.provider!==response.provider||!/^[1-9][0-9]{0,18}$/.test(String(x.sourceId))||typeof x.title!=='string'||!x.title.trim())continue;\n"
+        "   let key=x.provider+':'+String(x.sourceId);if(keys.has(key)){skipped++;continue}keys.add(key);\n"
+        "   let image='';try{let u=new URL(String(x.image||''));if(u.protocol==='https:'&&!u.username&&!u.password&&!u.port)image=u.href}catch{}\n"
+        "   rows.push({provider:x.provider,sourceId:String(x.sourceId),malId:Number(x.malId)||0,anilistId:Number(x.anilistId)||0,title:x.title.trim().slice(0,300),image,status:String(x.status||'').slice(0,40),progress:Math.max(0,Math.min(100000,Number(x.progress)||0)),total:Math.max(0,Math.min(100000,Number(x.total)||0)),adult:typeof x.adult==='boolean'?x.adult:null});added++;\n"
+        "  }\n"
+        "  try{localStorage.setItem(IMPORT_KEY,JSON.stringify(rows))}catch{throw Error('Not enough local storage for the import. Existing lists were not changed.')}\n"
+        "  return `${added} added, ${skipped} already present and kept. Open My Lists to see your imports.${response.partial?' Partial import: '+String(response.reason||'some entries could not be read.'):''}`;"
+    )
+    new_put_imports = (
+        "  let old=readImports(),idxMap=new Map(),added=0,updated154=0,skipped=0,rows=old.slice();\n"
+        "  rows.forEach((r,idx)=>{if(r)idxMap.set(String(r.provider)+':'+String(r.sourceId),idx)});\n"
+        "  for(const x of response.items){\n"
+        "   if(!x||x.provider!==response.provider||!/^[1-9][0-9]{0,18}$/.test(String(x.sourceId))||typeof x.title!=='string'||!x.title.trim())continue;\n"
+        "   let key=x.provider+':'+String(x.sourceId);\n"
+        "   let image='';try{let u=new URL(String(x.image||''));if(u.protocol==='https:'&&!u.username&&!u.password&&!u.port)image=u.href}catch{}\n"
+        "   let nextRow={provider:x.provider,sourceId:String(x.sourceId),malId:Number(x.malId)||0,anilistId:Number(x.anilistId)||0,title:x.title.trim().slice(0,300),image,status:String(x.status||'').slice(0,40),progress:Math.max(0,Math.min(100000,Number(x.progress)||0)),total:Math.max(0,Math.min(100000,Number(x.total)||0)),adult:typeof x.adult==='boolean'?x.adult:null};\n"
+        "   if(idxMap.has(key)){\n"
+        "    let pos=idxMap.get(key),prev=rows[pos];\n"
+        "    if(prev&&(prev.status!==nextRow.status||prev.progress!==nextRow.progress||prev.total!==nextRow.total||(!prev.image&&nextRow.image))){rows[pos]=Object.assign({},prev,nextRow,{image:nextRow.image||prev.image});updated154++;}else{skipped++;}\n"
+        "    continue;\n"
+        "   }\n"
+        "   idxMap.set(key,rows.length);rows.push(nextRow);added++;\n"
+        "  }\n"
+        "  try{localStorage.setItem(IMPORT_KEY,JSON.stringify(rows));let m=JSON.parse(localStorage.getItem('kuro-tracker-last-sync-154')||'{}');m[response.provider]=Date.now();localStorage.setItem('kuro-tracker-last-sync-154',JSON.stringify(m))}catch{throw Error('Not enough local storage for the import. Existing lists were not changed.')}\n"
+        "  return `${added} added, ${updated154} updated, ${skipped} unchanged.${response.partial?' Partial import: '+String(response.reason||'some entries could not be read.'):''}`;"
+    )
+    ac_text = patch_once(
+        ac_text,
+        "updated154",
+        old_put_imports,
+        new_put_imports,
+        "accounts542.js putImports live status & progress sync",
+    )
+    ac_text = patch_once(
+        ac_text,
+        "window.kuroSilentImport154?.('anilist')",
+        "try{let r=await request('anilistPin',{token});closeModal();placeholder(r.message);await status();if(view==='profile')profile()}",
+        "try{let r=await request('anilistPin',{token});closeModal();placeholder(r.message);await status();if(view==='profile')profile();window.kuroTrackerSyncNow154?.('anilist');window.kuroSilentImport154?.('anilist')}",
+        "accounts542.js auto-sync on AniList PIN connect",
+    )
+    direct_helpers_js = (
+        " window.kuroDirectConnect154=async provider=>{\n"
+        "  if(!['discord','mal','anilist'].includes(provider))return;\n"
+        "  try{\n"
+        "   let result=await request('begin',{provider});\n"
+        "   if(provider==='anilist'){login('pin');message(result.message)}\n"
+        "   else{placeholder(result.message||'Continue in your browser, then return to Kuro.')}\n"
+        "  }catch(e){placeholder(e.message||'Could not start sign-in.')}\n"
+        " };\n"
+        " window.kuroSilentImport154=async provider=>{\n"
+        "  if(!['mal','anilist'].includes(provider))return null;\n"
+        "  let r=await request('import',{provider});\n"
+        "  let info=putImports(r);\n"
+        "  if(view==='profile')profile();\n"
+        "  else if(view==='library')library();\n"
+        "  return info;\n"
+        " };\n"
+        " window.kuroAccountEvent=async event=>{\n"
+        "  if(event?.error){if(document.querySelector('#account-overlay'))message(event.error,true);else placeholder(event.error);return}\n"
+        "  if(watchAccountMode){if(event?.message)message(event.message)}else if(document.querySelector('#account-overlay'))closeModal();\n"
+        "  if(event?.message&&!watchAccountMode)placeholder(event.message);try{await status()}catch{}if(view==='profile')profile();\n"
+        "  if(event?.kind==='mal'||event?.kind==='anilist'){window.kuroTrackerSyncNow154?.(event.kind);window.kuroSilentImport154?.(event.kind).catch(()=>{})}\n"
+        " };"
+    )
+    ac_text = patch_once(
+        ac_text,
+        "window.kuroDirectConnect154=",
+        " window.kuroAccountEvent=async event=>{\n"
+        "  if(event?.error){message(event.error,true);return}\n"
+        "  if(watchAccountMode){if(event?.message)message(event.message)}else if(document.querySelector('#account-overlay'))closeModal();\n"
+        "  if(event?.message&&!watchAccountMode)placeholder(event.message);try{await status()}catch{}if(view==='profile')profile();\n"
+        " };",
+        direct_helpers_js,
+        "accounts542.js kuroDirectConnect154, kuroSilentImport154 & kuroAccountEvent toast fallback",
+    )
+    ac_path.write_text(ac_text, encoding="utf-8")
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         raise SystemExit("usage: ui_1.5.4.py <kuro-source-dir>")
@@ -1691,7 +2398,8 @@ def main() -> None:
     patch_player_ad_blocker(root)
     patch_js_hooks(root)
     patch_perf_and_compat_154(root)
-    print("Applied Kuro 1.5.4-beta Detail v2, Desktop-Site Left-Rail Leanback, WindowInsets, Ad-Guard, Performance & Compatibility, and Smart Browse/Voice patches.")
+    patch_accounts_and_sync_154(root)
+    print("Applied Kuro 1.5.4-beta Detail v2, Desktop-Site Left-Rail Leanback, WindowInsets, Ad-Guard, Performance & Compatibility, Tracker Sync & Discord OAuth, and Smart Browse/Voice patches.")
 
 
 if __name__ == "__main__":

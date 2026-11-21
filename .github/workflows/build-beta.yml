@@ -409,6 +409,16 @@ jobs:
             || { echo "::error::MainActivity missing setupEdgeToEdgeInsets154."; exit 1; }
           grep -Fq '__kuro_ad_frame_154__' "$PROJECT/assets/player-ad-guard541.js" \
             || { echo "::error::player-ad-guard541.js missing 1.5.4 multi-layer ad guard."; exit 1; }
+          ! grep -Fq 'if (!host && !document.getElementById' "$PROJECT/assets/theme-accent-1.1.js" \
+            || { echo "::error::theme-accent-1.1.js still has undeclared host bug in schedule()."; exit 1; }
+          grep -Fq 'KuroFastNet154.accountRequest' "$PKG/AccountHttp.java" \
+            || { echo "::error::AccountHttp.java not routed through KuroFastNet154 DoH+HTTP/2."; exit 1; }
+          grep -Fq 'autoResolveIds154' "$PKG/TrackerSync553.java" \
+            || { echo "::error::TrackerSync553.java missing autoResolveIds154."; exit 1; }
+          grep -Fq 'openInBrowser154' "$PKG/KuroFastNet154.java" \
+            || { echo "::error::KuroFastNet154.java missing openInBrowser154."; exit 1; }
+          grep -Fq 'linkDirect154' "$PKG/MainActivity.java" \
+            || { echo "::error::MainActivity.java missing linkDirect154 Discord Rich Presence link."; exit 1; }
           chmod +x "$PROJECT/tests/test-ad-blocker.sh"
           ( cd "$PROJECT" && ./tests/test-ad-blocker.sh && node tests/test-restore-selection573.cjs && node tests/test-hls-player.cjs && node tests/test-web-markers574.cjs )
 
