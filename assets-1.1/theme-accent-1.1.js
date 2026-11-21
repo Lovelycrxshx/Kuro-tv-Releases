@@ -15,10 +15,11 @@
 (function () {
  'use strict';
  var KEY = 'kuro-accent-v1';
- var DEFAULT = 'teal';
+ var MIGRATED_154 = 'kuro-default-violet-154';
+ var DEFAULT = 'violet';
  var ACCENTS = [
-  { id: 'teal',     label: 'Teal',     group: 'Signature', swatch: '#27d7c5' },
   { id: 'violet',   label: 'Violet',   group: 'Signature', swatch: '#a65be4' },
+  { id: 'teal',     label: 'Teal',     group: 'Signature', swatch: '#27d7c5' },
   { id: 'plum',     label: 'Plum',     group: 'Signature', swatch: '#d252e6' },
   { id: 'graphite', label: 'Graphite', group: 'Signature', swatch: '#989898' },
   { id: 'sky',      label: 'Sky',      group: 'Cool',     swatch: '#2e92d9' },
@@ -50,7 +51,17 @@
   return ACCENTS[0];
  }
 
+ function migrateDefault154() {
+  try {
+   if (localStorage.getItem(MIGRATED_154) === '1') return;
+   localStorage.setItem(MIGRATED_154, '1');
+   var raw = localStorage.getItem(KEY);
+   if (!raw || raw === 'teal') localStorage.removeItem(KEY);
+  } catch (e) {}
+ }
+
  function read() {
+  migrateDefault154();
   try {
    var raw = localStorage.getItem(KEY);
    return valid(raw || '') ? raw : DEFAULT;
@@ -110,7 +121,7 @@
   return '<div class="accent-preview111">' +
    '<div class="accent-preview-head111">' +
    '<span class="accent-preview-dot111" aria-hidden="true"></span>' +
-   '<strong class="accent-preview-name111">Teal</strong>' +
+   '<strong class="accent-preview-name111">Violet</strong>' +
    '<span class="accent-preview-tag111">CURRENT</span>' +
    '</div>' +
    '<div class="accent-preview-body111">' +
@@ -133,10 +144,10 @@
   el.setAttribute('role', 'group');
   el.setAttribute('aria-labelledby', 'accent-111-title');
   el.innerHTML = '<div class="accent-head111"><h3 id="accent-111-title">Theme colour</h3>' +
-   '<p>Every screen, dialog and player control follows it. Teal is the default. ' +
+   '<p>Every screen, dialog and player control follows it. Violet is the default. ' +
    'Saved on this phone.</p></div>' + preview() +
    '<div class="accent-groups111">' + groups(current) + '</div>' +
-   '<p class="accent-note111">Violet is the 1.0 look, kept in case you want it back. ' +
+   '<p class="accent-note111">Twenty themes across Signature, Cool and Warm. ' +
    'Graphite keeps the same depth with no colour at all.</p>';
   return el;
  }

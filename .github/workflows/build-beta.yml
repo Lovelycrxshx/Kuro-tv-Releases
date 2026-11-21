@@ -134,7 +134,7 @@ jobs:
           sed -i -E "s/versionName +'[^']*'/versionName '${EXPECT_VERSION_NAME}'/" "$PROJECT/build.gradle"
           grep -nE "versionName|versionCode" "$PROJECT/build.gradle"
 
-          grep -qF 'theme-teal-1.1.css' "$PROJECT/assets/index.html" \
+          grep -qF 'theme-violet-1.1.css' "$PROJECT/assets/index.html" \
             || { echo "::error::the accent stylesheet is not linked."; exit 1; }
           grep -qF 'theme-accent-1.1.js' "$PROJECT/assets/index.html" \
             || { echo "::error::the accent picker script is not linked."; exit 1; }

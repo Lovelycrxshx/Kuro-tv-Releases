@@ -906,37 +906,37 @@ KURO_TV_BANNER_XML = """<?xml version="1.0" encoding="utf-8"?>
     android:viewportWidth="320"
     android:viewportHeight="180">
     <path
-        android:fillColor="#080A10"
+        android:fillColor="#0A0710"
         android:pathData="M0,0h320v180h-320z" />
     <path
-        android:fillColor="#111726"
+        android:fillColor="#160E23"
         android:pathData="M10,10h300v160h-300z" />
     <path
-        android:strokeColor="#2B3A55"
+        android:strokeColor="#3D2659"
         android:strokeWidth="2"
         android:pathData="M10,10h300v160h-300z" />
     <path
-        android:fillColor="#7FD8D1"
-        android:fillAlpha="0.16"
+        android:fillColor="#A65BE4"
+        android:fillAlpha="0.18"
         android:pathData="M86,90m-44,0a44,44 0,1 1,88 0a44,44 0,1 1,-88 0" />
     <path
-        android:fillColor="#7FD8D1"
+        android:fillColor="#B478EE"
         android:pathData="M72,62h10v24l20,-24h13l-21,25l23,31h-13l-17,-23l-5,6v17h-10z" />
     <path
-        android:fillColor="#F4F6FB"
+        android:fillColor="#F4F1FA"
         android:pathData="M148,70h9v17l15,-17h11l-16,18l17,22h-11l-12,-16l-4,4v12h-9z" />
     <path
-        android:fillColor="#F4F6FB"
+        android:fillColor="#F4F1FA"
         android:pathData="M189,70h9v24c0,5 3,8 8,8s8,-3 8,-8v-24h9v24c0,10 -7,17 -17,17s-17,-7 -17,-17z" />
     <path
-        android:fillColor="#F4F6FB"
+        android:fillColor="#F4F1FA"
         android:pathData="M231,70h17c9,0 15,5 15,13c0,6 -3,10 -9,12l10,15h-10l-9,-14h-5v14h-9zM240,78v11h7c4,0 6,-2 6,-5.5s-2,-5.5 -6,-5.5z" />
     <path
-        android:fillColor="#7FD8D1"
+        android:fillColor="#B478EE"
         android:pathData="M286,70c11,0 19,9 19,20s-8,20 -19,20s-19,-9 -19,-20s8,-20 19,-20zM286,78c-6,0 -10,5 -10,12s4,12 10,12s10,-5 10,-12s-4,-12 -10,-12z" />
     <path
-        android:fillColor="#7FD8D1"
-        android:fillAlpha="0.85"
+        android:fillColor="#A65BE4"
+        android:fillAlpha="0.88"
         android:pathData="M148,118h96v4h-96z" />
 </vector>
 """
@@ -1458,64 +1458,9 @@ def patch_perf_and_compat_154(root: pathlib.Path) -> None:
   }catch(RuntimeException ignored){}
   return totalRamMb154()<=3900;
  }
- private int maxDisplayHz154(){
-  try{
-   Window w=getWindow();if(w==null)return 60;
-   Display d=w.getWindowManager().getDefaultDisplay();if(d==null)return 60;
-   Display.Mode cur=d.getMode();
-   float best=d.getRefreshRate();
-   Display.Mode[] modes=d.getSupportedModes();
-   if(modes!=null&&cur!=null){
-    for(Display.Mode m:modes){
-     if(m.getPhysicalWidth()==cur.getPhysicalWidth()&&m.getPhysicalHeight()==cur.getPhysicalHeight()&&m.getRefreshRate()>best){
-      best=m.getRefreshRate();
-     }
-    }
-   }
-   return Math.max(60,Math.round(best));
-  }catch(RuntimeException e){return 60;}
- }
- private void applyDisplayRefresh154(){
-  try{
-   Window w=getWindow();if(w==null)return;
-   Display d=w.getWindowManager().getDefaultDisplay();if(d==null)return;
-   Display.Mode cur=d.getMode();
-   Display.Mode[] modes=d.getSupportedModes();
-   if(cur==null||modes==null||modes.length<=1)return;
-   String pref=perfPrefs154().getString("refreshMode","auto");
-   boolean videoFs=playerLayer!=null&&(customView!=null||enhancedFullscreen||isInPictureInPictureMode()||nativePlayer561!=null);
-   int wantModeId=0;
-   if("60".equals(pref)){
-    float bestDiff=999f;
-    for(Display.Mode m:modes){
-     if(m.getPhysicalWidth()==cur.getPhysicalWidth()&&m.getPhysicalHeight()==cur.getPhysicalHeight()){
-      float diff=Math.abs(m.getRefreshRate()-60f);
-      if(diff<bestDiff){bestDiff=diff;wantModeId=m.getModeId();}
-     }
-    }
-   }else if("max".equals(pref)||("auto".equals(pref)&&!videoFs)){
-    float bestHz=0f;
-    for(Display.Mode m:modes){
-     if(m.getPhysicalWidth()==cur.getPhysicalWidth()&&m.getPhysicalHeight()==cur.getPhysicalHeight()&&m.getRefreshRate()>bestHz){
-      bestHz=m.getRefreshRate();wantModeId=m.getModeId();
-     }
-    }
-   }
-   WindowManager.LayoutParams lp=w.getAttributes();
-   if(lp.preferredDisplayModeId!=wantModeId){
-    lp.preferredDisplayModeId=wantModeId;
-    w.setAttributes(lp);
-   }
-  }catch(RuntimeException ignored){}
- }
  private void initPerf154(){
   SharedPreferences sp=perfPrefs154();
   KuroFastNet154.setDohMode(sp.getString("dohMode","auto"));
-  if(ui!=null){
-   WebSettings ws=ui.getSettings();
-   ws.setOffscreenPreRaster(false);
-  }
-  applyDisplayRefresh154();
  }
  private long folderBytes154(File f){
   if(f==null||!f.exists())return 0L;
@@ -1537,14 +1482,10 @@ def patch_perf_and_compat_154(root: pathlib.Path) -> None:
   double cacheMb=Math.round((folderBytes154(getCacheDir())/(1024.0*1024.0))*10.0)/10.0;
   try{
    return new JSONObject()
-    .put("refreshMode",sp.getString("refreshMode","auto"))
     .put("dohMode",sp.getString("dohMode","auto"))
-    .put("gpuMode",sp.getString("gpuMode","auto"))
-    .put("fastBoot",sp.getBoolean("fastBoot",false))
     .put("isTv",isTelevisionDevice154())
     .put("lowRam",isLowRamDevice154())
     .put("ramMb",totalRamMb154())
-    .put("maxHz",maxDisplayHz154())
     .put("cacheMb",cacheMb)
     .toString();
   }catch(Exception e){return "{}";}
@@ -1557,14 +1498,6 @@ def patch_perf_and_compat_154(root: pathlib.Path) -> None:
         " private androidx.core.view.WindowInsetsCompat lastWindowInsets154;",
         perf_helpers + " private androidx.core.view.WindowInsetsCompat lastWindowInsets154;",
         "MainActivity performance & compatibility helpers",
-    )
-
-    text = patch_once(
-        text,
-        "applyDisplayRefresh154();applyRootInsets154",
-        "applyRootInsets154(lastWindowInsets154);",
-        "applyDisplayRefresh154();applyRootInsets154(lastWindowInsets154);",
-        "MainActivity syncWindowSystemBars154 display refresh sync",
     )
 
     text = patch_once(
@@ -1606,12 +1539,8 @@ def patch_perf_and_compat_154(root: pathlib.Path) -> None:
         '   if(raw==null||raw.length()>2000)return buildPerfStatusJson154();\n'
         '   try{\n'
         '    JSONObject j=new JSONObject(raw);SharedPreferences.Editor ed=perfPrefs154().edit();\n'
-        '    if(j.has("refreshMode")){String r=j.optString("refreshMode","auto");if("auto".equals(r)||"max".equals(r)||"60".equals(r))ed.putString("refreshMode",r);}\n'
         '    if(j.has("dohMode")){String d=j.optString("dohMode","auto");if("auto".equals(d)||"always".equals(d)||"off".equals(d)){ed.putString("dohMode",d);KuroFastNet154.setDohMode(d);}}\n'
-        '    if(j.has("gpuMode")){String g=j.optString("gpuMode","auto");if("auto".equals(g)||"lite".equals(g)||"full".equals(g))ed.putString("gpuMode",g);}\n'
-        '    if(j.has("fastBoot"))ed.putBoolean("fastBoot",j.optBoolean("fastBoot",false));\n'
         '    ed.apply();\n'
-        '    main.post(()->{if(!isFinishing()&&!isDestroyed())applyDisplayRefresh154();});\n'
         '   }catch(Exception ignored){}\n'
         '   return buildPerfStatusJson154();\n'
         '  }\n'
@@ -1641,22 +1570,6 @@ def patch_perf_and_compat_154(root: pathlib.Path) -> None:
         "@Override public void onReceivedError(WebView v,WebResourceRequest request,WebResourceError error){super.onReceivedError(v,request,error);",
         "@Override public boolean onRenderProcessGone(WebView v,RenderProcessGoneDetail detail){if(v!=player)return true;lastPlayerIssue573=\"The embedded player ran low on memory; Kuro recovered without crashing.\";try{if(watchPlayerBox!=null)watchPlayerBox.removeView(v);v.destroy();}catch(RuntimeException ignored){}player=null;main.post(()->{if(!isFinishing()&&!isDestroyed()&&playerLayer!=null){Toast.makeText(MainActivity.this,\"Player recovered from low memory. Try another server.\",Toast.LENGTH_LONG).show();closePlayer();}});return true;}@Override public void onReceivedError(WebView v,WebResourceRequest request,WebResourceError error){super.onReceivedError(v,request,error);",
         "MainActivity player WebView crash shield",
-    )
-
-    text = patch_once(
-        text,
-        "if(resumeFullscreenUntil153>android.os.SystemClock.elapsedRealtime()){resumeFullscreenUntil153=0L;enterEnhancedFullscreen();}applyDisplayRefresh154();",
-        "if(resumeFullscreenUntil153>android.os.SystemClock.elapsedRealtime()){resumeFullscreenUntil153=0L;enterEnhancedFullscreen();}",
-        "if(resumeFullscreenUntil153>android.os.SystemClock.elapsedRealtime()){resumeFullscreenUntil153=0L;enterEnhancedFullscreen();}applyDisplayRefresh154();",
-        "MainActivity openWatch applyDisplayRefresh154",
-    )
-
-    text = patch_once(
-        text,
-        "fxComparing=false;applyDisplayRefresh154();}",
-        "fxConfig=null;fxTopStatus=null;fxComparing=false;}",
-        "fxConfig=null;fxTopStatus=null;fxComparing=false;applyDisplayRefresh154();}",
-        "MainActivity closePlayer applyDisplayRefresh154",
     )
 
     old_poster = (

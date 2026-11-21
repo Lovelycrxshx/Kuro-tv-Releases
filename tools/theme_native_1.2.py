@@ -205,9 +205,9 @@ import java.util.Map;
 public final class KuroTheme12 {
     /** Accent ids, in picker order. */
     public static final String[] ACCENTS = {%(names)s};
-    public static final String DEFAULT = "teal";
+    public static final String DEFAULT = "violet";
 
-    private static final int TEAL = 0;
+    private static final int VIOLET = 0;
     /** Base ARGB (the 1.0 violet value), then the value in each accent. */
     private static final int[][] TABLE = {
 %(rows)s    };
@@ -215,9 +215,9 @@ public final class KuroTheme12 {
     private static final int[] DIALOG_THEMES = {%(dialog_themes)s};
 
     private static final List<Runnable> LISTENERS = new ArrayList<>();
-    private static int accent = TEAL;
+    private static int accent = VIOLET;
     private static boolean amoled;
-    private static Map<Integer, Integer> map = table(TEAL);
+    private static Map<Integer, Integer> map = table(VIOLET);
     private static boolean loaded;
 
     private KuroTheme12() {
@@ -300,6 +300,14 @@ public final class KuroTheme12 {
         loaded = true;
         SharedPreferences p = prefs(context);
         String saved = p.getString("accent", DEFAULT);
+        if (!p.getBoolean("default_violet_154", false)) {
+            SharedPreferences.Editor ed = p.edit().putBoolean("default_violet_154", true);
+            if ("teal".equals(saved)) {
+                saved = DEFAULT;
+                ed.putString("accent", DEFAULT);
+            }
+            ed.apply();
+        }
         amoled = p.getBoolean("amoled", false);
         accent = indexOf(saved);
         apply();
@@ -311,7 +319,7 @@ public final class KuroTheme12 {
                 return i;
             }
         }
-        return TEAL;
+        return VIOLET;
     }
 
     /** Switch accent: persist, rebuild the map, repaint everything registered. */
@@ -546,7 +554,7 @@ STYLES = '''<resources>
          content-rich dialogs are built by KuroDialogs581 on top of the same
          palette; this only covers the framework alerts that still exist. -->
     <style name="KuroDialogBase" parent="android:style/Theme.Material.Dialog.Alert">
-        <item name="android:windowBackground">@drawable/kuro_dialog_panel_teal</item>
+        <item name="android:windowBackground">@drawable/kuro_dialog_panel_violet</item>
         <item name="android:textColorPrimary">%TEAL_INK%</item>
         <item name="android:textColorSecondary">%TEAL_MUTED%</item>
         <item name="android:textColorPrimaryInverse">#FF0F0A16</item>
@@ -557,7 +565,7 @@ STYLES = '''<resources>
 %STYLES%
     <!-- Kept so an older call site or a stale resource reference still lands on
          a themed dialog; the current code asks KuroTheme12.dialogTheme(). -->
-    <style name="KuroDialogTheme" parent="KuroDialogTeal"/>
+    <style name="KuroDialogTheme" parent="KuroDialogViolet"/>
 </resources>
 '''
 

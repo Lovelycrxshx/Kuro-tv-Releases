@@ -1923,22 +1923,16 @@
   }
 
   /* ==========================================================================
-     PERFORMANCE & COMPATIBILITY (1.5.4-BETA):
-     - Native 90Hz/120Hz display rate + battery step-down sync
+     NETWORK, CACHE & COMPATIBILITY (1.5.4-BETA):
      - Encrypted DNS-over-HTTPS (1.1.1.1 / 8.8.8.8) ISP Unblock control
-     - Auto Lite-GPU mode on low-RAM phones & TV sticks + async/lazy image decode
-     - Instant Startup toggle & 1-tap safe temporary cache cleaner in Settings
+     - 1-tap safe temporary cache cleaner in Settings
      ========================================================================== */
   var PERF_KEY_154 = 'kuro-perf-154';
   var perfDefaults154 = {
-    refreshMode: 'auto',
     dohMode: 'auto',
-    gpuMode: 'auto',
-    fastBoot: false,
     isTv: false,
     lowRam: false,
     ramMb: 4096,
-    maxHz: 60,
     cacheMb: 0
   };
 
@@ -1952,30 +1946,16 @@
     var merged = Object.assign({}, perfDefaults154, local, nat);
     try {
       localStorage.setItem(PERF_KEY_154, JSON.stringify({
-        refreshMode: merged.refreshMode,
-        dohMode: merged.dohMode,
-        gpuMode: merged.gpuMode,
-        fastBoot: !!merged.fastBoot
+        dohMode: merged.dohMode
       }));
     } catch (_) {}
     return merged;
   }
 
-  function applyPerfDom154(perf) {
-    var p = perf || readPerf154();
-    var lowMemWeb = false;
-    try { lowMemWeb = !!(navigator.deviceMemory && navigator.deviceMemory <= 4); } catch (_) {}
-    var useLite = p.gpuMode === 'lite' || (p.gpuMode === 'auto' && (p.lowRam || p.isTv || lowMemWeb));
-    document.documentElement.dataset.k154LiteGpu = useLite ? '1' : '0';
-  }
-
   function savePerf154(patch) {
     var cur = readPerf154();
     var next = {
-      refreshMode: patch.refreshMode !== undefined ? patch.refreshMode : cur.refreshMode,
-      dohMode: patch.dohMode !== undefined ? patch.dohMode : cur.dohMode,
-      gpuMode: patch.gpuMode !== undefined ? patch.gpuMode : cur.gpuMode,
-      fastBoot: patch.fastBoot !== undefined ? !!patch.fastBoot : !!cur.fastBoot
+      dohMode: patch.dohMode !== undefined ? patch.dohMode : cur.dohMode
     };
     try { localStorage.setItem(PERF_KEY_154, JSON.stringify(next)); } catch (_) {}
     var updated = Object.assign({}, cur, next);
@@ -1985,18 +1965,7 @@
         updated = Object.assign(updated, fromNative);
       } catch (_) {}
     }
-    applyPerfDom154(updated);
     return updated;
-  }
-
-  function optimizeImages154() {
-    var imgs = document.querySelectorAll('.grid .card img:not([data-k154-img]), .shelf .card img:not([data-k154-img]), .episode-row img:not([data-k154-img])');
-    for (var i = 0; i < imgs.length; i++) {
-      var img = imgs[i];
-      img.setAttribute('data-k154-img', '1');
-      if (!img.getAttribute('decoding')) img.setAttribute('decoding', 'async');
-      if (!img.getAttribute('loading')) img.setAttribute('loading', 'lazy');
-    }
   }
 
   function openPerfChoiceSheet154(overlayRoot, titleText, options, currentVal, onPick, triggerBtn) {
@@ -2016,7 +1985,7 @@
     heading.className = 'choice-head567';
     var copy = document.createElement('div');
     var eye = document.createElement('small');
-    eye.textContent = 'KURO.TV \u00b7 PERFORMANCE';
+    eye.textContent = 'KURO.TV \u00b7 NETWORK';
     var h2 = document.createElement('h2');
     h2.id = 'k154-choice-title';
     h2.textContent = titleText;
@@ -2094,7 +2063,7 @@
     var sec = document.createElement('section');
     sec.id = 'k154-perf-group';
     sec.className = 'settings-group560';
-    sec.setAttribute('data-section', 'performance & compatibility speed dns 120hz refresh gpu lite startup cache tv');
+    sec.setAttribute('data-section', 'network & compatibility dns isp unblock cache storage tv');
 
     var appearance = body.querySelector('.settings-group560[data-section="appearance and startup"]');
     if (appearance && appearance.nextSibling) {
@@ -2105,24 +2074,11 @@
 
     function renderPerfGroup() {
       var p = readPerf154();
-      var hzLabel = p.maxHz >= 90 ? (p.maxHz + 'Hz Screen Ready') : (p.maxHz + 'Hz Screen');
       var devLabel = p.isTv ? 'Android TV / Fire TV' : (p.ramMb ? (Math.max(1, Math.round(p.ramMb / 1024)) + ' GB RAM') : 'Phone / Tablet');
       var dnsChip = p.dohMode === 'always' ? 'DNS: Always Encrypted' : (p.dohMode === 'auto' ? 'DNS: Smart Unblock' : 'DNS: System');
       var cacheLabel = (typeof p.cacheMb === 'number' ? p.cacheMb.toFixed(1) : '0.0') + ' MB temp';
 
       var specs = [
-        {
-          key: 'refreshMode',
-          title: 'Smooth display rate',
-          desc: 'Unlocks 90Hz/120Hz while browsing and steps down in fullscreen video to save battery.',
-          filter: 'smooth display rate 90hz 120hz refresh battery screen fps',
-          current: p.refreshMode,
-          options: [
-            { value: 'auto', label: 'Auto (' + (p.maxHz >= 90 ? p.maxHz + 'Hz + video saver' : 'Adaptive') + ')' },
-            { value: 'max', label: 'Always highest Hz' },
-            { value: '60', label: '60Hz battery saver' }
-          ]
-        },
         {
           key: 'dohMode',
           title: 'Network & ISP unblock (DNS)',
@@ -2133,29 +2089,6 @@
             { value: 'auto', label: 'Smart Auto (recommended)' },
             { value: 'always', label: 'Always Encrypted DNS' },
             { value: 'off', label: 'System default DNS' }
-          ]
-        },
-        {
-          key: 'gpuMode',
-          title: 'Graphics & scroll smoothness',
-          desc: 'Lite GPU turns off heavy blur layers so budget phones and TV sticks stay cool and fast.',
-          filter: 'graphics scroll smoothness lite gpu blur lag low ram heat tv',
-          current: p.gpuMode,
-          options: [
-            { value: 'auto', label: 'Auto' + ((p.lowRam || p.isTv) ? ' (Lite active)' : ' (Full active)') },
-            { value: 'lite', label: 'Lite GPU (fastest, less heat)' },
-            { value: 'full', label: 'Full glass blur' }
-          ]
-        },
-        {
-          key: 'fastBoot',
-          title: 'Startup speed',
-          desc: 'Skip the 3.6-second launch animation and open Home straight away.',
-          filter: 'startup speed instant boot skip intro splash launch fast',
-          current: p.fastBoot ? 'true' : 'false',
-          options: [
-            { value: 'false', label: 'Play launch animation' },
-            { value: 'true', label: 'Instant Home (skip intro)' }
           ]
         }
       ];
@@ -2179,12 +2112,11 @@
 
       sec.innerHTML =
         '<div class="settings-group-head560">' +
-          '<h3>Performance &amp; compatibility</h3>' +
-          '<p>Faster loading, smoother scrolling, carrier DNS unblock, and TV/low-RAM stability</p>' +
+          '<h3>Network &amp; compatibility</h3>' +
+          '<p>Built-in carrier DNS unblock, temporary cache cleanup, and TV/low-RAM stability</p>' +
         '</div>' +
         '<div class="k154-perf-summary">' +
-          '<span class="k154-perf-chip is-accent">' + esc(hzLabel) + '</span>' +
-          '<span class="k154-perf-chip">' + esc(dnsChip) + '</span>' +
+          '<span class="k154-perf-chip is-accent">' + esc(dnsChip) + '</span>' +
           '<span class="k154-perf-chip">' + esc(devLabel) + '</span>' +
           '<span class="k154-perf-chip">' + esc(cacheLabel) + '</span>' +
         '</div>' +
@@ -2198,7 +2130,7 @@
           e.stopPropagation();
           openPerfChoiceSheet154(overlay, sp.title, sp.options, sp.current, function (picked) {
             var patch = {};
-            patch[sp.key] = sp.key === 'fastBoot' ? (picked === 'true') : picked;
+            patch[sp.key] = picked;
             savePerf154(patch);
             renderPerfGroup();
             toast(sp.title + ' saved.');
@@ -2238,7 +2170,6 @@
       requestAnimationFrame(function () {
         rafPending = false;
         pruneHiddenControls154();
-        optimizeImages154();
         if (document.getElementById('discover-search')) {
           enhanceBrowseCommandBar154();
         }
@@ -2255,10 +2186,9 @@
   }
 
   function init154() {
-    applyPerfDom154(readPerf154());
+    readPerf154();
     syncDesktopSite154();
     pruneHiddenControls154();
-    optimizeImages154();
     hookDetailView154();
     hookBrowseFilters154();
     hookAccountTrackerHub154();

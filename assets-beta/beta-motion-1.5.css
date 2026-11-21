@@ -22,9 +22,9 @@
 
 /* ---------------------------------------------------------------- tokens */
 #km-intro-15{
- --km-accent:var(--ku-accent,#3be3d2);
- --km-ink:var(--ink,#f1f4f3);
- --km-bg:var(--bg,#081615);
+ --km-accent:var(--ku-accent,#b478ee);
+ --km-ink:var(--ink,#f3eef7);
+ --km-bg:var(--bg,#100816);
  --km-ease-out:var(--ku-ease-out,cubic-bezier(.16,1,.3,1));
  --km-ease:var(--ku-ease,cubic-bezier(.32,.72,0,1));
  --km-hair:var(--ku-hair,#ffffff12);
@@ -57,7 +57,7 @@
 
 /* ---------------------------------------------- browser frame + chrome --- */
 #km-intro-15 .km-frame{position:absolute;left:50%;top:38%;z-index:2;width:min(76vw,380px);aspect-ratio:16/10;
- transform:translate(-50%,-50%);border-radius:var(--km-r-lg);overflow:hidden;background:#0c1918;
+ transform:translate(-50%,-50%);border-radius:var(--km-r-lg);overflow:hidden;background:#160c20;
  border:1.5px solid var(--km-hair-strong);box-shadow:var(--km-shadow);opacity:0;will-change:transform,opacity;
  animation:km-frame-in .86s cubic-bezier(.18,1.14,.32,1) .24s both}
 @keyframes km-frame-in{
@@ -77,13 +77,13 @@
 #km-intro-15 .km-url{margin-left:auto;display:block;width:44%;height:9px;border-radius:5px;background:var(--km-ink);
  opacity:0;transform:scaleX(.35);transform-origin:right;animation:km-url-in .52s var(--km-ease-out) .62s both}
 @keyframes km-url-in{to{opacity:.15;transform:scaleX(1)}}
-#km-intro-15 .km-art{position:absolute;inset:22px 0 0;z-index:1;overflow:hidden;background:#0a1413}
+#km-intro-15 .km-art{position:absolute;inset:22px 0 0;z-index:1;overflow:hidden;background:#12091b}
 #km-intro-15 .km-art img{width:100%;height:100%;object-fit:cover;object-position:center 24%;opacity:.94;
  transform:scale(1.1);animation:km-ken 4.8s var(--km-ease) both}
 @keyframes km-ken{from{transform:scale(1.17)}to{transform:scale(1.02)}}
 #km-intro-15 .km-art.km-empty{background:
  radial-gradient(circle at 22% 18%,var(--km-accent) 0,transparent 46%),
- linear-gradient(135deg,#123 0,#0a1413 62%)}
+ linear-gradient(135deg,#211229 0,#12091b 62%)}
 #km-intro-15 .km-art.km-empty:after{content:'';position:absolute;inset:0;background:
  repeating-linear-gradient(115deg,transparent 0 26px,#ffffff0a 26px 27px)}
 
@@ -215,11 +215,11 @@
 .hero-slide:active,.info .poster:active{transform:scale(.985)}
 
 /* ------------------------------ focus, for remote and keyboard -------- */
-:focus-visible{outline:2px solid var(--ku-accent,#3be3d2);outline-offset:2px}
+:focus-visible{outline:2px solid var(--ku-accent,#b478ee);outline-offset:2px}
 
 /* ------------------------------------------- route-change sweep ------ */
 #km-sweep-15{position:fixed;left:0;right:0;top:0;height:2px;z-index:9997;pointer-events:none;
- background:linear-gradient(90deg,transparent,var(--ku-accent,#3be3d2),transparent);
+ background:linear-gradient(90deg,transparent,var(--ku-accent,#b478ee),transparent);
  transform:scaleX(0);transform-origin:left;opacity:.85}
 #km-sweep-15.km-run{animation:km-sweep .5s var(--ku-ease-out,cubic-bezier(.16,1,.3,1)) both}
 @keyframes km-sweep{0%{transform:scaleX(0);transform-origin:left}
@@ -233,10 +233,10 @@
 .profile-private547{display:none!important}
 
 /* ------------------------------- update button (header) ---------------- */
-.km-update-btn{position:relative;color:var(--ku-accent,#3be3d2)}
+.km-update-btn{position:relative;color:var(--ku-accent,#b478ee)}
 .km-update-btn svg{stroke-width:2}
 .km-update-btn:after{content:'';position:absolute;inset:-1px;border-radius:50%;
- box-shadow:inset 0 0 0 1px var(--ku-accent,#3be3d2);opacity:.45}
+ box-shadow:inset 0 0 0 1px var(--ku-accent,#b478ee);opacity:.45}
 .km-update-btn:active:after{opacity:1}
 .km-update-off{opacity:.55}
 .km-update-btn:focus-visible{outline:2px solid var(--ink,#f1f4f3);outline-offset:3px}
@@ -320,7 +320,7 @@ body.km-scrolled header .brand-logo{transform:scale(.9);transform-origin:left ce
 
 /* scroll position, as a hairline under the header */
 #km-scrollbar-15{position:fixed;left:0;right:0;top:0;height:2px;z-index:9997;pointer-events:none;
- background:var(--ku-accent,#3be3d2);opacity:.55;transform:scaleX(0);transform-origin:left}
+ background:var(--ku-accent,#b478ee);opacity:.55;transform:scaleX(0);transform-origin:left}
 #km-scrollbar-15.km-idle{opacity:0;transition:opacity .3s linear}
 
 /* ------------------------------------------------- reduced motion ----- */

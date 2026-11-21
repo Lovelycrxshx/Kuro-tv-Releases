@@ -10,7 +10,7 @@
   try { if (localStorage.getItem(KEY) === STAMP) return; } catch (_) { return; }
 
   var ITEMS = [
-    ['Speed, 120Hz & Device Compatibility', 'Unlocks 90Hz/120Hz smooth scrolling (auto battery-saver in fullscreen video), built-in Encrypted DNS (1.1.1.1 / 8.8.8.8) to unblock carrier-restricted sources without a VPN, faster 8-lane HTTP/2 catalog loading, software video decoder fallback, WebView low-RAM crash protection, and native Android TV / Fire TV / foldable support.'],
+    ['Signature Violet Theme & Faster Loading', 'Default app colour restored to Signature Violet across all screens, dialogs & player controls, plus built-in Encrypted DNS (1.1.1.1 / 8.8.8.8) to unblock carrier-restricted sources without a VPN, faster 8-lane catalog loading, backup video codec support, low-RAM crash protection, and Android TV / Fire TV / foldable support.'],
     ['Cinematic Title Detail v2', 'Full-bleed banner header with ★ score, studio & runtime pills, interactive Franchise & Watch-Order strip, Canon / Filler / Recap badges, Skip Filler switch (also skips fillers on Auto-Next), 16:9 episode rows, and ⬇ Batch Offline Download.'],
     ['Desktop-Site Left-Rail & DPAD UI', 'Turn on Settings → Site view → Desktop (or launch on Android TV / Fire TV) to unlock the frosted-OLED left navigation rail, widescreen hero & multi-column shelves, glowing accent DPAD focus halo, and remote spatial navigation.'],
     ['Smart Multi-Filter Browse & Voice Search', 'Combinable OLED filter pills on Browse (Dub Available, ★ 8.0+, Airing/Completed, Genre, Format, Year), native Android Voice Search mic pill, and richer SUB | DUB + ★ rating poster badges.'],
