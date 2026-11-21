@@ -1,0 +1,45 @@
+Kuro.tv 1.5.4-beta (not launched on GitHub)
+
+Installs cleanly over v1.5.3 (versionName 1.5.4-beta, versionCode 96), signed
+with the same CN=Kuro Anime release key so no uninstall is needed. Public GitHub
+Releases remain on v1.5.3.
+
+APK      https://drive.google.com/file/d/14UZzL76JXd0WLaPpqGnVEsPnPS3FmhBt/view
+sha256   bf90970c2959d6cc1112f1e0f3adcf40c917105ba50dddd9c25338abd4aff5de
+md5      e5a35ea36e23b33c440ee760bc10d1d3
+size     48,758,292 bytes
+
+What is new in 1.5.4-beta
+  1. Cinematic Title Detail Page v2 (#2).
+     - Full-bleed banner header with ★ AniList score, runtime, format, status,
+       studio, and SUB/DUB pills.
+     - Interactive Franchise & Watch-Order pill strip (Prequels -> Current ✓ ->
+       Sequels / Movies / OVAs) to jump across seasons in one tap.
+     - Canon / Filler / Recap episode badges (combining live HiAnime filler
+       markers, episode recap heuristics, and curated long-runner ranges) plus a
+       persistent "Skip Filler" pill switch that hides filler/recap rows AND
+       skips past them automatically on Auto-Next & Fullscreen Next Episode.
+     - Upgraded 16:9 episode thumbnail rows with saved playhead progress bars.
+     - One-tap "⬇ Batch Download" modal sheet (Next 3 / 5 / 12 / All unwatched
+       up to 24) resolving verified Zenkai direct HLS streams into Kuro offline
+       storage (with automatic Watch Queue fallback for embed-only sources).
+
+  2. Widescreen Left-Rail Leanback UI & Glowing DPAD Focus (#3 — Desktop site ON only).
+     - Strictly gated on Settings -> Appearance and startup -> Site view -> Desktop.
+     - Default Mobile mode keeps the standard mobile top bar and bottom 5-tab dock
+       100% unchanged.
+     - Turning Desktop site ON switches to a frosted-OLED left navigation rail,
+       1180px widescreen layout viewport, widescreen hero & landscape Continue
+       Watching rail, multi-column grids, glowing accent DPAD spatial arrow-key
+       focus navigation, ContextMenu/F2 poster quick actions, and a contextual
+       "OK Select · MENU Quick Actions · ESC Back" pill (plus a one-tap "Mobile ↺"
+       switch at the foot of the rail).
+
+  3. Smart Multi-Filter Browse & Voice Command Search (#4).
+     - Combinable OLED filter pills on Browse: Dub Available, CC Subbed, ★ 8.0+,
+       ★ 8.5+, Airing, Completed, and top Genres alongside Format & Year chips.
+     - Native Android Voice Search mic button (RecognizerIntent, zero RECORD_AUDIO
+       permission required, with Web Speech fallback) right in the Browse bar.
+     - "🎲 Surprise Me" randomizer pill.
+     - Richer poster badges with top-right ★ scores and bottom-left SUB | DUB
+       split count pills.
