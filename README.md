@@ -13,11 +13,12 @@ Notes for every earlier cut are in [archive/1.x/](archive/1.x/), and the same te
 
 ## 📥 Download
 
-Get the latest stable build from GitHub:
+[![Download](design/download-button.svg)](https://lovelycrxshx.github.io/Kuro-tv-Releases/)
 
+* **[Download page](https://lovelycrxshx.github.io/Kuro-tv-Releases/)** — direct APK download,
+  SHA-256 checksum and install steps.
 * **[Latest release](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)** — APK,
-  checksum and the matching source archive.
-* The site mirrors the same file with its SHA-256 for comparison.
+  checksum and the matching source archive on GitHub Releases.
 
 ---
 
