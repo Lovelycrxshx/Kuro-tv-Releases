@@ -395,7 +395,12 @@ jobs:
             || { echo "::error::KuroCatalog573 missing detail154."; exit 1; }
           grep -Fq 'RECOGNIZE_SPEECH' "$PROJECT/AndroidManifest.xml" \
             || { echo "::error::AndroidManifest missing RECOGNIZE_SPEECH query."; exit 1; }
-          ( cd "$PROJECT" && node tests/test-restore-selection573.cjs && node tests/test-hls-player.cjs && node tests/test-web-markers574.cjs )
+          grep -Fq 'setupEdgeToEdgeInsets154' "$PKG/MainActivity.java" \
+            || { echo "::error::MainActivity missing setupEdgeToEdgeInsets154."; exit 1; }
+          grep -Fq '__kuro_ad_frame_154__' "$PROJECT/assets/player-ad-guard541.js" \
+            || { echo "::error::player-ad-guard541.js missing 1.5.4 multi-layer ad guard."; exit 1; }
+          chmod +x "$PROJECT/tests/test-ad-blocker.sh"
+          ( cd "$PROJECT" && ./tests/test-ad-blocker.sh && node tests/test-restore-selection573.cjs && node tests/test-hls-player.cjs && node tests/test-web-markers574.cjs )
 
       - name: Verify the expected changes are in this source
         run: |

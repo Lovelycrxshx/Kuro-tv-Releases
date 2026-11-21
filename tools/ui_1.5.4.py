@@ -289,7 +289,537 @@ def patch_main_activity(root: pathlib.Path) -> None:
         "MainActivity Bridge 1.5.4 methods",
     )
 
+    # 7. Android 15 (targetSdk 35) & all-API edge-to-edge WindowInsets safe-area fix
+    insets_helpers = """ private androidx.core.view.WindowInsetsCompat lastWindowInsets154;
+ private int fallbackStatusBarHeight154(){
+  try{int id=getResources().getIdentifier("status_bar_height","dimen","android");return id>0?getResources().getDimensionPixelSize(id):0;}catch(RuntimeException e){return 0;}
+ }
+ private void applyRootInsets154(androidx.core.view.WindowInsetsCompat insets){
+  if(root==null)return;
+  if(customView!=null||enhancedFullscreen||isInPictureInPictureMode()){
+   if(root.getPaddingLeft()!=0||root.getPaddingTop()!=0||root.getPaddingRight()!=0||root.getPaddingBottom()!=0)root.setPadding(0,0,0,0);
+   return;
+  }
+  if(insets==null){
+   int topFb=(!isInMultiWindowMode()&&getResources().getConfiguration().orientation!=android.content.res.Configuration.ORIENTATION_LANDSCAPE)?fallbackStatusBarHeight154():0;
+   if(root.getPaddingTop()!=topFb||root.getPaddingLeft()!=0||root.getPaddingRight()!=0||root.getPaddingBottom()!=0)root.setPadding(0,topFb,0,0);
+   return;
+  }
+  int barMask=androidx.core.view.WindowInsetsCompat.Type.systemBars()|androidx.core.view.WindowInsetsCompat.Type.displayCutout();
+  androidx.core.graphics.Insets vis=insets.getInsets(barMask);
+  androidx.core.graphics.Insets ign=insets.getInsetsIgnoringVisibility(barMask);
+  androidx.core.graphics.Insets ime=insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime());
+  int l=Math.max(vis.left,ign.left);
+  int t=Math.max(vis.top,ign.top);
+  if(t<=0&&!isInMultiWindowMode()&&getResources().getConfiguration().orientation!=android.content.res.Configuration.ORIENTATION_LANDSCAPE)t=fallbackStatusBarHeight154();
+  int r=Math.max(vis.right,ign.right);
+  int b=Math.max(Math.max(vis.bottom,ign.bottom),ime.bottom);
+  if(root.getPaddingLeft()!=l||root.getPaddingTop()!=t||root.getPaddingRight()!=r||root.getPaddingBottom()!=b){
+   root.setPadding(l,t,r,b);
+  }
+ }
+ private void syncWindowSystemBars154(){
+  Window w=getWindow();if(w==null)return;
+  View decor=w.getDecorView();
+  boolean fs=customView!=null||enhancedFullscreen||isInPictureInPictureMode();
+  if(Build.VERSION.SDK_INT>=28){
+   WindowManager.LayoutParams lp=w.getAttributes();
+   int wantCutout=fs?WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES:WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT;
+   if(lp.layoutInDisplayCutoutMode!=wantCutout){lp.layoutInDisplayCutoutMode=wantCutout;w.setAttributes(lp);}
+  }
+  if(decor!=null){
+   androidx.core.view.WindowInsetsControllerCompat ctrl=androidx.core.view.WindowCompat.getInsetsController(w,decor);
+   if(ctrl!=null){
+    ctrl.setAppearanceLightStatusBars(false);
+    ctrl.setAppearanceLightNavigationBars(false);
+    if(fs){
+     ctrl.setSystemBarsBehavior(androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+     ctrl.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+    }else{
+     ctrl.show(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+    }
+   }
+  }
+  applyRootInsets154(lastWindowInsets154);
+  if(root!=null)androidx.core.view.ViewCompat.requestApplyInsets(root);
+ }
+ private void setupEdgeToEdgeInsets154(){
+  Window w=getWindow();
+  if(w!=null)androidx.core.view.WindowCompat.setDecorFitsSystemWindows(w,false);
+  if(root!=null){
+   root.setBackgroundColor(KuroTheme12.background());
+   androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root,(v,insets)->{
+    lastWindowInsets154=insets;
+    applyRootInsets154(insets);
+    return androidx.core.view.WindowInsetsCompat.CONSUMED;
+   });
+   syncWindowSystemBars154();
+  }
+ }
+"""
+    text = patch_once(
+        text,
+        "setupEdgeToEdgeInsets154()",
+        " private SharedPreferences settings560(){",
+        insets_helpers + " private SharedPreferences settings560(){",
+        "MainActivity setupEdgeToEdgeInsets154 helpers",
+    )
+    text = patch_once(
+        text,
+        "setContentView(root);setupEdgeToEdgeInsets154();",
+        "KuroTheme12.init(this);KuroTheme12.applyWindow(this);root=new FrameLayout(this);setContentView(root);",
+        "KuroTheme12.init(this);KuroTheme12.applyWindow(this);root=new FrameLayout(this);setContentView(root);setupEdgeToEdgeInsets154();",
+        "MainActivity onCreate setupEdgeToEdgeInsets154",
+    )
+    text = patch_once(
+        text,
+        "if(root!=null){root.setBackgroundColor(floor);syncWindowSystemBars154();}",
+        "if(ui!=null)ui.setBackgroundColor(floor);if(root!=null)root.setBackgroundColor(floor);",
+        "if(ui!=null)ui.setBackgroundColor(floor);if(root!=null){root.setBackgroundColor(floor);syncWindowSystemBars154();}",
+        "MainActivity kuroTheme12WindowApplied syncWindowSystemBars154",
+    )
+    text = patch_once(
+        text,
+        "getWindow().getDecorView().setSystemUiVisibility(5894);syncWindowSystemBars154();applyPlayerOptions(null);",
+        "getWindow().getDecorView().setSystemUiVisibility(5894);applyPlayerOptions(null);",
+        "getWindow().getDecorView().setSystemUiVisibility(5894);syncWindowSystemBars154();applyPlayerOptions(null);",
+        "MainActivity onShowCustomView syncWindowSystemBars154",
+    )
+    text = patch_once(
+        text,
+        "getWindow().getDecorView().setSystemUiVisibility(enhancedFullscreen?5894:0);syncWindowSystemBars154();",
+        "getWindow().getDecorView().setSystemUiVisibility(enhancedFullscreen?5894:0);",
+        "getWindow().getDecorView().setSystemUiVisibility(enhancedFullscreen?5894:0);syncWindowSystemBars154();",
+        "MainActivity hideFullscreen syncWindowSystemBars154",
+    )
+    text = patch_once(
+        text,
+        "getWindow().getDecorView().setSystemUiVisibility(5894);syncWindowSystemBars154();watchPlayerBox.requestLayout();",
+        "getWindow().getDecorView().setSystemUiVisibility(5894);watchPlayerBox.requestLayout();",
+        "getWindow().getDecorView().setSystemUiVisibility(5894);syncWindowSystemBars154();watchPlayerBox.requestLayout();",
+        "MainActivity enterEnhancedFullscreen syncWindowSystemBars154",
+    )
+    text = patch_once(
+        text,
+        "if(customView==null)getWindow().getDecorView().setSystemUiVisibility(0);syncWindowSystemBars154();",
+        "if(customView==null)getWindow().getDecorView().setSystemUiVisibility(0);",
+        "if(customView==null)getWindow().getDecorView().setSystemUiVisibility(0);syncWindowSystemBars154();",
+        "MainActivity exitEnhancedFullscreen syncWindowSystemBars154",
+    )
+    text = patch_once(
+        text,
+        "super.onPictureInPictureModeChanged(inPip,config);syncWindowSystemBars154();",
+        "super.onPictureInPictureModeChanged(inPip,config);",
+        "super.onPictureInPictureModeChanged(inPip,config);syncWindowSystemBars154();",
+        "MainActivity onPictureInPictureModeChanged syncWindowSystemBars154",
+    )
+    text = patch_once(
+        text,
+        "super.onConfigurationChanged(config);syncWindowSystemBars154();",
+        "super.onConfigurationChanged(config);",
+        "super.onConfigurationChanged(config);syncWindowSystemBars154();",
+        "MainActivity onConfigurationChanged syncWindowSystemBars154",
+    )
+    text = patch_once(
+        text,
+        "super.onResume();activityResumed=true;syncWindowSystemBars154();",
+        "super.onResume();activityResumed=true;",
+        "super.onResume();activityResumed=true;syncWindowSystemBars154();",
+        "MainActivity onResume syncWindowSystemBars154",
+    )
+
+    # 8. Always re-sweep cosmetic ad guard on player frame finish even when DOCUMENT_START is active
+    text = patch_once(
+        text,
+        "/*kuroAdSweep154*/",
+        'if(!adFrameMode&&settings560().getBoolean("adBlock",true))v.evaluateJavascript(assetText("player-ad-guard541.js"),null);',
+        'if(settings560().getBoolean("adBlock",true))/*kuroAdSweep154*/v.evaluateJavascript(assetText("player-ad-guard541.js"),null);',
+        "MainActivity onPageFinished player-ad-guard541 resweep",
+    )
+
     path.write_text(text, encoding="utf-8")
+
+
+def patch_offline_activity_insets(root: pathlib.Path) -> None:
+    path = root / "src/app/lovelycrxshx/kuro/KuroOfflineActivity561.java"
+    text = path.read_text(encoding="utf-8")
+    text = patch_once(
+        text,
+        "setDecorFitsSystemWindows",
+        'LinearLayout layout=new LinearLayout(this);layout.setBackgroundColor(Color.BLACK);layout.setOrientation(LinearLayout.VERTICAL);setContentView(layout);',
+        'if(getWindow()!=null)androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(),false);'
+        'LinearLayout layout=new LinearLayout(this);layout.setBackgroundColor(Color.BLACK);layout.setOrientation(LinearLayout.VERTICAL);setContentView(layout);'
+        'androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(layout,(v,insets)->{'
+        'if(isInPictureInPictureMode()){v.setPadding(0,0,0,0);return androidx.core.view.WindowInsetsCompat.CONSUMED;}'
+        'int m=androidx.core.view.WindowInsetsCompat.Type.systemBars()|androidx.core.view.WindowInsetsCompat.Type.displayCutout();'
+        'androidx.core.graphics.Insets b=insets.getInsetsIgnoringVisibility(m);'
+        'v.setPadding(b.left,b.top,b.right,b.bottom);return androidx.core.view.WindowInsetsCompat.CONSUMED;});'
+        'androidx.core.view.ViewCompat.requestApplyInsets(layout);',
+        "KuroOfflineActivity561 WindowInsets",
+    )
+    text = patch_once(
+        text,
+        "requestApplyInsets((View)top.getParent())",
+        'if(top!=null)top.setVisibility(inPip?View.GONE:View.VISIBLE);',
+        'if(top!=null){top.setVisibility(inPip?View.GONE:View.VISIBLE);if(top.getParent() instanceof View)androidx.core.view.ViewCompat.requestApplyInsets((View)top.getParent());}',
+        "KuroOfflineActivity561 PiP insets refresh",
+    )
+    path.write_text(text, encoding="utf-8")
+
+
+PLAYER_AD_GUARD_154_JS = r"""/* Kuro 1.5.4 player-only multi-layer cosmetic & In-Page-Push ad guard.
+ * Blocks floating Ad/IPP/SocialBar banners (light DOM, open/closed Shadow DOM,
+ * and cross-origin banner iframes) without touching video, controls, subtitles,
+ * or human-verification challenges. */
+(function () {
+  'use strict';
+  try {
+    if (location.hostname === 'kuro.local') return;
+    if (window.__kuroAdGuard541) {
+      if (typeof window.__kuroAdGuardScan154 === 'function') window.__kuroAdGuardScan154();
+      return;
+    }
+    window.__kuroAdGuard541 = true;
+
+    const selectors = [
+      '[data-ad-slot]', '[data-ad-unit]', '[data-ad-zone]', '[data-ad-zone-id]',
+      'ins.adsbygoogle', 'iframe[id^="google_ads_iframe"]',
+      '.adsbox', '.ad-popup', '.ads-popup', '.ad-overlay', '.ads-overlay',
+      '.advertisement-overlay', '[id^="exoclick-"]', '[class^="exo-native-widget"]',
+      '[class*="exo-ipp"]', '[id*="exo-ipp"]', '[class*="in-page-push"]', '[id*="in-page-push"]',
+      '[class*="social-bar"]', '[id*="social-bar"]', '[class*="adspyglass"]', '[id*="adspyglass"]',
+      '[id^="asg-"]', '[class^="asg-"]', '[data-asg-zone]', '[data-exo-zone]',
+      'iframe[src*="adsterra"]', 'iframe[src*="exoclick"]', 'iframe[src*="exosrv"]',
+      'iframe[src*="monetag"]', 'iframe[src*="adspyglass"]', 'iframe[src*="clickadu"]',
+      'iframe[src*="hilltopads"]', 'iframe[src*="galaksion"]', 'iframe[src*="popads"]',
+      'iframe[src*="profitablecpmrate"]', 'iframe[src*="highperformanceformat"]',
+      'iframe[src*="topcreativeformat"]', 'iframe[src*="juicyads"]', 'iframe[src*="trafficjunky"]'
+    ].join(',');
+
+    const verification = '#challenge-form,#challenge-stage,.cf-challenge,.cf-turnstile,.h-captcha,.g-recaptcha,[src*="challenges.cloudflare.com"],[src*="hcaptcha.com"],[src*="recaptcha"]';
+    const controls = [
+      'video', 'audio', 'canvas', '[role="slider"]',
+      '.vjs-control-bar', '.jw-controls', '.plyr__controls', '.video-controls', '.player-controls',
+      '.art-bottom', '.art-controls', '.dplayer-controller', '#kuro-oled-hud153',
+      '.jw-captions', '.vjs-text-track-display', '.plyr__captions', '.art-subtitle',
+      '[id*="subtitle"]', '[class*="subtitle"]', '[class*="caption"]'
+    ].join(',');
+
+    let observer = null, timer = 0;
+    const pending = new Set(), retriedBadges = new WeakSet();
+    const shadowHosts = new WeakMap();
+    const observedRoots = new WeakSet();
+
+    function verificationActive() {
+      const t = (document.title || '').trim();
+      if (/^(just a moment|attention required|verify you are human|access denied)/i.test(t)) return true;
+      if (/challenges\.cloudflare\.com|hcaptcha\.com|recaptcha\.net/i.test(location.hostname)) return true;
+      return !!document.querySelector(verification);
+    }
+
+    // Block script-triggered popup windows inside third-party embeds (never on challenge pages).
+    try {
+      if (!verificationActive()) {
+        const noopOpen = function () { return null; };
+        window.open = noopOpen;
+      }
+    } catch (_) {}
+
+    function isMainPlayerIframe(ifr) {
+      if (!ifr || ifr.tagName !== 'IFRAME') return false;
+      const src = String(ifr.getAttribute('src') || '');
+      if (/cloudflare|turnstile|hcaptcha|recaptcha|challenge|verify/i.test(src)) return true;
+      const r = ifr.getBoundingClientRect();
+      if (r.width >= Math.max(220, innerWidth * 0.72) && r.height >= Math.max(140, innerHeight * 0.65)) return true;
+      return false;
+    }
+
+    function ownsProtectedIframe(el) {
+      if (!el || el.tagName === 'IFRAME') return false;
+      const frames = el.querySelectorAll('iframe');
+      if (!frames.length) return false;
+      for (let i = 0; i < frames.length; i++) {
+        const f = frames[i];
+        const src = String(f.getAttribute('src') || '');
+        if (/cloudflare|turnstile|hcaptcha|recaptcha|challenge|verify/i.test(src)) return true;
+        // Protect unknown iframes unless clearly tiny/banner-sized while a real player exists.
+        const r = f.getBoundingClientRect();
+        const hasMainMedia = !!document.querySelector('video') || Array.prototype.some.call(document.querySelectorAll('iframe'), isMainPlayerIframe);
+        if (!hasMainMedia || r.height > 190 || r.height === 0) return true;
+      }
+      return false;
+    }
+
+    function protectedNode(el) {
+      if (!el || el.nodeType !== 1 || /^(HTML|BODY|HEAD|STYLE|SCRIPT|VIDEO|AUDIO|SOURCE|TRACK|CANVAS)$/.test(el.tagName)) return true;
+      try {
+        if (el.matches(controls) || el.closest(controls) || el.closest(verification)) return true;
+        if (el.querySelector(verification) || el.querySelector(controls)) return true;
+      } catch (_) {
+        return true;
+      }
+      if (el.tagName === 'IFRAME' && isMainPlayerIframe(el)) return true;
+      if (ownsProtectedIframe(el)) return true;
+      return false;
+    }
+
+    function hide(el) {
+      if (protectedNode(el)) return false;
+      el.style.setProperty('display', 'none', 'important');
+      el.style.setProperty('visibility', 'hidden', 'important');
+      el.style.setProperty('opacity', '0', 'important');
+      el.style.setProperty('pointer-events', 'none', 'important');
+      el.style.setProperty('max-height', '0px', 'important');
+      el.setAttribute('data-kuro-ad-hidden', '1');
+      return true;
+    }
+
+    function parentAcrossShadow(node) {
+      if (!node) return null;
+      if (node.parentElement) return node.parentElement;
+      const rootNode = typeof node.getRootNode === 'function' ? node.getRootNode() : null;
+      if (rootNode && shadowHosts.has(rootNode)) return shadowHosts.get(rootNode);
+      if (rootNode && rootNode.host) return rootNode.host;
+      return null;
+    }
+
+    function notifyParentIfEntireFrameIsAd() {
+      try {
+        if (window === window.top) return;
+        if (document.querySelector('video,audio,canvas') || verificationActive()) return;
+        if (innerHeight > 0 && innerHeight <= 210 && innerWidth >= 140) {
+          document.documentElement.style.setProperty('background', 'transparent', 'important');
+          document.documentElement.style.setProperty('display', 'none', 'important');
+          if (document.body) document.body.style.setProperty('display', 'none', 'important');
+          window.parent.postMessage('__kuro_ad_frame_154__', '*');
+        }
+      } catch (_) {}
+    }
+
+    function closeCue(el) {
+      if (el.querySelector('button[aria-label*="Close" i],button[title*="Close" i],[data-close],[class*="close" i],[id*="close" i]')) return true;
+      const children = el.querySelectorAll('button,span,a,div,i,b');
+      for (let i = 0; i < Math.min(children.length, 60); i++) {
+        if (/^(?:×|✕|✖|⨯|╳|x|close)$/i.test((children[i].textContent || '').trim())) return true;
+      }
+      // SVG close icon in top-right/right corner of a floating notification banner
+      const svgs = el.querySelectorAll('svg');
+      if (svgs.length > 0 && svgs.length <= 6) {
+        const er = el.getBoundingClientRect();
+        for (let i = 0; i < svgs.length; i++) {
+          const sr = svgs[i].getBoundingClientRect();
+          if (sr.width >= 6 && sr.width <= 32 && sr.height >= 6 && sr.height <= 32 && sr.left >= er.left + er.width * 0.65) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    function inspectBadge(badge) {
+      const text = (badge.textContent || '').trim();
+      if (!/^(?:ad|ads|advertisement|sponsored|adchoices|ad\s*choices)$/i.test(text)) return;
+      if (badge.children && badge.children.length > 2) return;
+      if (protectedNode(badge)) return;
+
+      let el = parentAcrossShadow(badge);
+      let bestTarget = null;
+      for (let depth = 0; el && depth < 12; depth++, el = parentAcrossShadow(el)) {
+        if (el === document.body || el === document.documentElement) break;
+        if (protectedNode(el)) break;
+        const css = getComputedStyle(el), r = el.getBoundingClientRect();
+        if (!/^(?:absolute|fixed|sticky)$/.test(css.position)) continue;
+        if (r.width < 80 || r.height < 22 || r.height > Math.max(340, innerHeight * 0.78)) continue;
+        // Any non-protected floating overlay card explicitly carrying a standalone
+        // "Ad" / "Sponsored" badge (including Adsterra Social Bar & ExoClick IPP) is an ad.
+        const br = badge.getBoundingClientRect();
+        const badgeStyled = getComputedStyle(badge).backgroundColor !== 'rgba(0, 0, 0, 0)' || (br.width > 0 && br.width <= 76 && br.height <= 36);
+        const copy = (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 1200);
+        if (badgeStyled || closeCue(el) || /\b(?:message\s+from|secret\s+video|xxx|\[720p\]|\[1080p\]|\.mp4)\b/i.test(copy)) {
+          bestTarget = el;
+        }
+      }
+
+      if (bestTarget) {
+        hide(bestTarget);
+        notifyParentIfEntireFrameIsAd();
+        return;
+      }
+
+      // If the entire small iframe IS the ad banner and the badge sits on a static wrapper inside it
+      if (window !== window.top && innerHeight > 0 && innerHeight <= 200 && !document.querySelector('video')) {
+        let wrap = parentAcrossShadow(badge);
+        while (wrap && wrap !== document.body && wrap !== document.documentElement && !protectedNode(wrap)) {
+          hide(wrap);
+          wrap = parentAcrossShadow(wrap);
+        }
+        notifyParentIfEntireFrameIsAd();
+        return;
+      }
+
+      if (!retriedBadges.has(badge)) {
+        retriedBadges.add(badge);
+        setTimeout(() => { if (badge.isConnected && !verificationActive()) inspectBadge(badge); }, 550);
+      }
+    }
+
+    function inspectSuspiciousOverlay(el) {
+      if (!el || el.nodeType !== 1 || protectedNode(el)) return;
+      const css = getComputedStyle(el);
+      if (!/^(?:absolute|fixed)$/.test(css.position)) return;
+      const r = el.getBoundingClientRect();
+      // 1. Transparent full-screen click-hijack <a target="_blank"> overlay over the video
+      if (el.tagName === 'A' && el.getAttribute('target') === '_blank' && r.width >= innerWidth * 0.5 && r.height >= innerHeight * 0.5) {
+        if ((parseFloat(css.opacity) || 1) < 0.08 || !(el.textContent || '').trim()) {
+          hide(el);
+          return;
+        }
+      }
+      // 2. Unbadged In-Page Push / adult fake-video notification strip
+      if (r.width >= 150 && r.height >= 34 && r.height <= 170) {
+        const copy = (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 600);
+        if (/\b(?:1\s+message\s+from|secret\s+videos?\s*xxx|live\s*jasmin|stripchat|chaturbate|jerkmate|hookup\s+tonight|hot\s+girls?\s+near)\b/i.test(copy) && (closeCue(el) || el.querySelector('img'))) {
+          hide(el);
+          notifyParentIfEntireFrameIsAd();
+        }
+      }
+    }
+
+    function scan(root) {
+      if (!root || (root.nodeType !== 1 && root.nodeType !== 11)) return;
+      if (verificationActive()) { if (observer) observer.disconnect(); pending.clear(); return; }
+      if (root.nodeType === 1) {
+        if (root.matches(selectors)) { hide(root); notifyParentIfEntireFrameIsAd(); }
+        inspectSuspiciousOverlay(root);
+        if (/^(SPAN|SMALL|B|STRONG|LABEL|DIV|I|EM|SUP)$/.test(root.tagName) && root.textContent && root.textContent.length <= 24) {
+          inspectBadge(root);
+        }
+        if (root.shadowRoot) observeShadow(root.shadowRoot, root);
+      }
+      const marked = root.querySelectorAll ? root.querySelectorAll(selectors) : [];
+      for (let i = 0; i < Math.min(marked.length, 300); i++) {
+        hide(marked[i]);
+        notifyParentIfEntireFrameIsAd();
+      }
+      const nodes = root.querySelectorAll ? root.querySelectorAll('span,small,b,strong,label,div,i,em,sup,a') : [];
+      for (let i = 0; i < Math.min(nodes.length, 1800); i++) {
+        const n = nodes[i];
+        if (n.shadowRoot) observeShadow(n.shadowRoot, n);
+        if (n.textContent && n.textContent.length <= 24) inspectBadge(n);
+        if (n.tagName === 'DIV' || n.tagName === 'A') inspectSuspiciousOverlay(n);
+      }
+      // Inspect accessible same-origin / about:blank / srcdoc banner iframes
+      const iframes = root.querySelectorAll ? root.querySelectorAll('iframe') : [];
+      for (let i = 0; i < Math.min(iframes.length, 24); i++) {
+        const ifr = iframes[i];
+        if (isMainPlayerIframe(ifr)) continue;
+        try {
+          const doc = ifr.contentDocument;
+          if (doc && doc.documentElement) scan(doc.documentElement);
+        } catch (_) {}
+      }
+    }
+
+    function flush() {
+      timer = 0;
+      const batch = Array.from(pending); pending.clear();
+      for (const node of batch) scan(node);
+    }
+
+    function enqueue(node) {
+      if (!node) return;
+      if (node.nodeType === 3) node = node.parentElement;
+      if (!node || (node.nodeType !== 1 && node.nodeType !== 11)) return;
+      pending.add(node);
+      if (!timer) timer = setTimeout(flush, 80);
+    }
+
+    function observeShadow(sr, host) {
+      if (!sr || observedRoots.has(sr)) return;
+      observedRoots.add(sr);
+      if (host) shadowHosts.set(sr, host);
+      try {
+        const mo = new MutationObserver(records => {
+          for (const rec of records) {
+            if (rec.type === 'characterData') enqueue(rec.target);
+            else for (const n of rec.addedNodes) enqueue(n);
+          }
+        });
+        mo.observe(sr, { childList: true, subtree: true, characterData: true });
+        enqueue(sr);
+      } catch (_) {}
+    }
+
+    // Hook attachShadow at document-start so closed & open Shadow DOM ad widgets are caught too.
+    try {
+      const origAttachShadow = Element.prototype.attachShadow;
+      if (typeof origAttachShadow === 'function') {
+        Element.prototype.attachShadow = function (init) {
+          const sr = origAttachShadow.call(this, init);
+          observeShadow(sr, this);
+          return sr;
+        };
+      }
+    } catch (_) {}
+
+    // Child ad-frame -> parent iframe hider
+    window.addEventListener('message', function (ev) {
+      if (!ev || ev.data !== '__kuro_ad_frame_154__' || verificationActive()) return;
+      const frames = document.querySelectorAll('iframe');
+      for (let i = 0; i < frames.length; i++) {
+        if (frames[i].contentWindow === ev.source && !isMainPlayerIframe(frames[i])) {
+          hide(frames[i]);
+        }
+      }
+    });
+
+    observer = new MutationObserver(records => {
+      for (const record of records) {
+        if (record.type === 'characterData') enqueue(record.target);
+        else for (const node of record.addedNodes) enqueue(node);
+      }
+    });
+    observer.observe(document, { childList: true, subtree: true, characterData: true });
+
+    window.__kuroAdGuardScan154 = function () {
+      if (document.documentElement) enqueue(document.documentElement);
+    };
+    if (document.documentElement) enqueue(document.documentElement);
+    document.addEventListener('DOMContentLoaded', () => enqueue(document.documentElement), { once: true });
+    window.addEventListener('load', () => enqueue(document.documentElement), { once: true });
+  } catch (_) { /* Cosmetic filtering must never interrupt playback. */ }
+})();
+"""
+
+
+def patch_player_ad_blocker(root: pathlib.Path) -> None:
+    # 1. Expand PlayerAdBlocker.java NETWORKS with In-Page-Push / SocialBar / Monetag / AdSpyglass networks
+    ab_path = root / "src/app/lovelycrxshx/kuro/PlayerAdBlocker.java"
+    ab_text = ab_path.read_text(encoding="utf-8")
+    extra_networks = (
+        '"onclicka.com","onclickperformance.com","trafficstars.com","clickadu.com","trafficfactory.biz",'
+        '"adsterratech.com","profitablecpmrate.com","profitableratecpm.com","highperformanceformat.com","topcreativeformat.com",'
+        '"cloudatacdn.com","wpadmngr.com","wpncdn.com","tsyndicate.com","twinrdsrv.com","twinred.com",'
+        '"adcash.com","acscdn.com","ufpcdn.com","sufrcdn.com","onclasrv.com",'
+        '"monetag.com","alwingulla.com","gizokraijaw.net","glizauvo.net","upskittyan.com","ptauxofi.net","darnob.com","thaudray.com",'
+        '"galaksion.com","pushame.com","hilltopads.net","hilltopads.com","htlbid.com",'
+        '"adspyglass.com","asgcdn.com","sbbrdy.com","mondiad.com","mndsrv.com",'
+        '"clickaine.com","rollerads.com","richads.com","evadav.com","push.house",'
+        '"ero-advertising.com","plugrush.com","yllix.com","adtng.com","adskeeper.com","adskeeper.co.uk",'
+        '"mgid.com","taboola.com","outbrain.com","revcontent.com","bidvertiser.com","bidgear.com","pubfuture.com","acint.net","rtmark.net"));'
+    )
+    ab_text = patch_once(
+        ab_text,
+        '"profitablecpmrate.com"',
+        '"onclicka.com","onclickperformance.com","trafficstars.com","clickadu.com","trafficfactory.biz"));',
+        extra_networks,
+        "PlayerAdBlocker NETWORKS expansion",
+    )
+    ab_path.write_text(ab_text, encoding="utf-8")
+
+    # 2. Replace assets/player-ad-guard541.js with hardened 1.5.4 multi-layer guard
+    guard_path = root / "assets/player-ad-guard541.js"
+    guard_path.write_text(PLAYER_AD_GUARD_154_JS, encoding="utf-8")
 
 
 def patch_js_hooks(root: pathlib.Path) -> None:
@@ -378,8 +908,10 @@ def main() -> None:
     patch_catalog(root)
     patch_offline(root)
     patch_main_activity(root)
+    patch_offline_activity_insets(root)
+    patch_player_ad_blocker(root)
     patch_js_hooks(root)
-    print("Applied Kuro 1.5.4-beta Detail v2, Desktop-Site Left-Rail Leanback, and Smart Browse/Voice patches.")
+    print("Applied Kuro 1.5.4-beta Detail v2, Desktop-Site Left-Rail Leanback, WindowInsets, Ad-Guard, and Smart Browse/Voice patches.")
 
 
 if __name__ == "__main__":
