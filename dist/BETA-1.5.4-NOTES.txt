@@ -1,59 +1,49 @@
 Kuro 1.5.4-beta (Signed Beta Build — NOT Published on GitHub)
 ================================================================
 
-Package:        app.kuro.anime
+Package:        app.lovelycrxshx.kuro
 Version Name:   1.5.4-beta
 Version Code:   96
-Size:           51,560,082 bytes (49.2 MB)
-SHA-256:        1eb3a0be6479e11761f393af4d0897ba469e197897647126baaafd38d2436a6f
-MD5:            237404ead4e51c109c5f0514a05a144d
+Size:           51,562,530 bytes (49.2 MB)
+SHA-256:        1b37ef37b4d18919878cc70a989e100de4d1a32cc2a06b931f3a5d7e4a7997d8
+MD5:            357e230a7a26098266c3ed8f8970986d
 Signer:         CN=Kuro Anime
 Signer SHA-256: 1D:37:C3:CA:28:ED:80:CC:48:46:01:A7:A7:90:7D:5C:43:97:0A:5D:57:D5:1A:A4:E9:14:75:A6:07:03:E9:3E
-Google Drive:   https://drive.google.com/file/d/1lAn0yeOX9kGVw16Ggj9pYF68pH9cmBBR/view
-Direct DL:      https://drive.google.com/uc?id=1lAn0yeOX9kGVw16Ggj9pYF68pH9cmBBR&export=download
+Google Drive:   https://drive.google.com/file/d/1TGjU0aAJd9t48lHeV3FCE8hXHV_4rUE5/view
+Direct DL:      https://drive.google.com/uc?id=1TGjU0aAJd9t48lHeV3FCE8hXHV_4rUE5&export=download
 
 Note:
 - Signed with the production Kuro Anime release certificate so it installs cleanly
-  as an in-place upgrade over v1.5.3 without wiping user watch history or settings.
+  as an in-place upgrade over v1.5.3 / earlier 1.5.4-beta without wiping history.
 - GitHub Releases and main branch remain on v1.5.3 (official public release).
 
 What's Included in 1.5.4-beta:
-1. Unified Account, Trackers & Discord Rich Presence Hub (Proposal #3):
-   - Kuro Cloud Account card with profile avatar/banner sync, instant Push / Pull
-     Cloud Sync, Export / Import JSON backup, and Sign Out.
-   - AniList 2-Way Sync (OAuth token connect, auto-update episode progress at 85%
-     watched, full library import/sync).
-   - MyAnimeList Sync (Client ID + username/token connect, library pull & episode push).
-   - Discord Rich Presence (Live "Watching on Kuro" status with anime title, episode,
-     elapsed timer, cover art, and custom Webhook / RPC bridge support).
-   - Granular Sync Preferences toggles (Auto-push at 85% watched, Sync rewatch counts
-     & scores, Broadcast Discord Rich Presence, Private / Incognito session).
+1. Hardened Multi-Layer Player Popup & In-Page-Push Ad Blocker:
+   - Blocks Adsterra Social Bar, ExoClick In-Page Push, Monetag, Galaksion, AdCash,
+     AdSpyglass, Clickadu, HilltopAds, and adult fake-notification floating banners
+     at both the WebView network layer (50+ expanded ad/IPP CDN domains) and the
+     document-start cosmetic layer.
+   - Hooks Element.prototype.attachShadow at document-start so open and closed
+     Shadow DOM ad widgets are hidden along with their outer host container.
+   - Eliminates floating Ad/Sponsored banners with SVG/CSS close icons, neutralizes
+     window.open and invisible click-hijack overlays, and hides cross-origin ad
+     banner iframes while keeping video, subtitles, controls, and Cloudflare
+     verification untouched.
 
-2. 24 Real Manga Face PFPs & Matching 16:9 Banners (art-11 .. art-34):
-   - Removed all 10 legacy overlay PFPs & banners (art-01 .. art-10) and replaced them
-     with 24 authentic manga/manhwa face-only avatars (256x256 WebP) and 24 matching
-     16:9 manga spread banners (1024x576 WebP), plus one-tap "Match banner" pairing:
-     art-11 Satoru Gojo (Jujutsu Kaisen)        | art-23 Mash Burnedead (Mashle)
-     art-12 Ryomen Sukuna (Jujutsu Kaisen)      | art-24 Goku (Dragon Ball Z)
-     art-13 Yuta Okkotsu (Jujutsu Kaisen 0)     | art-25 Gabimaru (Hell's Paradise)
-     art-14 Toji Fushiguro (Jujutsu Kaisen)     | art-26 Akame (Akame ga Kill!)
-     art-15 Sung Jinwoo (Solo Leveling)         | art-27 Kaoruko Waguri (Fragrant Flower)
-     art-16 Light Yagami (Death Note)           | art-28 Eren Yeager (Attack on Titan)
-     art-17 Denji (Chainsaw Man)                | art-29 Levi Ackerman (Attack on Titan)
-     art-18 Makima (Chainsaw Man)               | art-30 Nagumo (Sakamoto Days)
-     art-19 Asta (Black Clover)                 | art-31 Ai Hoshino (Oshi no Ko)
-     art-20 Ichigo Kurosaki (Bleach)            | art-32 Buddha (Record of Ragnarok)
-     art-21 Sosuke Aizen (Bleach: TYBW)         | art-33 Johan Liebert (Monster)
-     art-22 Frieren (Beyond Journey's End)      | art-34 Yuuichi Katagiri (Tomodachi Game)
+2. Android 15 (targetSdk 35) Edge-to-Edge Status Bar & Gesture Bar Window Fix:
+   - Applies native WindowInsetsCompat (systemBars | displayCutout | ime) padding
+     to MainActivity and KuroOfflineActivity561 when not in fullscreen/PiP, so the
+     top Kuro header never overlaps the system clock, network speed, Bluetooth,
+     5G, or battery icons, and switches cleanly to true edge-to-edge in fullscreen.
 
-3. Desktop Leanback Left-Rail UI (Proposal #3 — Desktop Mode Only):
-   - Activates ONLY when Settings -> Appearance and startup -> Site view -> Desktop
-     is enabled; Mobile mode keeps the standard mobile layout.
-   - Collapsible glass left navigation rail, 16:9 widescreen hero spotlight,
-     horizontal Continue Watching progress strip, and multi-column poster grid.
+3. Unified Account, Trackers & Discord Rich Presence Hub (Proposal #3):
+   - Kuro Cloud Account card, AniList 2-Way Sync, MyAnimeList Sync, Discord Rich
+     Presence card, and granular sync toggles.
 
-4. Cleanups & Fixes Carried Forward:
-   - Hidden "Verify Library 11", "Surprise Me", and "Source sites · open separately"
-     across Home and Settings.
-   - Full v1.5.3 base (Miruro multi-server streaming, 1,100+ catalog, Cloud Sync,
-     Custom Accent Colors, Ambient Glow, Sleep Timer, Playback Speed, Guest Sync prompt).
+4. 24 Real Manga Face PFPs & Matching 16:9 Banners (art-11 .. art-34):
+   - Replaced all legacy art-01..10 overlays with 24 authentic manga/manhwa face
+     PFPs and matching 16:9 banners + one-tap "Match banner" pairing.
+
+5. Desktop Leanback Left-Rail UI (Desktop Site Mode Only) & UI Cleanups:
+   - Activates only when Settings -> Site view -> Desktop is enabled.
+   - Hidden "Verify Library 11", "Surprise Me", and "Source sites · open separately".
