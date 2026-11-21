@@ -4,10 +4,10 @@ Installs cleanly over v1.5.3 (versionName 1.5.4-beta, versionCode 96), signed
 with the same CN=Kuro Anime release key so no uninstall is needed. Public GitHub
 Releases remain on v1.5.3.
 
-APK      https://drive.google.com/file/d/18a6i2zJpWd0DiHWpsrCQ62v0RFecpjmq/view
-sha256   1c5668e66839d05659d7b5836c4c013bd44fec27c4eeb42deb0a78e0fceab07f
-md5      d7abf7aed3d1d1824acb2f6cb267c1b7
-size     48,757,956 bytes
+APK      https://drive.google.com/file/d/1vvnMxJZKGHe2YRQ23Y3ZPE6O4fmk59OX/view
+sha256   5fb06bef6387344a56eb6e8262290015a2a0a55b3897a4c190215a5b9fc41687
+md5      ad0d4de4d44157f6f05c2a9c5630c99b
+size     48,766,560 bytes
 
 What is new in 1.5.4-beta
   1. Cinematic Title Detail Page v2 (#2).
@@ -43,6 +43,16 @@ What is new in 1.5.4-beta
      - Richer poster badges with top-right ★ scores and bottom-left SUB | DUB
        split count pills.
 
-  4. Cleaner Browse & Detail Surface (Beta Polish).
+  4. Account Section: Unified Trackers & Discord Rich Presence Hub (Account #3).
+     - Upgraded Account tab with dedicated OLED service cards for AniList and
+       MyAnimeList (@handle, last sync timestamp, episodes mirrored, offline
+       sync queue counter, Two-Way Auto-Sync switches, Sync Now & Import pills,
+       and inline match/conflict resolution).
+     - Live interactive Discord Rich Presence preview card pulling your latest
+       watched anime & saved playhead progress, with instant OLED switches for
+       Share Activity on Discord, Show Episode Progress, and Privacy Mode on
+       18+ & Titles, plus one-tap 15s Test & Presence Customization shortcuts.
+
+  5. Cleaner Browse & Detail Surface (Beta Polish).
      - Hidden "Verify Library 11" ([data-miruro-verify]), "🎲 Surprise Me", and
        the "Source sites · open separately" external link strip (.open-sites).
