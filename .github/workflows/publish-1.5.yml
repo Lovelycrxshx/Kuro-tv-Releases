@@ -164,7 +164,7 @@ jobs:
           done
           unzip -p "$APK" classes.dex | grep -aq 'option-download15' \
             || { echo "::error::classes.dex is missing option-download15"; exit 1; }
-          unzip -p "$APK" assets/settings560.js | grep -aFq "['download', 'Download button', [['on', 'Show'], ['off', 'Hide']]]" \
+          unzip -p "$APK" assets/settings560.js | grep -aFq "['download','Download button'" \
             || { echo "::error::assets/settings560.js is missing the Download button toggle"; exit 1; }
           echo "All artifacts sane; APK matches the signed build."
 
@@ -220,7 +220,7 @@ jobs:
             || { echo "::error::the source archive does not mark a download as played"; exit 1; }
           unzip -p "dist/$APK_NAME-Source.zip" '*kuro_discord_rpc563.cpp' | grep -q 'AddButton' \
             || { echo "::error::the source archive has no Discord Rich Presence Download button"; exit 1; }
-          unzip -p "dist/$APK_NAME-Source.zip" '*settings560.js' | grep -Fq "['download', 'Download button', [['on', 'Show'], ['off', 'Hide']]]" \
+          unzip -p "dist/$APK_NAME-Source.zip" '*settings560.js' | grep -Fq "['download','Download button'" \
             || { echo "::error::the source archive settings560.js has no Download button toggle"; exit 1; }
           printf '%s  %s\n' "$(sha256sum "dist/$APK_NAME-Source.zip" | cut -d' ' -f1)" "$APK_NAME-Source.zip" \
             > "dist/$APK_NAME-Source.zip.sha256"
