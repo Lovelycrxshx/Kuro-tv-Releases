@@ -4,10 +4,15 @@
 (function () {
   'use strict';
 
-  var STAMP = '1.5.5-beta3';
-  var KEY = 'kuro-beta-whatsnew-seen-1.5.5-beta3';
+  var STAMP = '1.5.5-beta4';
+  var KEY = 'kuro-beta-whatsnew-seen-1.5.5-beta4';
 
-  try { if (localStorage.getItem(KEY) === STAMP) return; } catch (_) { return; }
+  try {
+    if (localStorage.getItem(KEY) === STAMP || localStorage.getItem('kuro-beta-whatsnew-seen-1.5.5-beta3')) {
+      localStorage.setItem(KEY, STAMP);
+      return;
+    }
+  } catch (_) { return; }
 
   var ITEMS = [
     ['Full 20-Theme & Pure Black OLED Sync', 'Every Watch Screen v3 card, border, SUB/DUB tab, active server pill, episode progress bar, badge, WatchHeader kuro.tv wordmark, and Title Detail / Browse overlay now dynamically changes colour across all 20 theme accents and Pure Black OLED mode — even live while a video is playing.'],
@@ -37,12 +42,12 @@
 
     var tag = document.createElement('div');
     tag.className = 'kb-wn-tag';
-    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA3';
+    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA4';
 
     var h = document.createElement('h2');
     h.id = 'kb-wn-title';
     h.className = 'kb-wn-title';
-    h.textContent = 'What\u2019s new in 1.5.5-beta3';
+    h.textContent = 'What\u2019s new in 1.5.5-beta4';
 
     var list = document.createElement('ul');
     list.className = 'kb-wn-list';
@@ -67,6 +72,7 @@
       scrim.classList.add('is-out');
       document.removeEventListener('keydown', onKey, true);
       setTimeout(function () { if (scrim.parentNode) scrim.parentNode.removeChild(scrim); }, 220);
+      if (window.kuroPinHomeTop155) window.kuroPinHomeTop155();
     }
     function onKey(e) {
       if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); close(); }
@@ -82,7 +88,9 @@
     card.appendChild(btn);
     scrim.appendChild(card);
     document.body.appendChild(scrim);
-    setTimeout(function () { try { btn.focus(); } catch (_) {} }, 60);
+    setTimeout(function () {
+      try { btn.focus({ preventScroll: true }); } catch (_) { try { btn.focus(); } catch (__) {} }
+    }, 60);
   }
 
   function waitForIntro() {

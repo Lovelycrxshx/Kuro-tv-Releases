@@ -908,6 +908,32 @@ def patch_js_hooks(root: pathlib.Path) -> None:
     )
     f_path.write_text(f_text, encoding="utf-8")
 
+    # 4. route-state538.js & smooth-ui.css: never auto-scroll down on Home when entering the app
+    rs_path = root / "assets/route-state538.js"
+    if rs_path.is_file():
+        rs_text = rs_path.read_text(encoding="utf-8")
+        rs_text = patch_once(
+            rs_text,
+            "history.scrollRestoration='manual'",
+            " const key='kuro-page-checkpoint-v1';",
+            " try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(_){}\n const key='kuro-page-checkpoint-v1';",
+            "route-state538.js manual scrollRestoration",
+        )
+        rs_text = patch_once(
+            rs_text,
+            "if(page==='home'){scrollTarget=null;window.scrollTo(0,0);return}",
+            " function restoreScroll(page,y){\n  scrollTarget={view:page,y:Math.round(safeNumber(y,100000))};",
+            " function restoreScroll(page,y){\n  if(page==='home'){scrollTarget=null;window.scrollTo(0,0);return}\n  scrollTarget={view:page,y:Math.round(safeNumber(y,100000))};",
+            "route-state538.js no Home auto-scroll on startup",
+        )
+        rs_path.write_text(rs_text, encoding="utf-8")
+
+    su_path = root / "assets/smooth-ui.css"
+    if su_path.is_file():
+        su_text = su_path.read_text(encoding="utf-8")
+        su_text = su_text.replace("  scroll-behavior: smooth;\n", "  scroll-behavior: auto;\n")
+        su_path.write_text(su_text, encoding="utf-8")
+
 
 KURO_TV_BANNER_XML = """<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"

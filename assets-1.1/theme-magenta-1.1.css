@@ -488,7 +488,7 @@ html.watch-account-active,html.watch-account-active body,html.watch-account-acti
 /* ---------------------------------------------------------------- base feel */
 
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   -webkit-text-size-adjust: 100%;
 }
 

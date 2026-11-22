@@ -70,6 +70,187 @@
     return Array.isArray(window.episodes) ? window.episodes : [];
   }
 
+  function safeFocus155(el) {
+    if (!el || typeof el.focus !== 'function') return;
+    try {
+      el.focus({ preventScroll: true });
+    } catch (_) {
+      try { el.focus(); } catch (__) {}
+    }
+  }
+
+  /* ------------------------------------------------------------------------
+     Startup & Home-Entry Scroll Guard (1.5.5-beta4)
+     Guarantees opening/entering the app NEVER automatically scrolls down on
+     the Home page across:
+       - route-state538 startup scroll restoration (startup === 'last')
+       - Chromium scroll anchoring as Hero, Continue Watching, Popular & New
+         shelves populate asynchronously
+       - WebView status/nav-bar inset resizes & intro/whatsnew overlay focus
+     Unpins immediately on the user's first vertical touch drag, wheel, or
+     downward key press, or when navigating away from Home.
+     ------------------------------------------------------------------------ */
+  (function setupHomeEntryScrollGuard155() {
+    try {
+      if ('scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'manual';
+      }
+    } catch (_) {}
+
+    // Sanitize any persisted Home scroll offset before onPageFinished runs
+    try {
+      var rawCp = localStorage.getItem('kuro-page-checkpoint-v1');
+      if (rawCp && rawCp.length <= 48000) {
+        var cp = JSON.parse(rawCp);
+        if (cp && cp.view === 'home' && cp.scroll) {
+          cp.scroll = 0;
+          localStorage.setItem('kuro-page-checkpoint-v1', JSON.stringify(cp));
+        }
+      }
+    } catch (_) {}
+
+    var homeTopPinned = true;
+    var touchStartX = 0;
+    var touchStartY = 0;
+    var touchFromOverlay = false;
+
+    function isStartupOverlayTarget(t) {
+      if (!t || !t.closest) return false;
+      return Boolean(t.closest('#km-intro-15, #kb-whatsnew, .km-sheet-15, #settings-overlay560, #account-overlay, #news-overlay'));
+    }
+
+    function snapHomeToTopNow() {
+      if (!homeTopPinned) return;
+      var v = curView();
+      if (v && v !== 'home') {
+        unpinHomeTop();
+        return;
+      }
+      var y = window.scrollY || window.pageYOffset ||
+        (document.documentElement && document.documentElement.scrollTop) ||
+        (document.body && document.body.scrollTop) || 0;
+      if (y > 0) {
+        try { window.scrollTo(0, 0); } catch (_) {}
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+      }
+    }
+
+    function pinHomeTop() {
+      var v = curView();
+      if (v && v !== 'home') return;
+      homeTopPinned = true;
+      if (document.documentElement) {
+        document.documentElement.setAttribute('data-k155-home-top', '1');
+      }
+      snapHomeToTopNow();
+    }
+
+    function unpinHomeTop() {
+      if (!homeTopPinned) return;
+      homeTopPinned = false;
+      if (document.documentElement) {
+        document.documentElement.removeAttribute('data-k155-home-top');
+      }
+    }
+
+    window.kuroPinHomeTop155 = pinHomeTop;
+    window.kuroUnpinHomeTop155 = unpinHomeTop;
+
+    pinHomeTop();
+
+    // Wrap startup restore so entering the app on Home always stays at scrollY = 0
+    if (typeof window.kuroRestoreStartup560 === 'function' && !window.kuroRestoreStartup560.__k155Wrapped) {
+      var origRestoreStartup = window.kuroRestoreStartup560;
+      var wrappedRestoreStartup = function () {
+        var res = origRestoreStartup.apply(this, arguments);
+        if ((curView() || 'home') === 'home') {
+          pinHomeTop();
+          requestAnimationFrame(snapHomeToTopNow);
+          setTimeout(snapHomeToTopNow, 320);
+          setTimeout(snapHomeToTopNow, 1250);
+        } else {
+          unpinHomeTop();
+        }
+        return res;
+      };
+      wrappedRestoreStartup.__k155Wrapped = true;
+      window.kuroRestoreStartup560 = wrappedRestoreStartup;
+    }
+
+    // Disengage if returnToShowOrigin() restores a browse position after Back from Detail
+    if (typeof window.returnToShowOrigin === 'function' && !window.returnToShowOrigin.__k155Wrapped) {
+      var origReturnOrigin = window.returnToShowOrigin;
+      var wrappedReturnOrigin = function () {
+        unpinHomeTop();
+        return origReturnOrigin.apply(this, arguments);
+      };
+      wrappedReturnOrigin.__k155Wrapped = true;
+      window.returnToShowOrigin = wrappedReturnOrigin;
+    }
+
+    // Genuine user scroll intent detectors (passive capture -> zero scroll latency)
+    window.addEventListener('touchstart', function (e) {
+      if (!homeTopPinned) return;
+      touchFromOverlay = isStartupOverlayTarget(e.target);
+      var t = e.touches && e.touches[0];
+      if (t) {
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+      }
+    }, { capture: true, passive: true });
+
+    window.addEventListener('touchmove', function (e) {
+      if (!homeTopPinned || touchFromOverlay) return;
+      if (document.getElementById('km-intro-15') || document.getElementById('kb-whatsnew')) return;
+      var t = e.touches && e.touches[0];
+      if (!t) { unpinHomeTop(); return; }
+      var dx = Math.abs(t.clientX - touchStartX);
+      var dy = Math.abs(t.clientY - touchStartY);
+      if (dy > 6 && dy >= dx) {
+        unpinHomeTop();
+      }
+    }, { capture: true, passive: true });
+
+    window.addEventListener('wheel', function (e) {
+      if (!homeTopPinned) return;
+      if (isStartupOverlayTarget(e.target)) return;
+      if (document.getElementById('km-intro-15') || document.getElementById('kb-whatsnew')) return;
+      if (e.deltaY !== 0) unpinHomeTop();
+    }, { capture: true, passive: true });
+
+    window.addEventListener('pointerdown', function (e) {
+      if (!homeTopPinned) return;
+      if (isStartupOverlayTarget(e.target)) return;
+      // Scrollbar thumb drag near right viewport edge
+      if (typeof e.clientX === 'number' && window.innerWidth > 0 && e.clientX >= window.innerWidth - 22) {
+        unpinHomeTop();
+      }
+    }, { capture: true, passive: true });
+
+    window.addEventListener('keydown', function (e) {
+      if (!homeTopPinned) return;
+      if (document.getElementById('km-intro-15') || document.getElementById('kb-whatsnew')) return;
+      var k = e.key;
+      if (k === 'ArrowDown' || k === 'PageDown' || k === 'End' || k === ' ') {
+        unpinHomeTop();
+      }
+    }, { capture: true, passive: true });
+
+    // Re-arm top pin when explicitly clicking the Home dock button or header brand
+    document.addEventListener('click', function (e) {
+      var t = e.target && e.target.closest && e.target.closest('#header-home, nav.kuro-dock [data-nav="home"]');
+      if (t) {
+        setTimeout(pinHomeTop, 0);
+      }
+    }, true);
+
+    window.addEventListener('scroll', function () {
+      if (!homeTopPinned) return;
+      snapHomeToTopNow();
+    }, { passive: true });
+  })();
+
   /* ------------------------------------------------------------------------
      Native AniList Catalogue Bridge (reuses app.js pending[] / requestNo)
      ------------------------------------------------------------------------ */
@@ -309,7 +490,7 @@
     }
     if (!curEntry) {
       e.preventDefault();
-      items[0].el.focus();
+      safeFocus155(items[0].el);
       return;
     }
 
@@ -759,7 +940,7 @@
     });
 
     var firstBtn = scrim.querySelector('[data-batch-preset]');
-    if (firstBtn) firstBtn.focus();
+    if (firstBtn) safeFocus155(firstBtn);
   }
 
   function enhanceDetailEpisodes154(item, media) {
@@ -1524,7 +1705,7 @@
       setTimeout(function () {
         var btn = document.querySelector('#account-overlay [data-signin="' + provider + '"]');
         if (btn) {
-          try { btn.focus(); } catch (_) {}
+          safeFocus155(btn);
           btn.click();
         }
       }, 30);
@@ -2078,7 +2259,7 @@
       backdrop.remove();
       if (triggerBtn && triggerBtn.isConnected) {
         triggerBtn.setAttribute('aria-expanded', 'false');
-        triggerBtn.focus();
+        safeFocus155(triggerBtn);
       }
     }
 
@@ -2117,7 +2298,7 @@
       }
     });
     var activeOpt = list.querySelector('[aria-checked="true"]') || closeBtn;
-    if (activeOpt) activeOpt.focus();
+    if (activeOpt) safeFocus155(activeOpt);
   }
 
   function mountPerfSettingsGroup154() {

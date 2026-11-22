@@ -31,9 +31,9 @@ concurrency:
 
 env:
   APK_NAME: Kuro-tv-beta-1.5.5
-  SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
-  EXPECT_VERSION_NAME: "1.5.5-beta3"
-  EXPECT_VERSION_CODE: "99"
+  SOURCE_ID: 1STOFJDlIuR3zG3ApVFzZJnWlaveKqhnY
+  EXPECT_VERSION_NAME: "1.5.5-beta4"
+  EXPECT_VERSION_CODE: "100"
 
 jobs:
   apk:
@@ -114,9 +114,13 @@ jobs:
           # copy must be byte-for-byte the source's copy, otherwise the overlay would
           # silently revert a newer change made in the source tree.
           strip() {
-            sed -E -e 's#<link id="kuro-accent-css"[^>]*>##g' \
+            sed -E -e 's#media-src '\''self'\''; ##g' \
+                   -e 's#<link id="kuro-accent-css"[^>]*>##g' \
                    -e 's#<link rel="stylesheet" href="theme-picker-1\.1\.css">##g' \
-                   -e 's#<script src="theme-accent-1\.1\.js"></script>##g' "$1" | tr -d '[:space:]'
+                   -e 's#<link rel="stylesheet" href="theme-rich-1\.5\.css">##g' \
+                   -e 's#<link rel="stylesheet" href="beta-[^"]*\.css">##g' \
+                   -e 's#<script src="theme-accent-1\.1\.js"></script>##g' \
+                   -e 's#<script src="beta-[^"]*\.js"></script>##g' "$1" | tr -d '[:space:]'
           }
           [ "$(strip "$PROJECT/assets/index.html")" = "$(strip "$OVERLAY/index.html")" ] \
             || { echo "::error::assets/index.html in the source zip differs from the one the 1.1 overlay was cut from. Regenerate assets-1.1/index.html first."; exit 1; }
@@ -132,7 +136,9 @@ jobs:
           # The version bump lives here until the Drive source itself is regenerated.
           sed -i -E "s/versionCode +[0-9]+/versionCode ${EXPECT_VERSION_CODE}/" "$PROJECT/build.gradle"
           sed -i -E "s/versionName +'[^']*'/versionName '${EXPECT_VERSION_NAME}'/" "$PROJECT/build.gradle"
-          grep -nE "versionName|versionCode" "$PROJECT/build.gradle"
+          sed -i -E "s/android:versionCode=\"[0-9]+\"/android:versionCode=\"${EXPECT_VERSION_CODE}\"/" "$PROJECT/AndroidManifest.xml"
+          sed -i -E "s/android:versionName=\"[^\"]+\"/android:versionName=\"${EXPECT_VERSION_NAME}\"/" "$PROJECT/AndroidManifest.xml"
+          grep -nE "versionName|versionCode" "$PROJECT/build.gradle" "$PROJECT/AndroidManifest.xml"
 
           grep -qF 'theme-violet-1.1.css' "$PROJECT/assets/index.html" \
             || { echo "::error::the accent stylesheet is not linked."; exit 1; }
@@ -707,12 +713,18 @@ jobs:
               assert any(b"tintLogoBitmap" in d for d in dex_blobs), "dex missing tintLogoBitmap"
               assert any(b"refreshTheme155" in d for d in dex_blobs), "dex missing refreshTheme155"
               wn_js = z.read("assets/beta-whatsnew-1.5.js").decode("utf-8")
-              assert "var STAMP = '1.5.5-beta3';" in wn_js, "beta-whatsnew-1.5.js STAMP is not 1.5.5-beta3"
+              assert "var STAMP = '1.5.5-beta4';" in wn_js, "beta-whatsnew-1.5.js STAMP is not 1.5.5-beta4"
+              assert "preventScroll: true" in wn_js, "beta-whatsnew-1.5.js missing preventScroll"
+              assert "setupHomeEntryScrollGuard155" in ui154_js, "beta-ui-1.5.4.js missing setupHomeEntryScrollGuard155"
+              rs_js = z.read("assets/route-state538.js").decode("utf-8")
+              assert "if(page==='home'){scrollTarget=null;window.scrollTo(0,0);return}" in rs_js, "route-state538.js missing Home no-autoscroll guard"
+              assert "scroll-behavior: smooth" not in z.read("assets/smooth-ui.css").decode("utf-8"), "smooth-ui.css still has smooth scroll"
+              assert "scroll-behavior: smooth" not in z.read("assets/theme-violet-1.1.css").decode("utf-8"), "theme-violet-1.1.css still has smooth scroll"
               motion_js = z.read("assets/beta-motion-1.5.js").decode("utf-8")
               assert "INTRO_HOLD = 3600;" in motion_js, "beta-motion-1.5.js missing 3600ms INTRO_HOLD"
               motion_css = z.read("assets/beta-motion-1.5.css").decode("utf-8")
               assert "km-iris .54s cubic-bezier(.62,.02,.9,.4) 3s forwards" in motion_css, "beta-motion-1.5.css missing 3s iris timing"
-          print("APK 1.5.5-beta3 verified: Full 20-Theme & OLED Watch Screen v3 + Classic Player")
+          print("APK 1.5.5-beta4 verified: Home Entry No-Auto-Scroll + Full 20-Theme & OLED Watch Screen v3")
           PY
           sha256sum "$RUNNER_TEMP/$APK_NAME-aligned.apk"
 

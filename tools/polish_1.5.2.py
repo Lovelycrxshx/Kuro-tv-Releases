@@ -236,12 +236,13 @@ def patch_main_activity(pkg: Path) -> None:
     src = f.read_text(encoding="utf-8", errors="surrogateescape")
 
     # 1. Permission request code constant
-    src = replace_once(
-        src,
-        "private static final int BACKUP_EXPORT560=5600,BACKUP_IMPORT560=5601,ERROR_PERMISSION560=5602;",
-        "private static final int BACKUP_EXPORT560=5600,BACKUP_IMPORT560=5601,ERROR_PERMISSION560=5602,UPDATE_PERMISSION152=5729;",
-        "MainActivity.UPDATE_PERMISSION152",
-    )
+    if "UPDATE_PERMISSION152=5729" not in src:
+        src = replace_once(
+            src,
+            "private static final int BACKUP_EXPORT560=5600,BACKUP_IMPORT560=5601,ERROR_PERMISSION560=5602;",
+            "private static final int BACKUP_EXPORT560=5600,BACKUP_IMPORT560=5601,ERROR_PERMISSION560=5602,UPDATE_PERMISSION152=5729;",
+            "MainActivity.UPDATE_PERMISSION152",
+        )
 
     # 2. Refresh update dialog when notification permission result arrives
     src = replace_once(

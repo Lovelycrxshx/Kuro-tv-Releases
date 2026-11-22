@@ -71,7 +71,7 @@ window.km15 = (function () {
   el.classList.remove('km-sheet-on-15');
   setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 180);
   if (lastFocus && lastFocus.isConnected && typeof lastFocus.focus === 'function') {
-   try { lastFocus.focus(); } catch (e) {}
+   try { lastFocus.focus({ preventScroll: true }); } catch (e) { try { lastFocus.focus(); } catch (_) {} }
   }
   lastFocus = null;
  }
@@ -114,7 +114,7 @@ window.km15 = (function () {
   });
 
   var first = el.querySelector('.km-sheet-row-15') || el.querySelector('.km-sheet-close-15');
-  if (first) { try { first.focus(); } catch (e) {} }
+  if (first) { try { first.focus({ preventScroll: true }); } catch (e) { try { first.focus(); } catch (_) {} } }
   return el;
  }
 

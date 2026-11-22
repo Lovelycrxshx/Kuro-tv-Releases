@@ -135,6 +135,7 @@ def transform(text, accent):
     # Only rewrite short hex when it really is a colour, never inside #id text.
     text = HEX3.sub(sub3, text)
     text = RGBA.sub(subrgb, text)
+    text = text.replace("scroll-behavior: smooth;", "scroll-behavior: auto;")
     return text
 
 

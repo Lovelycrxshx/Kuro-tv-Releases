@@ -275,6 +275,7 @@ function dropPrivateCard() {
  function finish() {
   if (started) return;
   started = true;
+  if (window.kuroPinHomeTop155) window.kuroPinHomeTop155();
   bindScroll();
   updateButton();
   armAll();
@@ -284,6 +285,7 @@ function dropPrivateCard() {
    setTimeout(function () {
     if (gone.parentNode) gone.parentNode.removeChild(gone);
     introEl = null;
+    if (window.kuroPinHomeTop155) window.kuroPinHomeTop155();
    }, 200);
   }
   if (window.MutationObserver && document.body) {
@@ -342,7 +344,10 @@ function dropPrivateCard() {
    setTimeout(fillArt, 1150);
    setTimeout(fillArt, 1800);
 
-   var skip = function () { finish(); };
+   var skip = function (ev) {
+    if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation();
+    finish();
+   };
    introEl.addEventListener('pointerdown', skip);
    introEl.addEventListener('click', skip);
    window.addEventListener('keydown', function (ev) { if (!started && ev.key) finish(); });

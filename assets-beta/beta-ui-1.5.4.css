@@ -66,6 +66,24 @@ html[data-kuro-theme="light"] {
 }
 
 /* --------------------------------------------------------------------------
+   Startup & Home Scroll Stability (prevents smooth downward drift / scroll
+   anchoring jumps as Hero, Continue Watching, Popular & New shelves mount)
+   -------------------------------------------------------------------------- */
+html {
+  scroll-behavior: auto !important;
+}
+
+html[data-k155-home-top="1"],
+html[data-k155-home-top="1"] body,
+html[data-k155-home-top="1"] #main,
+#main.home-surface576 > #spotlight,
+#main.home-surface576 > #km-continue-15,
+#main.home-surface576 > .home-rail,
+#main.home-surface576 .shelf {
+  overflow-anchor: none !important;
+}
+
+/* --------------------------------------------------------------------------
    Hidden Browse / Source Clutter (Verify Library 11, Surprise Me, Source sites)
    -------------------------------------------------------------------------- */
 .open-sites,
