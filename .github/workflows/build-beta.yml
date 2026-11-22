@@ -32,8 +32,8 @@ concurrency:
 env:
   APK_NAME: Kuro-tv-beta-1.5.5
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
-  EXPECT_VERSION_NAME: "1.5.5-beta2"
-  EXPECT_VERSION_CODE: "98"
+  EXPECT_VERSION_NAME: "1.5.5-beta3"
+  EXPECT_VERSION_CODE: "99"
 
 jobs:
   apk:
@@ -386,6 +386,26 @@ jobs:
           ! grep -Fq 'kuro-oled-hud153' "$PROJECT/assets/player-skin.js" \
             || { echo "::error::player-skin.js still contains 1.5.3 HUD skin."; exit 1; }
           python3 "$GITHUB_WORKSPACE/out/tools/ui_1.5.4.py" "$PROJECT"
+          python3 - "$PROJECT" <<'VERIFY_THEME_TABLE'
+          import glob, re, sys
+          proj = sys.argv[1]
+          kt = open(f"{proj}/src/app/lovelycrxshx/kuro/KuroTheme12.java", encoding="utf-8").read()
+          keys = set(m.lower() for m in re.findall(r"\{0x([0-9a-fA-F]{8}),", kt))
+          assert len(keys) >= 155, f"Expected >=155 rows in KuroTheme12.TABLE, got {len(keys)}"
+          assert "tintLogoBitmap" in kt and "remapDynamic" in kt, "KuroTheme12 missing tintLogoBitmap/remapDynamic"
+          for jf in sorted(glob.glob(f"{proj}/src/app/lovelycrxshx/kuro/*.java")):
+              bn = jf.rsplit("/", 1)[-1]
+              if bn in ("KuroTheme12.java", "KuroFastNet154.java"):
+                  continue
+              src = open(jf, encoding="utf-8").read()
+              for m in re.finditer(r"KuroTheme12\.col\(\s*0x([0-9a-fA-F]{8})\s*\)", src):
+                  assert m.group(1).lower() in keys, f"{bn}: 0x{m.group(1)} missing from KuroTheme12.TABLE"
+          print(f"Verified KuroTheme12.TABLE: {len(keys)} palette rows across 20 accents (0 missing)")
+          VERIFY_THEME_TABLE
+          grep -Fq 'watchRetheme155' "$PKG/MainActivity.java" \
+            || { echo "::error::MainActivity missing live watchRetheme155."; exit 1; }
+          grep -Fq 'refreshTheme155' "$PKG/WatchHeader.java" \
+            || { echo "::error::WatchHeader missing live refreshTheme155."; exit 1; }
           grep -Fq 'voiceSearch154' "$PKG/MainActivity.java" \
             || { echo "::error::MainActivity missing voiceSearch154."; exit 1; }
           grep -Fq 'confirmBatchDownload154' "$PKG/KuroOffline561.java" \
@@ -683,13 +703,16 @@ jobs:
               assert any(b"perfGet154" in d for d in dex_blobs), "dex missing perfGet154"
               assert any(b"onRenderProcessGone" in d for d in dex_blobs), "dex missing onRenderProcessGone"
               assert b"kuro_tv_banner" in z.read("resources.arsc"), "resources.arsc missing kuro_tv_banner"
+              assert any(b"watchRetheme155" in d for d in dex_blobs), "dex missing watchRetheme155"
+              assert any(b"tintLogoBitmap" in d for d in dex_blobs), "dex missing tintLogoBitmap"
+              assert any(b"refreshTheme155" in d for d in dex_blobs), "dex missing refreshTheme155"
               wn_js = z.read("assets/beta-whatsnew-1.5.js").decode("utf-8")
-              assert "var STAMP = '1.5.5-beta2';" in wn_js, "beta-whatsnew-1.5.js STAMP is not 1.5.5-beta2"
+              assert "var STAMP = '1.5.5-beta3';" in wn_js, "beta-whatsnew-1.5.js STAMP is not 1.5.5-beta3"
               motion_js = z.read("assets/beta-motion-1.5.js").decode("utf-8")
               assert "INTRO_HOLD = 3600;" in motion_js, "beta-motion-1.5.js missing 3600ms INTRO_HOLD"
               motion_css = z.read("assets/beta-motion-1.5.css").decode("utf-8")
               assert "km-iris .54s cubic-bezier(.62,.02,.9,.4) 3s forwards" in motion_css, "beta-motion-1.5.css missing 3s iris timing"
-          print("APK 1.5.5-beta2 verified: Watch Screen v3 + Classic Player + 1.5.4 Detail/Browse/TV/DoH")
+          print("APK 1.5.5-beta3 verified: Full 20-Theme & OLED Watch Screen v3 + Classic Player")
           PY
           sha256sum "$RUNNER_TEMP/$APK_NAME-aligned.apk"
 

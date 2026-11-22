@@ -2395,7 +2395,7 @@ final class AccountHttp implements AccountTransport {
 
 
 def patch_watch_ui_154(root: pathlib.Path) -> None:
-    # 1. WatchHeader.java: remove the top circular episodes drawer button
+    # 1. WatchHeader.java: remove top circular episodes drawer button + add live refreshTheme155() & tinted kuro-logo.png
     wh_path = root / "src/app/lovelycrxshx/kuro/WatchHeader.java"
     wh_text = wh_path.read_text(encoding="utf-8")
     wh_text = patch_once(
@@ -2404,6 +2404,45 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
         '  addView(icon("watch-episodes","Episodes",2,()->{if(this.listener!=null)this.listener.episodes();}),new LinearLayout.LayoutParams(dp(48),dp(48)));\n',
         '  /* k154 watch-episodes header button removed */\n',
         "WatchHeader remove watch-episodes button",
+    )
+    wh_text = patch_once(
+        wh_text,
+        "private Bitmap baseLogo155;",
+        ' private final Listener listener; private FrameLayout accountTarget; private TextView accountWord; private TextView accountMono; private ImageView accountArt;',
+        ' private final Listener listener; private FrameLayout accountTarget; private TextView accountWord; private TextView accountMono; private ImageView accountArt; private Bitmap baseLogo155; private ImageView logoView155; private TextView logoFallback155; private final java.util.ArrayList<FrameLayout> iconFrames155=new java.util.ArrayList<>();',
+        "WatchHeader theme fields",
+    )
+    wh_text = patch_once(
+        wh_text,
+        "KuroTheme12.tintLogoBitmap(bitmap)",
+        '  if(bitmap!=null)logo.setImageBitmap(bitmap);\n'
+        '  home.addView(logo,new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT,dp(48),Gravity.CENTER_VERTICAL));\n'
+        '  if(bitmap==null){TextView fallback=new TextView(context);fallback.setText("kuro.tv");fallback.setTextSize(18);fallback.setTypeface(Typeface.DEFAULT,Typeface.BOLD_ITALIC);fallback.setTextColor(ICON);fallback.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);home.addView(fallback,new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT,LayoutParams.WRAP_CONTENT,Gravity.CENTER_VERTICAL|Gravity.START));}',
+        '  logoView155=logo;baseLogo155=bitmap;if(bitmap!=null)logo.setImageBitmap(KuroTheme12.tintLogoBitmap(bitmap));\n'
+        '  home.addView(logo,new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT,dp(48),Gravity.CENTER_VERTICAL));\n'
+        '  if(bitmap==null){TextView fallback=new TextView(context);logoFallback155=fallback;fallback.setText("kuro.tv");fallback.setTextSize(18);fallback.setTypeface(Typeface.DEFAULT,Typeface.BOLD_ITALIC);fallback.setTextColor(ICON);fallback.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);home.addView(fallback,new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT,LayoutParams.WRAP_CONTENT,Gravity.CENTER_VERTICAL|Gravity.START));}',
+        "WatchHeader tint logo bitmap",
+    )
+    wh_text = patch_once(
+        wh_text,
+        "public void refreshTheme155()",
+        ' private FrameLayout icon(String tag,String description,int which,Runnable click){\n'
+        '  FrameLayout frame=target(tag,description,click);Icon glyph=new Icon(getContext(),which);glyph.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);glyph.setBackground(shape(CHIP,BORDER,17));frame.addView(glyph,new FrameLayout.LayoutParams(dp(34),dp(34),Gravity.CENTER));return frame;\n'
+        ' }',
+        ' private FrameLayout icon(String tag,String description,int which,Runnable click){\n'
+        '  FrameLayout frame=target(tag,description,click);Icon glyph=new Icon(getContext(),which);glyph.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);glyph.setBackground(shape(CHIP,BORDER,17));frame.addView(glyph,new FrameLayout.LayoutParams(dp(34),dp(34),Gravity.CENTER));iconFrames155.add(frame);return frame;\n'
+        ' }\n'
+        ' public void refreshTheme155(){\n'
+        '  retint();setBackgroundColor(BACKGROUND);\n'
+        '  if(logoView155!=null&&baseLogo155!=null)logoView155.setImageBitmap(KuroTheme12.tintLogoBitmap(baseLogo155));\n'
+        '  if(logoFallback155!=null)logoFallback155.setTextColor(ICON);\n'
+        '  for(int i=0;i<iconFrames155.size();i++){FrameLayout fr=iconFrames155.get(i);fr.setForeground(new RippleDrawable(ColorStateList.valueOf(KuroTheme12.col(0x447f55a0)),null,null));if(fr.getChildCount()>0&&fr.getChildAt(0) instanceof Icon){Icon ic=(Icon)fr.getChildAt(0);ic.setBackground(shape(CHIP,BORDER,17));ic.paint.setColor(ICON);ic.invalidate();}}\n'
+        '  if(accountTarget!=null)accountTarget.setForeground(new RippleDrawable(ColorStateList.valueOf(KuroTheme12.col(0x447f55a0)),null,null));\n'
+        '  if(accountWord!=null){accountWord.setTextColor(ICON);accountWord.setBackground(shape(CHIP,BORDER,17));}\n'
+        '  if(accountMono!=null){accountMono.setTextColor(ICON);accountMono.setBackground(shape(CHIP,BORDER,30));}\n'
+        '  if(accountArt!=null)accountArt.setBackground(shape(CHIP,BORDER,30));\n'
+        ' }',
+        "WatchHeader refreshTheme155 method",
     )
     wh_path.write_text(wh_text, encoding="utf-8")
 
@@ -2458,8 +2497,24 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
         '  content.addView(controls,new LinearLayout.LayoutParams(-1,-2));addGap(content,12);addDirectTools561(content);'
     )
 
+    ma_text = patch_once(
+        ma_text,
+        "watchRetheme155",
+        'void kuroTheme12WindowApplied(int floor){if(ui!=null)ui.setBackgroundColor(floor);if(root!=null){root.setBackgroundColor(floor);syncWindowSystemBars154();}}',
+        'private Runnable watchRetheme155;\n'
+        'void kuroTheme12WindowApplied(int floor){if(ui!=null)ui.setBackgroundColor(floor);if(root!=null){root.setBackgroundColor(floor);syncWindowSystemBars154();}if(playerLayer!=null)playerLayer.setBackgroundColor(KuroTheme12.col(0xff110917));if(watchHeader!=null)watchHeader.refreshTheme155();if(watchRetheme155!=null&&playerLayer!=null)watchRetheme155.run();}',
+        "MainActivity kuroTheme12WindowApplied live watchRetheme155",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "watchRetheme155=null;",
+        'watchPlayerBox=null;watchHeader=null;watchScroll=null;',
+        'watchRetheme155=null;watchPlayerBox=null;watchHeader=null;watchScroll=null;',
+        "MainActivity closePlayer clear watchRetheme155",
+    )
+
     new_top_controls = (
-        '  ScrollView scroll=new ScrollView(this);watchScroll=scroll;scroll.setFillViewport(false);LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(14),dp(12),dp(14),dp(28));scroll.addView(content);playerLayer.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));\n'
+        '  ScrollView scroll=new ScrollView(this);watchScroll=scroll;scroll.setBackgroundColor(KuroTheme12.col(0xff0d0914));scroll.setFillViewport(false);LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(14),dp(12),dp(14),dp(28));scroll.addView(content);playerLayer.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));\n'
         '  final int nextPlayable155=nextPlayableEpisode154(info,current+1);final boolean canNext=nextPlayable155>=0&&nextPlayable155<eps.length();JSONObject following=canNext?eps.optJSONObject(nextPlayable155):null;\n'
         '  String followingNumber=canNext?(following!=null?following.optString("number",""):eps.optString(nextPlayable155,"")):"";\n'
         '  int prevScan155=current-1;if(info.optBoolean("skipFiller154",false)){while(prevScan155>=0){JSONObject pe=eps.optJSONObject(prevScan155);if(pe==null||!pe.optBoolean("filler154",false))break;prevScan155--;}if(prevScan155<0&&current>0)prevScan155=current-1;}final int prevPlayable155=prevScan155;final boolean canPrev155=prevPlayable155>=0;\n'
@@ -2471,17 +2526,18 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
         '  TextView curEpCenter155=text("Episode "+curEpNum155+(curEpName155==null||curEpName155.isEmpty()?"":"  •  "+curEpName155),12,Color.WHITE);curEpCenter155.setTypeface(null,android.graphics.Typeface.BOLD);curEpCenter155.setGravity(Gravity.CENTER);curEpCenter155.setSingleLine(true);curEpCenter155.setEllipsize(android.text.TextUtils.TruncateAt.END);curEpCenter155.setPadding(dp(8),0,dp(8),0);epStrip155.addView(curEpCenter155,new LinearLayout.LayoutParams(0,-2,1));\n'
         '  TextView nextEpBtn155=text("Next ›",12,canNext?KuroTheme12.col(0xffeae2f2):KuroTheme12.col(0xff6b5b7a));nextEpBtn155.setTypeface(null,android.graphics.Typeface.BOLD);nextEpBtn155.setGravity(Gravity.CENTER);nextEpBtn155.setMinHeight(dp(36));nextEpBtn155.setPadding(dp(11),0,dp(11),0);nextEpBtn155.setBackground(watchShape154(canNext?KuroTheme12.col(0xff21152b):KuroTheme12.col(0xff160e1e),canNext?KuroTheme12.col(0xff443253):KuroTheme12.col(0xff2b1e36),9));nextEpBtn155.setEnabled(canNext);nextEpBtn155.setOnClickListener(v->{if(canNext)chooseEpisode581(nextPlayable155);});epStrip155.addView(nextEpBtn155,new LinearLayout.LayoutParams(-2,dp(36)));\n'
         '  TextView autoNextPill155=text("✦ Auto-Next",11,Color.WHITE);autoNextPill155.setTypeface(null,android.graphics.Typeface.BOLD);autoNextPill155.setGravity(Gravity.CENTER);autoNextPill155.setMinHeight(dp(36));autoNextPill155.setPadding(dp(11),0,dp(11),0);autoNextPill155.setTag("watch-autonext-pill-155");autoNextQuickPill155[0]=autoNextPill155;styleAutoNextPill155.accept(getPreferences(MODE_PRIVATE).getBoolean("auto_next",false));LinearLayout.LayoutParams anLp155=new LinearLayout.LayoutParams(-2,dp(36));anLp155.setMargins(dp(6),0,0,0);epStrip155.addView(autoNextPill155,anLp155);\n'
-        '  content.addView(epStrip155,new LinearLayout.LayoutParams(-1,-2));addGap(content,10);addDirectTools561(content);\n'
+        '  final LinearLayout directHost155=new LinearLayout(this);directHost155.setOrientation(LinearLayout.VERTICAL);\n'
+        '  content.addView(epStrip155,new LinearLayout.LayoutParams(-1,-2));addGap(content,10);content.addView(directHost155,new LinearLayout.LayoutParams(-1,-2));addDirectTools561(directHost155);\n'
         '  final LinearLayout toolsDrawer155=new LinearLayout(this);toolsDrawer155.setOrientation(LinearLayout.VERTICAL);toolsDrawer155.setVisibility(View.GONE);toolsDrawer155.setPadding(0,dp(10),0,0);\n'
-        '  PlaybackPanel controls=new PlaybackPanel(this,info.optString("episode",""),followingNumber,canNext,\n'
-        '   getPreferences(MODE_PRIVATE).getBoolean("autoplay",true),getPreferences(MODE_PRIVATE).getBoolean("auto_next",false),getPreferences(MODE_PRIVATE).getBoolean("auto_skip",false),new PlaybackPanel.Listener(){\n'
+        '  final PlaybackPanel.Listener pbListener155=new PlaybackPanel.Listener(){\n'
         '    @Override public void nextEpisode(){if(!canNext)return;chooseEpisode581(nextPlayable155);}\n'
         '    @Override public void autoplayChanged(boolean on){getPreferences(MODE_PRIVATE).edit().putBoolean("autoplay",on).apply();if(nativePlayer561!=null)nativePlayer561.setAutoplay(on);if(player!=null){player.getSettings().setMediaPlaybackRequiresUserGesture(!on);player.evaluateJavascript("window.__kuroAutoplay="+(on?"true":"false")+";if(window.__kuroSetAutoplay561)window.__kuroSetAutoplay561("+(on?"true":"false")+");"+(on?"document.querySelectorAll(\'video\').forEach(function(v){if(v.paused){try{var p=v.play();if(p&&p.catch)p.catch(function(){})}catch(e){}}});":""),null);}Toast.makeText(MainActivity.this,on?"Autoplay requested; some players require a tap.":"Autoplay off for new videos.",Toast.LENGTH_SHORT).show();}\n'
         '    @Override public void autoNextChanged(boolean on){getPreferences(MODE_PRIVATE).edit().putBoolean("auto_next",on).apply();styleAutoNextPill155.accept(on);if(!syncingAutoNext155[0])Toast.makeText(MainActivity.this,on?"Auto-Next ON":"Auto-Next OFF",Toast.LENGTH_SHORT).show();}\n'
         '    @Override public void autoSkipChanged(boolean on){getPreferences(MODE_PRIVATE).edit().putBoolean("auto_skip",on).apply();updateSkipFrames();Toast.makeText(MainActivity.this,nativePlayer561!=null?(on?"Auto skip uses available or saved markers.":"Auto skip off."):on?(skipFrameMode?"Auto skip will try visible Skip controls.":"Auto skip is limited on this WebView; try updating Android System WebView."):"Auto skip off.",Toast.LENGTH_SHORT).show();}\n'
-        '   });\n'
-        '  autoNextPill155.setOnClickListener(v->{boolean nxt=!getPreferences(MODE_PRIVATE).getBoolean("auto_next",false);getPreferences(MODE_PRIVATE).edit().putBoolean("auto_next",nxt).apply();styleAutoNextPill155.accept(nxt);if(controls.getAutoNext()!=null&&controls.getAutoNext().isChecked()!=nxt){syncingAutoNext155[0]=true;controls.getAutoNext().setChecked(nxt);syncingAutoNext155[0]=false;}Toast.makeText(MainActivity.this,nxt?"Auto-Next ON":"Auto-Next OFF",Toast.LENGTH_SHORT).show();});\n'
-        '  toolsDrawer155.addView(controls,new LinearLayout.LayoutParams(-1,-2));addGap(toolsDrawer155,8);'
+        '  };\n'
+        '  final PlaybackPanel[] controlsRef155={new PlaybackPanel(this,info.optString("episode",""),followingNumber,canNext,getPreferences(MODE_PRIVATE).getBoolean("autoplay",true),getPreferences(MODE_PRIVATE).getBoolean("auto_next",false),getPreferences(MODE_PRIVATE).getBoolean("auto_skip",false),pbListener155)};\n'
+        '  autoNextPill155.setOnClickListener(v->{boolean nxt=!getPreferences(MODE_PRIVATE).getBoolean("auto_next",false);getPreferences(MODE_PRIVATE).edit().putBoolean("auto_next",nxt).apply();styleAutoNextPill155.accept(nxt);PlaybackPanel cp=controlsRef155[0];if(cp!=null&&cp.getAutoNext()!=null&&cp.getAutoNext().isChecked()!=nxt){syncingAutoNext155[0]=true;cp.getAutoNext().setChecked(nxt);syncingAutoNext155[0]=false;}Toast.makeText(MainActivity.this,nxt?"Auto-Next ON":"Auto-Next OFF",Toast.LENGTH_SHORT).show();});\n'
+        '  toolsDrawer155.addView(controlsRef155[0],new LinearLayout.LayoutParams(-1,-2));addGap(toolsDrawer155,8);'
     )
 
     ma_text = patch_once(
@@ -2730,8 +2786,45 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
         '  recHScroll154.addView(recFeed154,new FrameLayout.LayoutParams(-2,-2));content.addView(recHScroll154,hScrollLp154);\n'
         '  recLeftBtn154.setOnClickListener(v->recHScroll154.smoothScrollBy(-dp(268),0));\n'
         '  recRightBtn154.setOnClickListener(v->recHScroll154.smoothScrollBy(dp(268),0));\n'
-        '  populateWatchRecommendations154(session,info,anime,recFeed154,recSub154,epThumbs155,epFallbackImg155,epDurMin155,refresh,detailScore155,detailGenres155);\n'
-        '  addGap(content,14);TextView note=text("Playback uses a third-party player. Autoplay is best effort; tap play if needed. Use its fullscreen control to expand.",11,KuroTheme12.col(0xff9887a6));content.addView(note);'
+        '  final ArrayList<JSONObject> lastRecCards155=new ArrayList<>();final ArrayList<String> lastGenres155=new ArrayList<>();\n'
+        '  populateWatchRecommendations154(session,info,anime,recFeed154,recSub154,epThumbs155,epFallbackImg155,epDurMin155,refresh,detailScore155,detailGenres155,lastRecCards155,lastGenres155);\n'
+        '  addGap(content,14);TextView note=text("Playback uses a third-party player. Autoplay is best effort; tap play if needed. Use its fullscreen control to expand.",11,KuroTheme12.col(0xff9887a6));content.addView(note);\n'
+        '  final String followNum155=followingNumber;final JSONObject animeRef155=anime;\n'
+        '  watchRetheme155=()->{\n'
+        '   scroll.setBackgroundColor(KuroTheme12.col(0xff0d0914));\n'
+        '   if(connectionText[0]!=null)connectionText[0].setTextColor(KuroTheme12.col(0xffd7c7e4));\n'
+        '   prevEpBtn155.setTextColor(canPrev155?KuroTheme12.col(0xffeae2f2):KuroTheme12.col(0xff6b5b7a));\n'
+        '   prevEpBtn155.setBackground(watchShape154(canPrev155?KuroTheme12.col(0xff21152b):KuroTheme12.col(0xff160e1e),canPrev155?KuroTheme12.col(0xff443253):KuroTheme12.col(0xff2b1e36),9));\n'
+        '   nextEpBtn155.setTextColor(canNext?KuroTheme12.col(0xffeae2f2):KuroTheme12.col(0xff6b5b7a));\n'
+        '   nextEpBtn155.setBackground(watchShape154(canNext?KuroTheme12.col(0xff21152b):KuroTheme12.col(0xff160e1e),canNext?KuroTheme12.col(0xff443253):KuroTheme12.col(0xff2b1e36),9));\n'
+        '   styleAutoNextPill155.accept(getPreferences(MODE_PRIVATE).getBoolean("auto_next",false));\n'
+        '   directHost155.removeAllViews();addDirectTools561(directHost155);refreshDirectTools561();\n'
+        '   if(controlsRef155[0]!=null&&toolsDrawer155.indexOfChild(controlsRef155[0])>=0){int ci=toolsDrawer155.indexOfChild(controlsRef155[0]);toolsDrawer155.removeViewAt(ci);controlsRef155[0]=new PlaybackPanel(MainActivity.this,info.optString("episode",""),followNum155,canNext,getPreferences(MODE_PRIVATE).getBoolean("autoplay",true),getPreferences(MODE_PRIVATE).getBoolean("auto_next",false),getPreferences(MODE_PRIVATE).getBoolean("auto_skip",false),pbListener155);toolsDrawer155.addView(controlsRef155[0],ci,new LinearLayout.LayoutParams(-1,-2));}\n'
+        '   for(TextView tv:new TextView[]{optionsButton,enhancedButton,diagnostics573}){tv.setTextColor(KuroTheme12.col(0xffe3dce9));tv.setBackground(rounded(KuroTheme12.col(0xff281b32),KuroTheme12.col(0xff4c3a59)));}\n'
+        '   boolean tOpen=toolsDrawer155.getVisibility()==View.VISIBLE;\n'
+        '   serverCard155.setBackground(watchShape154(KuroTheme12.col(0xff1b1124),KuroTheme12.col(0xff3c2b4b),14));\n'
+        '   toolsToggle155.setTextColor(KuroTheme12.col(0xffd8b8f8));toolsToggle155.setBackground(watchShape154(tOpen?KuroTheme12.col(0xff4b296d):KuroTheme12.col(0xff281a35),tOpen?KuroTheme12.col(0xffa96de8):KuroTheme12.col(0xff4c385e),999));\n'
+        '   diagIcon155.setTextColor(KuroTheme12.col(0xffcbb4e3));diagIcon155.setBackground(watchShape154(KuroTheme12.col(0xff281a35),KuroTheme12.col(0xff4c385e),999));\n'
+        '   segBar155.setBackground(watchShape154(KuroTheme12.col(0xff120b19),KuroTheme12.col(0xff332341),10));\n'
+        '   syncServers154[0].run();\n'
+        '   for(int ei=0;ei<extraCol.getChildCount();ei++){if(extraCol.getChildAt(ei) instanceof TextView){TextView eb=(TextView)extraCol.getChildAt(ei);eb.setTextColor(KuroTheme12.col(0xffe3dce9));eb.setBackground(rounded(KuroTheme12.col(0xff281b32),KuroTheme12.col(0xff4c3a59)));}}\n'
+        '   playlistCard154.setBackground(watchShape154(KuroTheme12.col(0xff1b1124),KuroTheme12.col(0xff3c2b4b),14));\n'
+        '   epCountPill154.setTextColor(KuroTheme12.col(0xffd7b4fc));epCountPill154.setBackground(watchShape154(KuroTheme12.col(0xff281a35),KuroTheme12.col(0xff4c385e),999));\n'
+        '   seeAllEps155.setTextColor(KuroTheme12.col(0xffc993fc));\n'
+        '   search.setHintTextColor(KuroTheme12.col(0xff8e7d9b));search.setBackground(watchShape154(KuroTheme12.col(0xff23172e),KuroTheme12.col(0xff443253),9));\n'
+        '   final int savedEpY=epScroll154.getScrollY();refresh.run();epScroll154.post(()->epScroll154.scrollTo(0,savedEpY));\n'
+        '   detailCard155.setBackground(watchShape154(KuroTheme12.col(0xff1b1124),KuroTheme12.col(0xff3c2b4b),14));\n'
+        '   detailHeading.setTextColor(KuroTheme12.col(0xfff3eef7));detailScore155.setTextColor(KuroTheme12.col(0xffd7a8ff));\n'
+        '   poster.setBackground(watchShape154(KuroTheme12.col(0xff372447),KuroTheme12.col(0xff4c385e),9));\n'
+        '   detailFacts155.setTextColor(KuroTheme12.col(0xffb98ae5));synopsis.setTextColor(KuroTheme12.col(0xffdcd5e2));\n'
+        '   more.setTextColor(KuroTheme12.col(0xffe3dce9));more.setBackground(rounded(KuroTheme12.col(0xff281b32),KuroTheme12.col(0xff4c3a59)));\n'
+        '   if(!lastGenres155.isEmpty()){detailGenres155.removeAllViews();for(int gi=0;gi<lastGenres155.size();gi++){TextView gp=text(lastGenres155.get(gi),10,KuroTheme12.col(0xffdcd2e8));gp.setPadding(dp(8),dp(3),dp(8),dp(3));gp.setBackground(watchShape154(KuroTheme12.col(0xff251832),KuroTheme12.col(0xff453356),7));LinearLayout.LayoutParams glp=new LinearLayout.LayoutParams(-2,-2);glp.setMargins(0,0,dp(6),dp(7));detailGenres155.addView(gp,glp);}}\n'
+        '   recHeading154.setTextColor(KuroTheme12.col(0xfff3eef7));recSub154.setTextColor(KuroTheme12.col(0xffa79ab2));\n'
+        '   recLeftBtn154.setTextColor(KuroTheme12.col(0xffe6e1eb));recLeftBtn154.setBackground(watchShape154(KuroTheme12.col(0xff261830),KuroTheme12.col(0xff4c3a59),999));\n'
+        '   recRightBtn154.setTextColor(KuroTheme12.col(0xffe6e1eb));recRightBtn154.setBackground(watchShape154(KuroTheme12.col(0xff261830),KuroTheme12.col(0xff4c3a59),999));\n'
+        '   if(!lastRecCards155.isEmpty()){final int savedRecX=recHScroll154.getScrollX();recFeed154.removeAllViews();for(int ri=0;ri<lastRecCards155.size();ri++){View cv=buildYoutubeAnimeCard154(lastRecCards155.get(ri));LinearLayout.LayoutParams clp=new LinearLayout.LayoutParams(dp(256),-2);clp.setMargins(0,0,ri+1<lastRecCards155.size()?dp(12):0,0);recFeed154.addView(cv,clp);}recHScroll154.post(()->recHScroll154.scrollTo(savedRecX,0));}\n'
+        '   note.setTextColor(KuroTheme12.col(0xff9887a6));\n'
+        '  };'
     )
 
     ma_text = patch_once(
@@ -2749,7 +2842,8 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
   return d;
  }
  private static boolean allowedArtworkHost154(String h){
-  return "s4.anilist.co".equals(h)||"s3.anilist.co".equals(h)||"s2.anilist.co".equals(h)||"s1.anilist.co".equals(h)||"cdn.myanimelist.net".equals(h)||"media.kitsu.app".equals(h)||"media.kitsu.io".equals(h)||"hianime.ms".equals(h)||"hianime.dk".equals(h)||"cdn.hianime.dk".equals(h)||"cdn.noitatnemucod.net".equals(h)||"img1.ak.crunchyroll.com".equals(h)||"static.crunchyroll.com".equals(h)||"imgsrv.crunchyroll.com".equals(h)||"image.tmdb.org".equals(h)||"artworks.thetvdb.com".equals(h);
+  if(h==null||h.isEmpty())return false;
+  return h.endsWith(".anilist.co")||"anilist.co".equals(h)||h.endsWith(".myanimelist.net")||h.endsWith(".kitsu.app")||h.endsWith(".kitsu.io")||"hianime.ms".equals(h)||h.endsWith(".hianime.ms")||"hianime.dk".equals(h)||h.endsWith(".hianime.dk")||h.endsWith(".noitatnemucod.net")||h.endsWith(".flawlessfiles.com")||h.endsWith(".crunchyroll.com")||"image.tmdb.org".equals(h)||"artworks.thetvdb.com".equals(h);
  }
  private static String extractStreamEpNum155(String title){
   if(title==null||title.isEmpty())return "";
@@ -2778,7 +2872,7 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
     Bitmap bmp=BitmapFactory.decodeByteArray(bytes,0,bytes.length,opts);
     if(bmp!=null){
      posterCache154().put(cacheKey,bmp);
-     main.post(()->{if(target.isAttachedToWindow()&&cacheKey.equals(target.getTag()))target.setImageBitmap(bmp);});
+     main.post(()->{if(cacheKey.equals(target.getTag()))target.setImageBitmap(bmp);});
     }
    }catch(Exception ignored){}
   });
@@ -2879,7 +2973,7 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
   });
   return card;
  }
- private void populateWatchRecommendations154(String session,JSONObject info,JSONObject anime,LinearLayout feed,TextView subLabel,ConcurrentHashMap<String,String> epThumbs155,String[] epFallbackImg155,int[] epDurMin155,Runnable refreshPlaylist155,TextView detailScore155,LinearLayout detailGenres155){
+ private void populateWatchRecommendations154(String session,JSONObject info,JSONObject anime,LinearLayout feed,TextView subLabel,ConcurrentHashMap<String,String> epThumbs155,String[] epFallbackImg155,int[] epDurMin155,Runnable refreshPlaylist155,TextView detailScore155,LinearLayout detailGenres155,ArrayList<JSONObject> lastRecCards155,ArrayList<String> lastGenres155){
   if(feed==null||info==null)return;
   TextView loading=text("Loading similar anime…",13,KuroTheme12.col(0xffa79ab2));
   loading.setPadding(0,dp(4),0,dp(8));
@@ -2908,7 +3002,10 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
       int dur=media.optInt("duration",0);
       if(dur>=5&&dur<=180&&epDurMin155!=null&&epDurMin155[0]!=dur){epDurMin155[0]=dur;playlistDirty=true;}
       String mBanner=media.optString("bannerImage","").trim();
-      if(!mBanner.isEmpty()&&epFallbackImg155!=null){epFallbackImg155[0]=mBanner;playlistDirty=true;}
+      JSONObject mCov=media.optJSONObject("coverImage");
+      String mCovUrl=mCov==null?"":(!mCov.optString("extraLarge","").trim().isEmpty()?mCov.optString("extraLarge","").trim():mCov.optString("large","").trim());
+      String bestEpArt=!mBanner.isEmpty()?mBanner:mCovUrl;
+      if(!bestEpArt.isEmpty()&&epFallbackImg155!=null&&!bestEpArt.equals(epFallbackImg155[0])){epFallbackImg155[0]=bestEpArt;playlistDirty=true;}
       JSONArray streamEps=media.optJSONArray("streamingEpisodes");
       if(streamEps!=null&&epThumbs155!=null){
        for(int si=0;si<streamEps.length();si++){
@@ -2961,6 +3058,8 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
       detailScore155.setText(String.format(Locale.ROOT,"★ %.1f/10",resolvedScore[0]/10.0));
       detailScore155.setVisibility(View.VISIBLE);
      }
+     if(lastGenres155!=null){lastGenres155.clear();lastGenres155.addAll(resolvedGenres);}
+     if(lastRecCards155!=null){lastRecCards155.clear();lastRecCards155.addAll(cards);}
      if(detailGenres155!=null&&!resolvedGenres.isEmpty()){
       detailGenres155.removeAllViews();
       for(int gi=0;gi<resolvedGenres.size();gi++){
@@ -3022,7 +3121,13 @@ def main() -> None:
     patch_perf_and_compat_154(root)
     patch_accounts_and_sync_154(root)
     patch_watch_ui_154(root)
-    print("Applied Kuro 1.5.4 Detail v2, Desktop-Site Left-Rail Leanback, WindowInsets, Ad-Guard, Performance & Compatibility, Tracker Sync & Discord OAuth, Watch UI v2, and Smart Browse/Voice patches.")
+    import importlib.util as _ilu
+    _tn_spec = _ilu.spec_from_file_location("theme_native_1_2", pathlib.Path(__file__).with_name("theme_native_1.2.py"))
+    assert _tn_spec is not None and _tn_spec.loader is not None
+    _tn_mod = _ilu.module_from_spec(_tn_spec)
+    _tn_spec.loader.exec_module(_tn_mod)
+    _tn_mod.main(["theme_native_1.2.py", str(root)])
+    print("Applied Kuro 1.5.4 Detail v2, Desktop-Site Left-Rail Leanback, WindowInsets, Ad-Guard, Performance & Compatibility, Tracker Sync & Discord OAuth, Watch UI v3 (20-theme + OLED dynamic), and Smart Browse/Voice patches.")
 
 
 if __name__ == "__main__":

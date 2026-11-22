@@ -12,14 +12,15 @@
    Shared OLED Glass Tokens (inherits active 20-colour --accent & Pure Black)
    -------------------------------------------------------------------------- */
 :root {
+  --fg: var(--ink, #f4eef9);
   --accent: var(--ku-accent, #b478ee);
-  --accent-soft: color-mix(in srgb, var(--ku-accent, #b478ee) 18%, transparent);
-  --accent-line: color-mix(in srgb, var(--ku-accent, #b478ee) 44%, transparent);
-  --k154-surface: rgba(16, 17, 23, 0.88);
-  --k154-surface-elev: rgba(22, 24, 32, 0.94);
+  --accent-soft: var(--ku-accent-soft, rgba(180, 120, 238, 0.22));
+  --accent-line: var(--ku-accent-soft, rgba(180, 120, 238, 0.44));
+  --k154-surface: var(--panel, rgba(16, 17, 23, 0.90));
+  --k154-surface-elev: var(--panel, rgba(22, 24, 32, 0.95));
   --k154-border: rgba(255, 255, 255, 0.09);
   --k154-border-strong: rgba(255, 255, 255, 0.16);
-  --k154-text-dim: rgba(235, 238, 248, 0.68);
+  --k154-text-dim: var(--muted, rgba(235, 238, 248, 0.72));
   --k154-gold: #f6c453;
   --k154-canon-bg: rgba(46, 213, 152, 0.15);
   --k154-canon-fg: #5bf0b6;
@@ -27,9 +28,23 @@
   --k154-filler-bg: rgba(245, 158, 11, 0.16);
   --k154-filler-fg: #fbbf24;
   --k154-filler-bd: rgba(251, 191, 36, 0.38);
-  --k154-recap-bg: rgba(168, 85, 247, 0.16);
-  --k154-recap-fg: #d8b4fe;
-  --k154-recap-bd: rgba(216, 180, 254, 0.36);
+  --k154-recap-bg: var(--accent-soft);
+  --k154-recap-fg: var(--accent);
+  --k154-recap-bd: var(--accent-line);
+}
+
+@supports (color: color-mix(in srgb, #ffffff 50%, #000000)) {
+  :root {
+    --accent-soft: color-mix(in srgb, var(--ku-accent, #b478ee) 18%, transparent);
+    --accent-line: color-mix(in srgb, var(--ku-accent, #b478ee) 44%, transparent);
+    --k154-surface: color-mix(in srgb, var(--panel, #161122) 84%, rgba(10, 11, 16, 0.92));
+    --k154-surface-elev: color-mix(in srgb, var(--panel, #1e162c) 88%, rgba(16, 18, 25, 0.96));
+    --k154-border: color-mix(in srgb, var(--ku-accent, #b478ee) 16%, rgba(255, 255, 255, 0.08));
+    --k154-border-strong: color-mix(in srgb, var(--ku-accent, #b478ee) 28%, rgba(255, 255, 255, 0.14));
+    --k154-recap-bg: color-mix(in srgb, var(--ku-accent, #b478ee) 16%, transparent);
+    --k154-recap-fg: color-mix(in srgb, var(--ku-accent, #b478ee) 72%, #ffffff);
+    --k154-recap-bd: color-mix(in srgb, var(--ku-accent, #b478ee) 38%, transparent);
+  }
 }
 
 html[data-kuro-amoled="true"]:not([data-kuro-theme="light"]) {
@@ -1100,7 +1115,7 @@ html[data-pure-black="1"] .k154-hub-card {
   padding: 8px 12px;
   border-radius: 999px;
   border: 1px solid var(--accent-line, rgba(180, 120, 238, 0.42));
-  background: rgba(180, 120, 238, 0.06);
+  background: var(--accent-soft, rgba(180, 120, 238, 0.10));
   color: var(--accent, #b478ee);
   font-size: 12.5px;
   font-weight: 700;
@@ -1199,7 +1214,7 @@ html[data-pure-black="1"] .k154-rpc-preview {
   flex: 0 0 74px;
   border-radius: 12px;
   overflow: hidden;
-  background: radial-gradient(circle at 30% 25%, rgba(180, 120, 238, 0.28), #0b0f17 75%);
+  background: radial-gradient(circle at 30% 25%, var(--accent-soft, rgba(180, 120, 238, 0.28)), var(--bg, #0b0f17) 75%);
   border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
@@ -1236,7 +1251,7 @@ html[data-pure-black="1"] .k154-rpc-preview {
   width: 17px;
   height: 17px;
   border-radius: 5px;
-  background: rgba(180, 120, 238, 0.16);
+  background: var(--accent-soft, rgba(180, 120, 238, 0.16));
   border: 1px solid var(--accent-line, rgba(180, 120, 238, 0.45));
   color: var(--accent, #b478ee);
   font-size: 10.5px;

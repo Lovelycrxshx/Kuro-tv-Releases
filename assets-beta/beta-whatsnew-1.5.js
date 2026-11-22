@@ -1,20 +1,20 @@
-/* Kuro 1.5.5-beta2 — one-time "What's new" card, shown once after the splash on
-   first launch of 1.5.5-beta2 and never again. Self-contained, dismissible by
+/* Kuro 1.5.5-beta3 — one-time "What's new" card, shown once after the splash on
+   first launch of 1.5.5-beta3 and never again. Self-contained, dismissible by
    button, backdrop tap, or Escape / Android back. */
 (function () {
   'use strict';
 
-  var STAMP = '1.5.5-beta2';
-  var KEY = 'kuro-beta-whatsnew-seen-1.5.5-beta2';
+  var STAMP = '1.5.5-beta3';
+  var KEY = 'kuro-beta-whatsnew-seen-1.5.5-beta3';
 
   try { if (localStorage.getItem(KEY) === STAMP) return; } catch (_) { return; }
 
   var ITEMS = [
+    ['Full 20-Theme & Pure Black OLED Sync', 'Every Watch Screen v3 card, border, SUB/DUB tab, active server pill, episode progress bar, badge, WatchHeader kuro.tv wordmark, and Title Detail / Browse overlay now dynamically changes colour across all 20 theme accents and Pure Black OLED mode — even live while a video is playing.'],
     ['Watch Screen v3 Clarity Upgrade', 'New 1-tap < Prev • Episode • Next > + Auto-Next bar right below the player, compact SUB | DUB segmented Server Switcher with horizontal server pills, and upgraded 3-row Episode Playlist with 16:9 thumbnails, progress bars, ✓ Watched, Now Playing, and FILLER badges.'],
     ['Classic Video Player Restored', 'Clean original video player controls across embedded servers, HLS streams, native playback, and offline downloads — zero oversized purple pill rings or floating circle artefacts.'],
     ['Signature Violet Theme & Faster Loading', 'Default app colour set to Signature Violet across all screens & dialogs, plus built-in Encrypted DNS (1.1.1.1 / 8.8.8.8) to unblock carrier-restricted sources without a VPN, faster 8-lane catalog loading, backup video codec support, and Android TV / Fire TV support.'],
     ['Cinematic Title Detail v2', 'Full-bleed banner header with ★ score, studio & runtime pills, interactive Franchise & Watch-Order strip, Canon / Filler / Recap badges, Skip Filler switch, 16:9 episode rows, and ⬇ Batch Offline Download.'],
-    ['Desktop-Site Left-Rail & DPAD UI', 'Turn on Settings → Site view → Desktop (or launch on Android TV / Fire TV) to unlock the frosted-OLED left navigation rail, widescreen hero & multi-column shelves, glowing accent DPAD focus halo, and remote spatial navigation.'],
     ['Smart Multi-Filter Browse & Voice Search', 'Combinable OLED filter pills on Browse (Dub Available, ★ 8.0+, Airing/Completed, Genre, Format, Year), native Android Voice Search mic pill, and verified developer Discord profile link.']
   ];
 
@@ -37,12 +37,12 @@
 
     var tag = document.createElement('div');
     tag.className = 'kb-wn-tag';
-    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA2';
+    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA3';
 
     var h = document.createElement('h2');
     h.id = 'kb-wn-title';
     h.className = 'kb-wn-title';
-    h.textContent = 'What\u2019s new in 1.5.5-beta2';
+    h.textContent = 'What\u2019s new in 1.5.5-beta3';
 
     var list = document.createElement('ul');
     list.className = 'kb-wn-list';

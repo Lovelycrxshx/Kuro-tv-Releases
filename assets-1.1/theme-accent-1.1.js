@@ -83,12 +83,91 @@
   return el;
  }
 
+ var ACCENT_HLS = {
+  violet: [272, 0.63, 1.0], teal: [174, 0.50, 1.0], plum: [292, 0.55, 1.0], graphite: [272, 0.60, 0.0],
+  sky: [205, 0.52, 1.0], ice: [194, 0.45, 1.0], royal: [256, 0.57, 1.0], sapphire: [220, 0.62, 1.0],
+  indigo: [232, 0.56, 1.0], emerald: [150, 0.52, 1.0], mint: [162, 0.48, 1.0], lime: [92, 0.52, 1.0],
+  citron: [62, 0.56, 1.0], gold: [47, 0.67, 1.0], amber: [36, 0.55, 1.0], sunset: [18, 0.58, 1.0],
+  coral: [8, 0.66, 1.0], rose: [330, 0.60, 1.0], crimson: [348, 0.58, 1.0], magenta: [312, 0.60, 1.0]
+ };
+ var rawLogoSvg = null;
+ var logoUriCache = { violet: 'kuro-logo.svg' };
+
+ function remapLogoHex(hex6, spec) {
+  var r = parseInt(hex6.slice(0, 2), 16) / 255;
+  var g = parseInt(hex6.slice(2, 4), 16) / 255;
+  var b = parseInt(hex6.slice(4, 6), 16) / 255;
+  var mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+  var l = (mx + mn) / 2, d = mx - mn, s = 0, h = 0;
+  if (d > 0) {
+   s = l <= 0.5 ? d / (mx + mn) : d / (2 - mx - mn);
+   if (mx === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+   else if (mx === g) h = ((b - r) / d + 2) * 60;
+   else h = ((r - g) / d + 4) * 60;
+  }
+  if (s < 0.10 || h < 236 || h > 330) return hex6;
+  var th = spec[0], anchor = spec[1], sc = spec[2];
+  if (th === 272 && sc === 1.0) return hex6;
+  var nh = th, ns, nl;
+  if (l >= 0.88) { ns = Math.min(s, 0.08) * sc; nl = l; }
+  else if (l <= 0.25) { ns = s * sc; nl = l; }
+  else if (s < 0.30) { ns = (l <= 0.42 ? s * 0.85 : Math.min(s * 0.65, 0.13)) * sc; nl = l; }
+  else { ns = Math.min(1, 0.05 + s * 0.90) * sc; nl = Math.max(0.26, Math.min(0.97, anchor + (l - 0.63) * 0.85)); }
+  function hue2rgb(p, q, t) {
+   if (t < 0) t += 1; if (t > 1) t -= 1;
+   if (t < 1 / 6) return p + (q - p) * 6 * t;
+   if (t < 1 / 2) return q;
+   if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+   return p;
+  }
+  var nr, ng, nb;
+  if (ns === 0) { nr = ng = nb = nl; }
+  else {
+   var q = nl < 0.5 ? nl * (1 + ns) : nl + ns - nl * ns;
+   var p = 2 * nl - q, hk = (nh % 360) / 360;
+   nr = hue2rgb(p, q, hk + 1 / 3);
+   ng = hue2rgb(p, q, hk);
+   nb = hue2rgb(p, q, hk - 1 / 3);
+  }
+  function c2(v) { var x = Math.max(0, Math.min(255, Math.round(v * 255))).toString(16); return x.length < 2 ? '0' + x : x; }
+  return c2(nr) + c2(ng) + c2(nb);
+ }
+
+ function syncLogoImgs(id) {
+  var spec = ACCENT_HLS[id] || ACCENT_HLS.violet;
+  function paintUri(uri) {
+   var imgs = document.querySelectorAll('img.brand-logo, img.is-logo');
+   for (var i = 0; i < imgs.length; i++) {
+    if (imgs[i].getAttribute('src') !== uri) imgs[i].setAttribute('src', uri);
+   }
+  }
+  if (logoUriCache[id]) { paintUri(logoUriCache[id]); return; }
+  function buildFromRaw(svg) {
+   var out = svg.replace(/stop-color="#([0-9a-fA-F]{6})"/g, function (_, h6) {
+    return 'stop-color="#' + remapLogoHex(h6.toLowerCase(), spec) + '"';
+   });
+   logoUriCache[id] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(out);
+   if ((document.documentElement.getAttribute('data-accent') || DEFAULT) === id) paintUri(logoUriCache[id]);
+  }
+  if (rawLogoSvg) { buildFromRaw(rawLogoSvg); return; }
+  if (typeof fetch === 'function') {
+   fetch('kuro-logo.svg').then(function (r) { return r.ok ? r.text() : ''; }).then(function (txt) {
+    if (!txt || txt.indexOf('<svg') < 0) return;
+    rawLogoSvg = txt;
+    var cur = document.documentElement.getAttribute('data-accent') || DEFAULT;
+    syncLogoImgs(cur);
+   }).catch(function () {});
+  }
+ }
+
  function apply(id) {
   if (!valid(id)) id = DEFAULT;
   var href = 'theme-' + id + '-1.1.css';
   var el = link();
   if (el.getAttribute('href') !== href) el.setAttribute('href', href);
   document.documentElement.setAttribute('data-accent', id);
+  syncLogoImgs(id);
+  try { window.dispatchEvent(new CustomEvent('kuro:accent', { detail: { id: id } })); } catch (e) {}
   // The native shell reads this to tint its own surfaces.
   try {
    if (window.KuroNative && typeof window.KuroNative.themeAccent111 === 'function') {
