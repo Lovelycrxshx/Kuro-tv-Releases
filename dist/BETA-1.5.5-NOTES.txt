@@ -1,25 +1,28 @@
-Kuro.tv 1.5.5-beta4 (versionCode 100) — Beta Build Notes
+Kuro.tv 1.5.5-beta5 (versionCode 101) — Beta Build Notes
 ========================================================
 Package:      app.lovelycrxshx.kuro
-Version:      1.5.5-beta4 (versionCode = 100)
-Signed APK:   Kuro-tv-beta-1.5.5.apk (53,176,792 bytes)
-SHA-256:      41ebfad4772ff588d5b533b473284ba340ca1cb17db1fa7dd6a1cb80fec0c3eb
-Aligned SHA:  9aa0a2c40b3ad16ead1756774f7ac716af8d9be78fbf230fe7e13fe705f1c831
-Source Zip:   Kuro-tv-1.5.5-beta4-Source.zip (16,367,021 bytes)
-Source SHA:   2cee57aa35cff3e6824583222df58671f4e1fe2c56d3b32963446300be8bb9d3
+Version:      1.5.5-beta5 (versionCode = 101)
+Signed APK:   Kuro-tv-beta-1.5.5.apk (53,172,696 bytes)
+SHA-256:      0cba9b5d0d2f46b4e849bc098fef2c5e07e9ed2e7888721ca2dbee0caaaff7bd
+Aligned SHA:  f83160ce216adebc07787b0d05719c72c8b1f24876c1c54f36a19283d02d6c9b
+Source Zip:   Kuro-tv-1.5.5-beta5-Source.zip (16,381,991 bytes)
+Source SHA:   ef5266ae75e5f1d050915d84ca31f3bf020e76620df821030f42980d6b6dc567
 Signer:       CN=Kuro Anime (SHA-256: 1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e)
 
 Google Drive Links (Kuro folder: 1_lRTGIyahN-fABGstO6t4srd6TkJ0DOb):
-- APK File ID:     1iUyww9IxQjId-iCi3KqaIcafD4I1KnyL
-- APK View / Share:https://drive.google.com/file/d/1iUyww9IxQjId-iCi3KqaIcafD4I1KnyL/view?usp=sharing
-- APK Download:    https://drive.google.com/uc?id=1iUyww9IxQjId-iCi3KqaIcafD4I1KnyL&export=download
-- Source File ID:  1zPnkw9umK86Oq2p8iq3rWlnL9pycyZT8
-- Source View:     https://drive.google.com/file/d/1zPnkw9umK86Oq2p8iq3rWlnL9pycyZT8/view?usp=sharing
+- APK File ID:     1MhfMYRgrDh2RB1W3KueEWppKNFuWkq3e
+- APK View / Share:https://drive.google.com/file/d/1MhfMYRgrDh2RB1W3KueEWppKNFuWkq3e/view?usp=sharing
+- APK Download:    https://drive.google.com/uc?id=1MhfMYRgrDh2RB1W3KueEWppKNFuWkq3e&export=download
+- Source File ID:  1NrdUWxJ7FCj5hhXV6xixKCSOo1aSG5Nv
+- Source View:     https://drive.google.com/file/d/1NrdUWxJ7FCj5hhXV6xixKCSOo1aSG5Nv/view?usp=sharing
 
-What's New in 1.5.5-beta4:
-1. Fixed Home Page Auto-Scrolling Down on App Entry:
-   - Stopped route-state538.js startup scroll restoration from scrolling down on Home (view === 'home' always opens at scrollY = 0).
-   - Replaced global html { scroll-behavior: smooth; } with scroll-behavior: auto across smooth-ui.css, all 20 theme-*-1.1.css files, and beta-ui-1.5.4.css so programmatic scroll resets never animate downward.
-   - Disabled Chromium scroll anchoring (overflow-anchor: none) on Home shelves/hero/boot state so async Hero carousel, Continue Watching rail, Popular, and New shelf mounts never push scrollY down.
-   - Added setupHomeEntryScrollGuard155() boot top-pinning guard (unpins immediately on genuine user vertical touch drag, wheel, or downward DPAD/key input, while ignoring intro skip and What's New dialog dismissal) plus { preventScroll: true } on overlay button focus calls.
-2. Full 20-Theme & Pure Black OLED Sync + Watch Screen v3 + Classic Video Player (from 1.5.5-beta3).
+What's New in 1.5.5-beta5:
+1. 2K QHD (2560x1440 / 1440x2560) Render Resolution:
+   - Added KuroDisplay155 native display engine negotiating the highest-Hz 2K QHD (1440p / 2560p) hardware Display.Mode via WindowManager.LayoutParams.preferredDisplayModeId.
+   - Configured WebView 2K @ 500 DPI viewport rendering (461 CSS px portrait / 819 CSS px landscape / tablet-safe wide DP / 1180 CSS px Desktop-Site Leanback) with live orientation sync.
+   - Unlocked ExoPlayer 2K track selection (setMaxVideoSize(2560, 1440).setViewportSize(2560, 1440, true)), uncapped HLS level selection (capLevelToPlayerSize: false), upgraded WebGL2 shader pipeline (video-effects537.js) to 2K 1440p default output with up to 4x DPR support, and boosted Watch Screen poster/thumbnail decode & LruCache targets.
+2. Forced 500 DPI Across All Screens & Dialogs:
+   - Enforced Configuration.densityDpi = 500 and DisplayMetrics density = 3.125f across MainActivity, KuroOfflineActivity561, KuroDialogs581.themed(), Application resources, onConfigurationChanged, onResume, and immediately after every WebView instantiation (defeating Android Chromium's first-WebView-init DPI reset) regardless of system Display Size settings.
+3. Restored Smooth Home Vertical Touch Scrolling:
+   - Removed the beta4 window 'scroll' listener / data-k155-home-top lock in setupHomeEntryScrollGuard155() that fought Android WebView's native compositor touch scroll and caused Home to stay stuck at y = 0.
+   - Preserved clean boot-at-top behavior via one-shot initial scroll reset, route-state538.js Home scrollTarget bypass, preventScroll focus options, shelf-scoped overflow-anchor: none, and touch-action: pan-x pan-y on horizontal carousels/rails.
