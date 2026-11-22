@@ -1,23 +1,25 @@
-Kuro.tv 1.5.5-beta3 (versionCode 99) — Beta Build Notes
-=======================================================
+Kuro.tv 1.5.5-beta4 (versionCode 100) — Beta Build Notes
+========================================================
 Package:      app.lovelycrxshx.kuro
-Version:      1.5.5-beta3 (versionCode = 99)
-Signed APK:   Kuro-tv-beta-1.5.5.apk (53,172,696 bytes)
-SHA-256:      92105219f96f4685399fa40c2aacf5b1c1933826e767c438ab656806707c2017
-Aligned SHA:  56e55f9f2950aa7486ab12ba26ee1c8d45efab3031f134444fb98d14ddf5689a
+Version:      1.5.5-beta4 (versionCode = 100)
+Signed APK:   Kuro-tv-beta-1.5.5.apk (53,176,792 bytes)
+SHA-256:      41ebfad4772ff588d5b533b473284ba340ca1cb17db1fa7dd6a1cb80fec0c3eb
+Aligned SHA:  9aa0a2c40b3ad16ead1756774f7ac716af8d9be78fbf230fe7e13fe705f1c831
+Source Zip:   Kuro-tv-1.5.5-beta4-Source.zip (16,367,021 bytes)
+Source SHA:   2cee57aa35cff3e6824583222df58671f4e1fe2c56d3b32963446300be8bb9d3
 Signer:       CN=Kuro Anime (SHA-256: 1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e)
 
 Google Drive Links (Kuro folder: 1_lRTGIyahN-fABGstO6t4srd6TkJ0DOb):
-- File ID:         1Tbxb2jir3EQnJS8rmSB6gk-ul3UqO1Ow
-- View / Share:    https://drive.google.com/file/d/1Tbxb2jir3EQnJS8rmSB6gk-ul3UqO1Ow/view?usp=sharing
-- Direct Download: https://drive.google.com/uc?id=1Tbxb2jir3EQnJS8rmSB6gk-ul3UqO1Ow&export=download
+- APK File ID:     1iUyww9IxQjId-iCi3KqaIcafD4I1KnyL
+- APK View / Share:https://drive.google.com/file/d/1iUyww9IxQjId-iCi3KqaIcafD4I1KnyL/view?usp=sharing
+- APK Download:    https://drive.google.com/uc?id=1iUyww9IxQjId-iCi3KqaIcafD4I1KnyL&export=download
+- Source File ID:  1zPnkw9umK86Oq2p8iq3rWlnL9pycyZT8
+- Source View:     https://drive.google.com/file/d/1zPnkw9umK86Oq2p8iq3rWlnL9pycyZT8/view?usp=sharing
 
-What's New in 1.5.5-beta3:
-1. Full 20-Theme & Pure Black OLED Sync:
-   - Regenerated KuroTheme12.TABLE (158 palette rows across all 20 accents) after Watch Screen v3 & 1.5.x UI patches, plus runtime HLS fallback (remapDynamic) and expanded Pure Black OLED floor/card mappings.
-   - Live Watch Screen v3 re-theming (watchRetheme155 & WatchHeader.refreshTheme155) when switching themes or Pure Black OLED mode from the profile menu while a video is open.
-   - Dynamic kuro.tv wordmark re-hueing across both WebView SVG logos (theme-accent-1.1.js) and native WatchHeader PNG bitmaps (KuroTheme12.tintLogoBitmap).
-   - Eliminated hue-wheel drift on subtle tinted borders/surfaces in theme_gen.py across all 20 theme-*.css files and added pre-color-mix CSS variable fallbacks for older Android WebViews.
-2. Episode Thumbnail Fixes & Watch Screen v3 Clarity Upgrade:
-   - Fixed initial episode playlist thumbnail race before playerLayer window attachment, widened artwork host allowlist (TMDB, Metahub, Kitsu,Simkl, MyAnimeList, AniDB, HiAnime/AniWatch CDNs), and added coverImage fallback.
-   - Quick Episode Action Strip (< Prev • Episode • Next > + Auto-Next), compact SUB | DUB Server Switcher, upgraded 3-row Episode Playlist, and Classic Video Player preserved.
+What's New in 1.5.5-beta4:
+1. Fixed Home Page Auto-Scrolling Down on App Entry:
+   - Stopped route-state538.js startup scroll restoration from scrolling down on Home (view === 'home' always opens at scrollY = 0).
+   - Replaced global html { scroll-behavior: smooth; } with scroll-behavior: auto across smooth-ui.css, all 20 theme-*-1.1.css files, and beta-ui-1.5.4.css so programmatic scroll resets never animate downward.
+   - Disabled Chromium scroll anchoring (overflow-anchor: none) on Home shelves/hero/boot state so async Hero carousel, Continue Watching rail, Popular, and New shelf mounts never push scrollY down.
+   - Added setupHomeEntryScrollGuard155() boot top-pinning guard (unpins immediately on genuine user vertical touch drag, wheel, or downward DPAD/key input, while ignoring intro skip and What's New dialog dismissal) plus { preventScroll: true } on overlay button focus calls.
+2. Full 20-Theme & Pure Black OLED Sync + Watch Screen v3 + Classic Video Player (from 1.5.5-beta3).

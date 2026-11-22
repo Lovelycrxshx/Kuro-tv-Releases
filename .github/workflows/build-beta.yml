@@ -31,7 +31,7 @@ concurrency:
 
 env:
   APK_NAME: Kuro-tv-beta-1.5.5
-  SOURCE_ID: 1STOFJDlIuR3zG3ApVFzZJnWlaveKqhnY
+  SOURCE_ID: 1zPnkw9umK86Oq2p8iq3rWlnL9pycyZT8
   EXPECT_VERSION_NAME: "1.5.5-beta4"
   EXPECT_VERSION_CODE: "100"
 
