@@ -1,0 +1,22 @@
+Kuro 1.5.5-beta (Android Beta — Classic Player Restored)
+========================================================
+Package:      app.lovelycrxshx.kuro
+Version Name: 1.5.5-beta
+Version Code: 97
+APK Size:     53,078,390 bytes (~50.6 MB)
+Signed With:  CN=Kuro Anime (upgrades cleanly over v1.5.4 / versionCode 96 without uninstalling)
+SHA-256:      706b4197b9d51fc27d02bb59130c39419c51e6cf873cf8d1f64b0b4cd621ac40
+Google Drive: https://drive.google.com/file/d/1PeAmK2ft8ZKP-bzKrenblN2gNWtOuOM9/view?usp=sharing
+Direct DL:    https://drive.google.com/uc?id=1PeAmK2ft8ZKP-bzKrenblN2gNWtOuOM9&export=download
+
+What Changed in 1.5.5-beta
+--------------------------
+- Classic Video Player Restored (Reverted 1.5.3 Custom Pill-Ring Player Skin):
+  - Removed tools/player_1.5.3.py (KuroPlayerUi153, KuroPlayerAction153, kuro-oled-hud153, and cross-frame addDocumentStartJavaScript skin injection).
+  - Restored the clean original video player controls across embedded server players (JWPlayer / Plyr / Video.js), built-in HLS stream-player.html, native ExoPlayer/Media3 playback, and offline downloads — eliminating oversized purple circle rings around LIVE / timestamps, right-edge button clipping, vertical pill scrubber overrides, and the stray empty purple circle overlay.
+- Retains All 1.5.4 Improvements & Fixes:
+  - Verified developer Discord profile link (https://discord.com/users/825998094067695616) and Settings heading "Contact developer & notice for bugs and error".
+  - Streamlined YouTube-style Watch Page (5 servers per page + "Other servers" switcher, 3-row scrollable Episode Playlist card, YouTube Desktop horizontal recommended anime shelf below Anime details).
+  - Signature Violet default theme, Encrypted DNS (DoH 1.1.1.1 / 8.8.8.8), hardware-to-software backup video decoder fallback, Cinematic Title Detail v2 (with Skip Filler Auto-Next), Smart Multi-Filter Browse & Voice Search, Desktop-Site Left-Rail & Android TV Leanback UI, and 40 Anime/Manga profile sets.
+- Not Published on GitHub Releases:
+  - Official GitHub Release remains on v1.5.4; this beta APK is distributed via Google Drive only.
