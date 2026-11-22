@@ -1,4 +1,4 @@
-name: build KuroCord 1.0.0
+name: build czcord 1.0.0
 
 on:
   push:
@@ -9,18 +9,18 @@ permissions:
   contents: write
 
 concurrency:
-  group: kurocord-apk
+  group: czcord-apk
   cancel-in-progress: false
 
 env:
-  APK_NAME: KuroCord-1.0.0
-  SOURCE_ID: 1zOXX257hah_-CuVlxriG5_sRNS11FTmt
+  APK_NAME: czcord-1.0.0
+  SOURCE_ID: 1prLjEkN4m_MhLQXIHjQj7QIscBYjlDP_
   EXPECT_VERSION_NAME: "1.0.0"
   EXPECT_VERSION_CODE: "1"
 
 jobs:
   apk:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[kurocord]')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[czcord]')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -50,19 +50,19 @@ jobs:
           test -d "$ANDROID_HOME/platforms/android-35"
           test -x "$ANDROID_HOME/build-tools/35.0.1/zipalign"
 
-      - name: Download KuroCord source zip from Drive
+      - name: Download czcord source zip from Drive
         run: |
           set -euo pipefail
           URL="https://drive.usercontent.google.com/download?id=${SOURCE_ID}&export=download&confirm=t"
-          code=$(curl -sSL --retry 2 --retry-delay 3 -o "$RUNNER_TEMP/kc-src.zip" -w '%{http_code}' "$URL")
-          bytes=$(stat -c%s "$RUNNER_TEMP/kc-src.zip" 2>/dev/null || echo 0)
+          code=$(curl -sSL --retry 2 --retry-delay 3 -o "$RUNNER_TEMP/cz-src.zip" -w '%{http_code}' "$URL")
+          bytes=$(stat -c%s "$RUNNER_TEMP/cz-src.zip" 2>/dev/null || echo 0)
           echo "HTTP $code, $bytes bytes"
           if [ "$code" != "200" ] || [ "$bytes" -lt 10000 ]; then
             echo "::error::Source download failed (HTTP $code, $bytes bytes)"
             exit 1
           fi
           mkdir -p src
-          unzip -q "$RUNNER_TEMP/kc-src.zip" -d src
+          unzip -q "$RUNNER_TEMP/cz-src.zip" -d src
           PROJECT=$(dirname "$(find src -maxdepth 3 -name settings.gradle -print -quit)")
           [ -n "$PROJECT" ] || { echo "::error::No settings.gradle in source zip"; exit 1; }
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
@@ -73,18 +73,17 @@ jobs:
           set -euo pipefail
           cd "$PROJECT"
           chmod +x ./gradlew
-          for f in assets/*.js plugins-src/*.js; do
-            node --check "$f"
-          done
-          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee "$RUNNER_TEMP/kurocord-build.log"
+          node --check assets/czcord-runtime.js
+          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee "$RUNNER_TEMP/czcord-build.log"
           UNSIGNED=$(find build/outputs/apk/release -name '*-unsigned.apk' | head -1)
           [ -s "$UNSIGNED" ] || { echo "::error::Unsigned APK not produced"; exit 1; }
           "$ANDROID_HOME/build-tools/35.0.1/zipalign" -f -P 16 4 "$UNSIGNED" "$RUNNER_TEMP/$APK_NAME-aligned.apk"
           "$ANDROID_HOME/build-tools/35.0.1/zipalign" -c -P 16 4 "$RUNNER_TEMP/$APK_NAME-aligned.apk"
 
-          BADGING=$("$ANDROID_HOME/build-tools/35.0.1/aapt2" dump badging "$RUNNER_TEMP/$APK_NAME-aligned.apk" | head -3)
+          BADGING=$("$ANDROID_HOME/build-tools/35.0.1/aapt2" dump badging "$RUNNER_TEMP/$APK_NAME-aligned.apk" | head -25)
           echo "::warning::badging: $BADGING"
-          echo "$BADGING" | grep -q "name='app.lovelycrxshx.kurocord'"
+          echo "$BADGING" | grep -q "name='com.czcord'"
+          echo "$BADGING" | grep -q "application-label:'czcord'"
           echo "$BADGING" | grep -q "versionCode='${EXPECT_VERSION_CODE}'"
           echo "$BADGING" | grep -q "versionName='${EXPECT_VERSION_NAME}'"
 
@@ -92,16 +91,14 @@ jobs:
           import sys, zipfile
           with zipfile.ZipFile(sys.argv[1]) as z:
               names = set(z.namelist())
-              assert "assets/kurocord-preload.js" in names, "Missing assets/kurocord-preload.js"
-              preload = z.read("assets/kurocord-preload.js").decode("utf-8")
-              assert "window.KuroCord" in preload, "Missing window.KuroCord SDK"
-              assert "saveUserPlugin" in preload, "Missing saveUserPlugin"
-              assert "vencord-bridge" in preload, "Missing starter plugins"
+              assert "assets/czcord-runtime.js" in names, "Missing assets/czcord-runtime.js"
+              rt = z.read("assets/czcord-runtime.js").decode("utf-8")
+              assert "window.CZCord" in rt, "Missing window.CZCord SDK"
+              assert "MOBILE_WEB_SIDEBAR_OPEN" in rt, "Missing mobile sidebar FluxDispatcher hook"
               dex = b"".join(z.read(n) for n in names if n.endswith(".dex"))
-              assert b"KuroCordBridge" in dex, "DEX missing KuroCordBridge"
-              assert b"evalBypassCsp" in dex, "DEX missing evalBypassCsp"
-              assert b"KuroCordStore" in dex, "DEX missing KuroCordStore"
-          print("Verified KuroCord 1.0.0 APK structure & DEX!")
+              for sym in (b"CzNativeSheet", b"CzVoiceService", b"CzNotifier", b"CzChromeClient", b"CzNet", b"CZCordNative"):
+                  assert sym in dex, f"DEX missing {sym!r}"
+          print("Verified czcord 1.0.0 APK structure, badging & DEX!")
           PY
 
       - name: Return aligned APK & build log to branch
@@ -109,9 +106,9 @@ jobs:
         run: |
           set +e
           mkdir -p out/dist
-          if [ -s "$RUNNER_TEMP/kurocord-build.log" ]; then
-            cp -f "$RUNNER_TEMP/kurocord-build.log" out/dist/kurocord-build.log
-            grep -nE 'error:|Execution failed|FAILURE' out/dist/kurocord-build.log | tail -25 \
+          if [ -s "$RUNNER_TEMP/czcord-build.log" ]; then
+            cp -f "$RUNNER_TEMP/czcord-build.log" out/dist/czcord-build.log
+            grep -nE 'error:|Execution failed|FAILURE' out/dist/czcord-build.log | tail -25 \
               | while IFS= read -r line; do echo "::warning::${line}"; done
           fi
           if [ -s "$RUNNER_TEMP/$APK_NAME-aligned.apk" ]; then
@@ -121,8 +118,8 @@ jobs:
           cd out
           git config user.name  "Siva"
           git config user.email "sivaabhishek4@gmail.com"
-          git add -f dist/kurocord-build.log "dist/$APK_NAME-aligned.apk" "dist/$APK_NAME-aligned.apk.sha256" 2>/dev/null
-          git commit -m "kurocord: runner log + aligned APK (unsigned)" 2>/dev/null
+          git add -f dist/czcord-build.log "dist/$APK_NAME-aligned.apk" "dist/$APK_NAME-aligned.apk.sha256" 2>/dev/null
+          git commit -m "czcord: runner log + aligned APK (unsigned)" 2>/dev/null
           git push origin "HEAD:${GITHUB_REF_NAME}" 2>&1 || true
 
       - name: Fail if compile failed
