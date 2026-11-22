@@ -1,26 +1,23 @@
-Kuro.tv 1.5.5-beta2 (versionCode 98) — Beta Build Notes
+Kuro.tv 1.5.5-beta3 (versionCode 99) — Beta Build Notes
 =======================================================
 Package:      app.lovelycrxshx.kuro
-Version:      1.5.5-beta2 (versionCode = 98)
-Signed APK:   Kuro-tv-beta-1.5.5.apk (53,078,462 bytes)
-SHA-256:      1bb75ca84f34d9f7dbb3030a84859059ce920d02fdfbf898b69ce4634e773d57
-Aligned SHA:  3031049a7f7ae691d06e3c908783c7ae868995e1be1f2c7ce1b9f7bd86b08489
+Version:      1.5.5-beta3 (versionCode = 99)
+Signed APK:   Kuro-tv-beta-1.5.5.apk (53,172,696 bytes)
+SHA-256:      92105219f96f4685399fa40c2aacf5b1c1933826e767c438ab656806707c2017
+Aligned SHA:  56e55f9f2950aa7486ab12ba26ee1c8d45efab3031f134444fb98d14ddf5689a
 Signer:       CN=Kuro Anime (SHA-256: 1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e)
 
 Google Drive Links (Kuro folder: 1_lRTGIyahN-fABGstO6t4srd6TkJ0DOb):
-- File ID:         1pCItRB1Cg2WZfhlqVvPcXoHAVvCtPaDD
-- View / Share:    https://drive.google.com/file/d/1pCItRB1Cg2WZfhlqVvPcXoHAVvCtPaDD/view?usp=sharing
-- Direct Download: https://drive.google.com/uc?id=1pCItRB1Cg2WZfhlqVvPcXoHAVvCtPaDD&export=download
+- File ID:         1Tbxb2jir3EQnJS8rmSB6gk-ul3UqO1Ow
+- View / Share:    https://drive.google.com/file/d/1Tbxb2jir3EQnJS8rmSB6gk-ul3UqO1Ow/view?usp=sharing
+- Direct Download: https://drive.google.com/uc?id=1Tbxb2jir3EQnJS8rmSB6gk-ul3UqO1Ow&export=download
 
-What's New in 1.5.5-beta2 (Watch Screen v3 — Concept 1):
-1. Quick Episode Action Strip directly below the classic 16:9 player:
-   - ‹ Prev | Episode N • Title | Next › | glowing ✦ Auto-Next toggle pill (synced with PlaybackPanel & SharedPreferences).
-2. Compact Server Switcher card:
-   - Segmented SUB | DUB tabs with live server counts + horizontal scrollable server chips (● Server 1 • Fast, 5/page + Other servers ›).
-   - Collapsible ⚙ Tools drawer (PlaybackPanel, ⚙ Advanced video enhancements, ⛶ Enhanced fullscreen) + ⓘ Diagnostics trigger.
-3. Upgraded 3-Row Episode Playlist card:
-   - 16:9 episode thumbnails (AniList streamingEpisodes + Crunchyroll/TMDB/TVDB/banner artwork), episode number badge, watched/resume progress bar, and Now Playing / amber FILLER / RECAP / ✓ Watched pills, plus "See all ›" inline height toggle & instant search.
-4. Upgraded Anime Details card + horizontal 16:9 More Anime shelf:
-   - Live ★ X.X/10 score badge and genre chips, expandable synopsis, and smooth horizontal recommendation cards.
-5. Classic Video Player Restored:
-   - Original clean player controls preserved across embedded, HLS, native, and offline playback; official GitHub Release remains untouched on v1.5.4.
+What's New in 1.5.5-beta3:
+1. Full 20-Theme & Pure Black OLED Sync:
+   - Regenerated KuroTheme12.TABLE (158 palette rows across all 20 accents) after Watch Screen v3 & 1.5.x UI patches, plus runtime HLS fallback (remapDynamic) and expanded Pure Black OLED floor/card mappings.
+   - Live Watch Screen v3 re-theming (watchRetheme155 & WatchHeader.refreshTheme155) when switching themes or Pure Black OLED mode from the profile menu while a video is open.
+   - Dynamic kuro.tv wordmark re-hueing across both WebView SVG logos (theme-accent-1.1.js) and native WatchHeader PNG bitmaps (KuroTheme12.tintLogoBitmap).
+   - Eliminated hue-wheel drift on subtle tinted borders/surfaces in theme_gen.py across all 20 theme-*.css files and added pre-color-mix CSS variable fallbacks for older Android WebViews.
+2. Episode Thumbnail Fixes & Watch Screen v3 Clarity Upgrade:
+   - Fixed initial episode playlist thumbnail race before playerLayer window attachment, widened artwork host allowlist (TMDB, Metahub, Kitsu,Simkl, MyAnimeList, AniDB, HiAnime/AniWatch CDNs), and added coverImage fallback.
+   - Quick Episode Action Strip (< Prev • Episode • Next > + Auto-Next), compact SUB | DUB Server Switcher, upgraded 3-row Episode Playlist, and Classic Video Player preserved.
