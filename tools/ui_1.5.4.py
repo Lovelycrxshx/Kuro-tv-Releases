@@ -3139,28 +3139,17 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
-import android.os.Build;
 import android.util.DisplayMetrics;
-import android.view.Display;
-import android.view.Window;
-import android.view.WindowManager;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import androidx.annotation.OptIn;
-import androidx.media3.common.util.UnstableApi;
-import androidx.media3.exoplayer.ExoPlayer;
 import org.json.JSONObject;
 
 /**
- * Kuro 1.5.5-beta5 — 2K QHD (2560x1440 / 1440x2560) Render Resolution & Forced 500 DPI Engine.
+ * Kuro 1.5.5-beta6 — System Default Resolution + Forced 500 DPI Engine.
+ * Keeps hardware/window resolution and WebView viewport at native system default
+ * while enforcing Configuration.densityDpi = 500 (density = 3.125f).
  */
 public final class KuroDisplay155 {
     public static final int FORCE_DPI = 500;
     public static final float FORCE_DENSITY = 500f / 160f; // 3.125f
-    public static final int RENDER_2K_SHORT = 1440;
-    public static final int RENDER_2K_LONG = 2560;
-    public static final int VIEWPORT_2K_PORTRAIT_DP = 461;  // Math.round(1440f / 3.125f)
-    public static final int VIEWPORT_2K_LANDSCAPE_DP = 819; // Math.round(2560f / 3.125f)
 
     private KuroDisplay155() {}
 
@@ -3222,123 +3211,26 @@ public final class KuroDisplay155 {
         }
     }
 
-    public static void applyWindow2KMode(Activity activity) {
-        if (activity == null) return;
-        Window window = activity.getWindow();
-        if (window == null) return;
-        try {
-            Display display = null;
-            if (Build.VERSION.SDK_INT >= 30) {
-                try { display = activity.getDisplay(); } catch (RuntimeException ignored) {}
-            }
-            if (display == null) {
-                WindowManager wm = activity.getWindowManager();
-                if (wm != null) display = wm.getDefaultDisplay();
-            }
-            if (display == null) return;
-            Display.Mode[] modes = display.getSupportedModes();
-            if (modes == null || modes.length <= 1) return;
-
-            Display.Mode best2K = null;
-            float best2KHz = 0f;
-            int best2KLong = 0;
-
-            Display.Mode bestMax = null;
-            long bestMaxPixels = 0L;
-            float bestMaxHz = 0f;
-
-            for (Display.Mode m : modes) {
-                if (m == null) continue;
-                int pw = m.getPhysicalWidth();
-                int ph = m.getPhysicalHeight();
-                int shortSide = Math.min(pw, ph);
-                int longSide = Math.max(pw, ph);
-                float hz = m.getRefreshRate();
-                long pixels = (long) pw * (long) ph;
-
-                if (shortSide >= 1400 && shortSide <= 1660 && longSide >= 2400) {
-                    if (best2K == null || hz > best2KHz + 0.5f || (Math.abs(hz - best2KHz) <= 0.5f && longSide > best2KLong)) {
-                        best2K = m;
-                        best2KHz = hz;
-                        best2KLong = longSide;
-                    }
-                }
-                if (bestMax == null || pixels > bestMaxPixels || (pixels == bestMaxPixels && hz > bestMaxHz + 0.5f)) {
-                    bestMax = m;
-                    bestMaxPixels = pixels;
-                    bestMaxHz = hz;
-                }
-            }
-
-            Display.Mode chosen = best2K != null ? best2K : bestMax;
-            if (chosen != null) {
-                WindowManager.LayoutParams lp = window.getAttributes();
-                if (lp.preferredDisplayModeId != chosen.getModeId()) {
-                    lp.preferredDisplayModeId = chosen.getModeId();
-                    window.setAttributes(lp);
-                }
-            }
-        } catch (RuntimeException ignored) {}
-    }
-
-    public static void applyActivity2K500Dpi(Activity activity) {
+    public static void applyActivity500Dpi(Activity activity) {
         if (activity == null) return;
         enforce500Dpi(activity);
-        applyWindow2KMode(activity);
-    }
-
-    public static void configureWebView2K(WebView wv, boolean desktopMode, int textZoom) {
-        if (wv == null) return;
-        enforce500Dpi(wv.getContext());
-        WebSettings s = wv.getSettings();
-        if (s == null) return;
-        s.setTextZoom(textZoom);
-        s.setUseWideViewPort(true);
-        s.setLoadWithOverviewMode(true);
-        s.setSupportZoom(false);
-        s.setBuiltInZoomControls(false);
-        s.setDisplayZoomControls(false);
-    }
-
-    @OptIn(markerClass = UnstableApi.class)
-    public static void applyExoPlayer2K(ExoPlayer engine) {
-        if (engine == null) return;
-        try {
-            engine.setTrackSelectionParameters(
-                engine.getTrackSelectionParameters()
-                    .buildUpon()
-                    .setMaxVideoSize(RENDER_2K_LONG, RENDER_2K_SHORT)
-                    .setViewportSize(RENDER_2K_LONG, RENDER_2K_SHORT, true)
-                    .build()
-            );
-        } catch (RuntimeException ignored) {}
     }
 
     public static String infoJson(Context context) {
         try {
             enforce500Dpi(context);
             DisplayMetrics dm = context.getResources().getDisplayMetrics();
-            int pw = dm != null ? dm.widthPixels : RENDER_2K_SHORT;
-            int ph = dm != null ? dm.heightPixels : RENDER_2K_LONG;
-            boolean landscape = pw > ph;
-            int shortPx = Math.min(pw, ph);
-            int longPx = Math.max(pw, ph);
-            int portDp = shortPx > 1600 ? Math.round(shortPx / FORCE_DENSITY) : VIEWPORT_2K_PORTRAIT_DP;
-            int landDp = shortPx > 1600 ? Math.round(longPx / FORCE_DENSITY) : VIEWPORT_2K_LANDSCAPE_DP;
+            int pw = dm != null ? dm.widthPixels : 0;
+            int ph = dm != null ? dm.heightPixels : 0;
             return new JSONObject()
                 .put("dpi", FORCE_DPI)
                 .put("density", (double) FORCE_DENSITY)
-                .put("renderShort", RENDER_2K_SHORT)
-                .put("renderLong", RENDER_2K_LONG)
-                .put("renderLabel", "2K QHD (2560x1440)")
+                .put("resolutionMode", "system-default")
                 .put("physicalWidth", pw)
                 .put("physicalHeight", ph)
-                .put("landscape", landscape)
-                .put("viewportPortraitDp", portDp)
-                .put("viewportLandscapeDp", landDp)
                 .toString();
         } catch (Exception e) {
-            return "{\\"dpi\\":500,\\"density\\":3.125,\\"viewportPortraitDp\\":461,\\"viewportLandscapeDp\\":819}";
+            return "{\\"dpi\\":500,\\"density\\":3.125,\\"resolutionMode\\":\\"system-default\\"}";
         }
     }
 
@@ -3348,7 +3240,7 @@ public final class KuroDisplay155 {
         int dpi = dm != null ? dm.densityDpi : FORCE_DPI;
         int pw = dm != null ? dm.widthPixels : 0;
         int ph = dm != null ? dm.heightPixels : 0;
-        return "Render 2K QHD (2560x1440) \\u00b7 Forced " + dpi + " DPI (panel " + pw + "x" + ph + ")";
+        return "System Resolution (" + pw + "x" + ph + ") \\u00b7 Forced " + dpi + " DPI";
     }
 }
 """
@@ -3358,15 +3250,15 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
     disp_path = root / "src/app/lovelycrxshx/kuro/KuroDisplay155.java"
     disp_path.write_text(KURO_DISPLAY_155_JAVA, encoding="utf-8")
 
-    # 1. MainActivity: 2K window mode + forced 500 DPI across lifecycle, WebView creation, Bridge, and 2K artwork
+    # 1. MainActivity: System default resolution & viewport + forced 500 DPI kept unchanged
     ma_path = root / "src/app/lovelycrxshx/kuro/MainActivity.java"
     ma_text = ma_path.read_text(encoding="utf-8")
     ma_text = patch_once(
         ma_text,
-        " @Override public void onCreate(Bundle state){super.onCreate(state);KuroDisplay155.applyActivity2K500Dpi(this);",
+        " @Override public void onCreate(Bundle state){super.onCreate(state);KuroDisplay155.applyActivity500Dpi(this);",
         " @Override public void onCreate(Bundle state){super.onCreate(state);",
-        " @Override public void onCreate(Bundle state){super.onCreate(state);KuroDisplay155.applyActivity2K500Dpi(this);",
-        "MainActivity.onCreate 2K 500DPI",
+        " @Override public void onCreate(Bundle state){super.onCreate(state);KuroDisplay155.applyActivity500Dpi(this);",
+        "MainActivity.onCreate 500DPI",
     )
     ma_text = patch_once(
         ma_text,
@@ -3391,17 +3283,17 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
     )
     ma_text = patch_once(
         ma_text,
-        "KuroDisplay155.configureWebView2K(ui,desktopUi154,zoom);",
+        "KuroDisplay155.enforce500Dpi(this);if(ui!=null){ui.getSettings().setTextZoom(zoom);",
         'if(ui!=null){ui.getSettings().setTextZoom(zoom);ui.getSettings().setUseWideViewPort(desktopUi154);ui.getSettings().setLoadWithOverviewMode(desktopUi154);if(uiReady)ui.evaluateJavascript("window.kuroSyncDesktopSite154&&window.kuroSyncDesktopSite154("+desktopUi154+")",null);}',
-        'KuroDisplay155.applyActivity2K500Dpi(this);if(ui!=null){KuroDisplay155.configureWebView2K(ui,desktopUi154,zoom);if(uiReady)ui.evaluateJavascript("window.kuroSyncDesktopSite154&&window.kuroSyncDesktopSite154("+desktopUi154+")",null);}',
-        "MainActivity.applyWindowPreferences560 2K 500DPI",
+        'KuroDisplay155.enforce500Dpi(this);if(ui!=null){ui.getSettings().setTextZoom(zoom);ui.getSettings().setUseWideViewPort(desktopUi154);ui.getSettings().setLoadWithOverviewMode(desktopUi154);if(uiReady)ui.evaluateJavascript("window.kuroSyncDesktopSite154&&window.kuroSyncDesktopSite154("+desktopUi154+")",null);}',
+        "MainActivity.applyWindowPreferences560 system viewport + 500DPI",
     )
     ma_text = patch_once(
         ma_text,
         "KuroDisplay155.diagnosticsSummary(this)",
         '") \u00b7 WebView "+web+" \u00b7 Available device storage',
         '") \u00b7 WebView "+web+" \u00b7 "+KuroDisplay155.diagnosticsSummary(this)+" \u00b7 Available device storage',
-        "MainActivity.diagnostics560 2K 500DPI",
+        "MainActivity.diagnostics560 500DPI",
     )
     ma_text = patch_once(
         ma_text,
@@ -3414,8 +3306,8 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
         ma_text,
         "protected void attachBaseContext(Context newBase)",
         " @Override public void onConfigurationChanged(android.content.res.Configuration config){super.onConfigurationChanged(config);syncWindowSystemBars154();",
-        ' @Override protected void attachBaseContext(Context newBase){super.attachBaseContext(KuroDisplay155.wrapContext(newBase));}\n @Override public void onConfigurationChanged(android.content.res.Configuration config){super.onConfigurationChanged(config);syncWindowSystemBars154();KuroDisplay155.applyActivity2K500Dpi(this);if(ui!=null&&uiReady)ui.evaluateJavascript("window.kuroSyncDesktopSite154&&window.kuroSyncDesktopSite154()",null);',
-        "MainActivity attachBaseContext & onConfigurationChanged 2K 500DPI",
+        " @Override protected void attachBaseContext(Context newBase){super.attachBaseContext(KuroDisplay155.wrapContext(newBase));}\n @Override public void onConfigurationChanged(android.content.res.Configuration config){super.onConfigurationChanged(config);syncWindowSystemBars154();KuroDisplay155.applyActivity500Dpi(this);",
+        "MainActivity attachBaseContext & onConfigurationChanged 500DPI",
     )
     ma_text = patch_once(
         ma_text,
@@ -3424,59 +3316,17 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
         "super.onResume();activityResumed=true;syncWindowSystemBars154();KuroDisplay155.enforce500Dpi(this);",
         "MainActivity.onResume 500DPI",
     )
-    ma_text = patch_once(
-        ma_text,
-        "int capKb=Math.max(6144,Math.min(20480,maxKb/10));",
-        "int capKb=Math.max(4096,Math.min(12288,maxKb/12));",
-        "int capKb=Math.max(6144,Math.min(20480,maxKb/10));",
-        "MainActivity posterCache154 2K capacity",
-    )
-    ma_text = patch_once(
-        ma_text,
-        "loadThumb154(thumbIv,tUrl,384,216);",
-        "loadThumb154(thumbIv,tUrl,240,136);",
-        "loadThumb154(thumbIv,tUrl,384,216);",
-        "MainActivity episode thumb 2K DPI",
-    )
-    ma_text = patch_once(
-        ma_text,
-        "loadThumb154(thumbImg,thumbUrl,960,540);",
-        "loadThumb154(thumbImg,thumbUrl,640,360);",
-        "loadThumb154(thumbImg,thumbUrl,960,540);",
-        "MainActivity recommendation thumb 2K DPI",
-    )
-    ma_text = patch_once(
-        ma_text,
-        "loadThumb154(avatar,coverUrl,192,192);",
-        "loadThumb154(avatar,coverUrl,128,128);",
-        "loadThumb154(avatar,coverUrl,192,192);",
-        "MainActivity recommendation avatar 2K DPI",
-    )
-    ma_text = patch_once(
-        ma_text,
-        "Math.max(bounds.outWidth/480,bounds.outHeight/720)",
-        "opts.inSampleSize=Math.max(1,Math.max(bounds.outWidth/300,bounds.outHeight/450));",
-        "opts.inSampleSize=Math.max(1,Math.max(bounds.outWidth/480,bounds.outHeight/720));",
-        "MainActivity loadPoster 2K DPI",
-    )
     ma_path.write_text(ma_text, encoding="utf-8")
 
-    # 2. KuroOfflineActivity561: 500 DPI + 2K window mode + ExoPlayer 2K track selection
+    # 2. KuroOfflineActivity561: Forced 500 DPI kept unchanged, system default resolution
     oa_path = root / "src/app/lovelycrxshx/kuro/KuroOfflineActivity561.java"
     oa_text = oa_path.read_text(encoding="utf-8")
     oa_text = patch_once(
         oa_text,
         "attachBaseContext(android.content.Context newBase)",
         "    @Override protected void onCreate(Bundle b){super.onCreate(b);",
-        "    @Override protected void attachBaseContext(android.content.Context newBase){super.attachBaseContext(KuroDisplay155.wrapContext(newBase));}\n    @Override public void onConfigurationChanged(android.content.res.Configuration config){super.onConfigurationChanged(config);KuroDisplay155.applyActivity2K500Dpi(this);}\n    @Override protected void onCreate(Bundle b){super.onCreate(b);KuroDisplay155.applyActivity2K500Dpi(this);",
-        "KuroOfflineActivity561 2K 500DPI lifecycle",
-    )
-    oa_text = patch_once(
-        oa_text,
-        "KuroDisplay155.applyExoPlayer2K(engine);view.setPlayer(engine);",
-        ".setSeekBackIncrementMs(10000).setSeekForwardIncrementMs(10000).build();view.setPlayer(engine);",
-        ".setSeekBackIncrementMs(10000).setSeekForwardIncrementMs(10000).build();KuroDisplay155.applyExoPlayer2K(engine);view.setPlayer(engine);",
-        "KuroOfflineActivity561 ExoPlayer 2K",
+        "    @Override protected void attachBaseContext(android.content.Context newBase){super.attachBaseContext(KuroDisplay155.wrapContext(newBase));}\n    @Override public void onConfigurationChanged(android.content.res.Configuration config){super.onConfigurationChanged(config);KuroDisplay155.applyActivity500Dpi(this);}\n    @Override protected void onCreate(Bundle b){super.onCreate(b);KuroDisplay155.applyActivity500Dpi(this);",
+        "KuroOfflineActivity561 500DPI lifecycle",
     )
     oa_text = patch_once(
         oa_text,
@@ -3487,19 +3337,7 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
     )
     oa_path.write_text(oa_text, encoding="utf-8")
 
-    # 3. KuroNativePlayer561: ExoPlayer 2K track selection
-    np_path = root / "src/app/lovelycrxshx/kuro/KuroNativePlayer561.java"
-    np_text = np_path.read_text(encoding="utf-8")
-    np_text = patch_once(
-        np_text,
-        "KuroDisplay155.applyExoPlayer2K(engine);",
-        ".setSeekBackIncrementMs(10000).setSeekForwardIncrementMs(10000).build();",
-        ".setSeekBackIncrementMs(10000).setSeekForwardIncrementMs(10000).build();KuroDisplay155.applyExoPlayer2K(engine);",
-        "KuroNativePlayer561 ExoPlayer 2K",
-    )
-    np_path.write_text(np_text, encoding="utf-8")
-
-    # 4. KuroDialogs581: wrap themed dialog context with 500 DPI
+    # 3. KuroDialogs581: wrap themed dialog context with 500 DPI
     dg_path = root / "src/app/lovelycrxshx/kuro/KuroDialogs581.java"
     dg_text = dg_path.read_text(encoding="utf-8")
     if "KuroDisplay155.wrapContext(context)" not in dg_text:
@@ -3519,29 +3357,18 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
             raise SystemExit("ui_1.5.4.py: missing ContextThemeWrapper anchor in KuroDialogs581.java")
         dg_path.write_text(dg_text, encoding="utf-8")
 
-    # 5. WebView index.html 2K@500DPI viewport + HLS & WebGL2 2K player pipelines
+    # 4. Keep system default responsive viewport in assets/index.html + allow 500DPI DPR in video-effects537.js
     ix_path = root / "assets/index.html"
     ix_text = ix_path.read_text(encoding="utf-8")
-    if 'content="width=device-width,initial-scale=1,viewport-fit=cover"' in ix_text:
+    if 'content="width=461,viewport-fit=cover"' in ix_text:
         ix_text = ix_text.replace(
-            'content="width=device-width,initial-scale=1,viewport-fit=cover"',
             'content="width=461,viewport-fit=cover"',
+            'content="width=device-width,initial-scale=1,viewport-fit=cover"',
             1,
         )
         ix_path.write_text(ix_text, encoding="utf-8")
-    if 'content="width=461,viewport-fit=cover"' not in ix_text:
-        raise SystemExit("ui_1.5.4.py: missing 2K@500DPI viewport meta in assets/index.html")
-
-    sp_path = root / "assets/stream-player.js"
-    sp_text = sp_path.read_text(encoding="utf-8")
-    sp_text = patch_once(
-        sp_text,
-        "capLevelToPlayerSize:false",
-        "new Hls({enableWorker:false})",
-        "new Hls({enableWorker:false,capLevelToPlayerSize:false})",
-        "stream-player.js 2K HLS uncapped level selection",
-    )
-    sp_path.write_text(sp_text, encoding="utf-8")
+    if 'content="width=device-width,initial-scale=1,viewport-fit=cover"' not in ix_text:
+        raise SystemExit("ui_1.5.4.py: missing system-default viewport meta in assets/index.html")
 
     ve_path = root / "assets/video-effects537.js"
     ve_text = ve_path.read_text(encoding="utf-8")
@@ -3551,13 +3378,6 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
         "dpr=Math.max(1,Math.min(devicePixelRatio||1,3))",
         "dpr=Math.max(1,Math.min(devicePixelRatio||1,4))",
         "video-effects537.js 500DPI (3.125 DPR) WebGL2 support",
-    )
-    ve_text = patch_once(
-        ve_text,
-        "const maxH=settings.detail===32?2160:1440",
-        "const maxH=settings.detail===8?720:settings.detail===16?1080:2160",
-        "const maxH=settings.detail===32?2160:1440",
-        "video-effects537.js 2K (1440p) default WebGL2 render target",
     )
     ve_path.write_text(ve_text, encoding="utf-8")
 

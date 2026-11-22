@@ -67,19 +67,14 @@ html[data-kuro-theme="light"] {
 
 /* --------------------------------------------------------------------------
    Startup & Home Scroll Stability + Native Touch Scroll Pass-Through
-   - Smooth native vertical scrolling on Home (zero scroll lock)
+   - Keep html & body overflow at browser default (visible) so viewport is the
+     sole root scroller (setting overflow-y:auto on body traps scroll inside
+     body's overscroll-behavior-y:contain!)
    - Horizontal shelves/hero pass vertical finger drags cleanly to page scroll
    - Child shelf overflow-anchor: none prevents async mount jumps
    -------------------------------------------------------------------------- */
 html {
   scroll-behavior: auto !important;
-}
-
-html:not(.news-overlay-active):not(.watch-news-active):not(.account-modal-open),
-html:not(.news-overlay-active):not(.watch-news-active):not(.account-modal-open) body {
-  overflow-y: auto;
-  touch-action: pan-x pan-y;
-  -webkit-overflow-scrolling: touch;
 }
 
 #main.home-surface576 > #spotlight,

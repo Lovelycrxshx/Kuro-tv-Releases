@@ -1,26 +1,29 @@
-/* Kuro 1.5.5-beta5 — one-time "What's new" card, shown once after the splash on
-   first launch of 1.5.5-beta5 and never again. Self-contained, dismissible by
+/* Kuro 1.5.5-beta6 — one-time "What's new" card, shown once after the splash on
+   first launch of 1.5.5-beta6 and never again. Self-contained, dismissible by
    button, backdrop tap, or Escape / Android back. */
 (function () {
   'use strict';
 
-  var STAMP = '1.5.5-beta5';
-  var KEY = 'kuro-beta-whatsnew-seen-1.5.5-beta5';
+  var STAMP = '1.5.5-beta6';
+  var KEY = 'kuro-beta-whatsnew-seen-1.5.5-beta6';
 
   try {
-    if (localStorage.getItem(KEY) === STAMP || localStorage.getItem('kuro-beta-whatsnew-seen-1.5.5-beta4')) {
+    if (
+      localStorage.getItem(KEY) === STAMP ||
+      localStorage.getItem('kuro-beta-whatsnew-seen-1.5.5-beta5') ||
+      localStorage.getItem('kuro-beta-whatsnew-seen-1.5.5-beta4')
+    ) {
       localStorage.setItem(KEY, STAMP);
       return;
     }
   } catch (_) { return; }
 
   var ITEMS = [
-    ['2K Render Resolution & Forced 500 DPI', 'App-wide 2K QHD (2560\u00d71440 / 1440\u00d72560) rendering and forced 500 DPI (3.125\u00d7 density) across native screens, dialogs, WebView UI, ExoPlayer 2K track selection, WebGL2 video shaders, and high-DPI artwork.'],
-    ['Smooth Native Home Scrolling Restored', 'Fixed the Home screen scroll lock so vertical touch scrolling, fling momentum, wheel scrolling, and horizontal shelf swipes work effortlessly from the first touch while opening cleanly at the top.'],
+    ['Smooth Native Scrolling Fixed', 'Removed the root CSS overflow container trap and WebView overview-zoom lock so vertical touch scrolling, fling momentum, and shelf swipes work smoothly across Home, Browse, Library, Simulcasts, and Detail screens.'],
+    ['System Default Resolution + 500 DPI Kept', 'Restored native system default screen resolution and standard responsive viewport while keeping the crisp 500 DPI (3.125\u00d7 density) UI scaling intact.'],
     ['Full 20-Theme & Pure Black OLED Sync', 'Every Watch Screen v3 card, border, SUB/DUB tab, active server pill, episode progress bar, badge, WatchHeader kuro.tv wordmark, and Title Detail / Browse overlay dynamically syncs across all 20 accents and Pure Black OLED mode.'],
     ['Watch Screen v3 Clarity Upgrade', '1-tap < Prev \u2022 Episode \u2022 Next > + Auto-Next bar right below the player, compact SUB | DUB segmented Server Switcher with horizontal server pills, and 3-row Episode Playlist with 16:9 thumbnails and progress bars.'],
-    ['Classic Video Player & Encrypted DNS', 'Clean original video player controls across embedded servers, HLS streams, native playback, and offline downloads, plus built-in Encrypted DNS (1.1.1.1 / 8.8.8.8) to unblock carrier-restricted sources without a VPN.'],
-    ['Cinematic Title Detail v2 & Voice Search', 'Full-bleed banner header with \u2605 score, Franchise & Watch-Order strip, Canon / Filler / Recap badges, Skip Filler switch, Batch Offline Download, and native Android Voice Search.']
+    ['Classic Video Player & Encrypted DNS', 'Clean original video player controls across embedded servers, HLS streams, native playback, and offline downloads, plus built-in Encrypted DNS (1.1.1.1 / 8.8.8.8) to unblock carrier-restricted sources without a VPN.']
   ];
 
   function mark() {
@@ -42,12 +45,12 @@
 
     var tag = document.createElement('div');
     tag.className = 'kb-wn-tag';
-    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA5';
+    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA6';
 
     var h = document.createElement('h2');
     h.id = 'kb-wn-title';
     h.className = 'kb-wn-title';
-    h.textContent = 'What\u2019s new in 1.5.5-beta5';
+    h.textContent = 'What\u2019s new in 1.5.5-beta6';
 
     var list = document.createElement('ul');
     list.className = 'kb-wn-list';

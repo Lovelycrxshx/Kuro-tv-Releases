@@ -10,26 +10,8 @@
 
   var META_CACHE_KEY = 'kuro-meta154-v1';
   var SKIP_FILLER_KEY = 'kuro-skip-filler-154';
-  var VIEWPORT_2K_PORTRAIT = 'width=461,viewport-fit=cover';
-  var VIEWPORT_2K_LANDSCAPE = 'width=819,viewport-fit=cover';
+  var MOBILE_VIEWPORT = 'width=device-width,initial-scale=1,viewport-fit=cover';
   var DESKTOP_VIEWPORT = 'width=1180,viewport-fit=cover';
-
-  function resolveMobile2KViewport155() {
-    var land = false;
-    var portDp = 461;
-    var landDp = 819;
-    try {
-      if (window.KuroNative && typeof window.KuroNative.displayInfo155 === 'function') {
-        var info = JSON.parse(window.KuroNative.displayInfo155() || '{}');
-        if (typeof info.landscape === 'boolean') land = info.landscape;
-        if (Number(info.viewportPortraitDp) > 461) portDp = Math.round(Number(info.viewportPortraitDp));
-        if (Number(info.viewportLandscapeDp) > 819) landDp = Math.round(Number(info.viewportLandscapeDp));
-      } else if (window.matchMedia) {
-        land = window.matchMedia('(orientation: landscape)').matches;
-      }
-    } catch (_) {}
-    return 'width=' + (land ? landDp : portDp) + ',viewport-fit=cover';
-  }
 
   /* ------------------------------------------------------------------------
      Safe helpers & local storage cache
@@ -312,21 +294,14 @@
     var active = typeof explicitFlag === 'boolean' ? explicitFlag : isDesktopSiteActive();
     document.documentElement.dataset.siteView = active ? 'desktop' : 'mobile';
 
-    // 2K QHD (2560x1440 / 1440x2560) @ forced 500 DPI (3.125x density):
-    // Mobile portrait = 461 CSS px (1440 / 3.125), landscape = 819 CSS px (2560 / 3.125),
-    // Desktop Left-Rail = 1180 CSS px.
     var vp = document.querySelector('meta[name="viewport"]');
-    if (vp && window.KuroNative) {
-      var target = active ? DESKTOP_VIEWPORT : resolveMobile2KViewport155();
+    if (vp) {
+      var target = active ? DESKTOP_VIEWPORT : MOBILE_VIEWPORT;
       if (vp.getAttribute('content') !== target) vp.setAttribute('content', target);
     }
 
     ensureDesktopDecorations(active);
   }
-
-  window.addEventListener('orientationchange', function () {
-    setTimeout(function () { syncDesktopSite154(); }, 60);
-  }, { passive: true });
 
   window.kuroSyncDesktopSite154 = syncDesktopSite154;
   window.addEventListener('kuro-settings560-changed', function (ev) {
@@ -2269,7 +2244,7 @@
           '<p>Built-in carrier DNS unblock, temporary cache cleanup, and TV/low-RAM stability</p>' +
         '</div>' +
         '<div class="k154-perf-summary">' +
-          '<span class="k154-perf-chip is-accent">2K QHD · 500 DPI</span>' +
+          '<span class="k154-perf-chip is-accent">500 DPI · System Res</span>' +
           '<span class="k154-perf-chip is-accent">' + esc(dnsChip) + '</span>' +
           '<span class="k154-perf-chip">' + esc(devLabel) + '</span>' +
           '<span class="k154-perf-chip">' + esc(cacheLabel) + '</span>' +
