@@ -37,12 +37,12 @@
 
     var tag = document.createElement('div');
     tag.className = 'kb-wn-tag';
-    tag.textContent = 'KURO.TV  \u00b7  1.5.4';
+    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA';
 
     var h = document.createElement('h2');
     h.id = 'kb-wn-title';
     h.className = 'kb-wn-title';
-    h.textContent = 'What\u2019s new in 1.5.4';
+    h.textContent = 'What\u2019s new in 1.5.5-beta';
 
     var list = document.createElement('ul');
     list.className = 'kb-wn-list';

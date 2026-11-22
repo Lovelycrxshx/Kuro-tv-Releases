@@ -264,13 +264,14 @@ def patch_main_activity(root: pathlib.Path) -> None:
         "MainActivity offerAutoNext573 skipFiller154",
     )
 
-    text = patch_once(
-        text,
-        "nextPlayableEpisode154(wi,cur+1)",
-        "    if(eps!=null&&cur>=0&&cur+1<eps.length()){\n     if(customView!=null||enhancedFullscreen)resumeFullscreenUntil153=android.os.SystemClock.elapsedRealtime()+15000L;\n     chooseEpisode581(cur+1);\n    }",
-        "    int target154=nextPlayableEpisode154(wi,cur+1);\n    if(eps!=null&&cur>=0&&target154>=0&&target154<eps.length()){\n     if(customView!=null||enhancedFullscreen)resumeFullscreenUntil153=android.os.SystemClock.elapsedRealtime()+15000L;\n     chooseEpisode581(target154);\n    }",
-        "MainActivity fullscreenActions153 skipFiller154",
-    )
+    if "resumeFullscreenUntil153" in text:
+        text = patch_once(
+            text,
+            "nextPlayableEpisode154(wi,cur+1)",
+            "    if(eps!=null&&cur>=0&&cur+1<eps.length()){\n     if(customView!=null||enhancedFullscreen)resumeFullscreenUntil153=android.os.SystemClock.elapsedRealtime()+15000L;\n     chooseEpisode581(cur+1);\n    }",
+            "    int target154=nextPlayableEpisode154(wi,cur+1);\n    if(eps!=null&&cur>=0&&target154>=0&&target154<eps.length()){\n     if(customView!=null||enhancedFullscreen)resumeFullscreenUntil153=android.os.SystemClock.elapsedRealtime()+15000L;\n     chooseEpisode581(target154);\n    }",
+            "MainActivity fullscreenActions153 skipFiller154",
+        )
 
     # 5. Store skipFiller154 on watchInfo561 inside openWatch
     text = patch_once(
