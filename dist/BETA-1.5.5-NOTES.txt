@@ -1,0 +1,21 @@
+Kuro.tv 1.5.5-beta2 (versionCode 98) — Beta Build Notes
+=======================================================
+Package:      app.lovelycrxshx.kuro
+Version:      1.5.5-beta2 (versionCode = 98)
+Signed APK:   Kuro-tv-beta-1.5.5.apk (53,078,462 bytes)
+SHA-256:      1bb75ca84f34d9f7dbb3030a84859059ce920d02fdfbf898b69ce4634e773d57
+Aligned SHA:  3031049a7f7ae691d06e3c908783c7ae868995e1be1f2c7ce1b9f7bd86b08489
+Signer:       CN=Kuro Anime (SHA-256: 1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e)
+
+What's New in 1.5.5-beta2 (Watch Screen v3 — Concept 1):
+1. Quick Episode Action Strip directly below the classic 16:9 player:
+   - ‹ Prev | Episode N • Title | Next › | glowing ✦ Auto-Next toggle pill (synced with PlaybackPanel & SharedPreferences).
+2. Compact Server Switcher card:
+   - Segmented SUB | DUB tabs with live server counts + horizontal scrollable server chips (● Server 1 • Fast, 5/page + Other servers ›).
+   - Collapsible ⚙ Tools drawer (PlaybackPanel, ⚙ Advanced video enhancements, ⛶ Enhanced fullscreen) + ⓘ Diagnostics trigger.
+3. Upgraded 3-Row Episode Playlist card:
+   - 16:9 episode thumbnails (AniList streamingEpisodes + Crunchyroll/TMDB/TVDB/banner artwork), episode number badge, watched/resume progress bar, and Now Playing / amber FILLER / RECAP / ✓ Watched pills, plus "See all ›" inline height toggle & instant search.
+4. Upgraded Anime Details card + horizontal 16:9 More Anime shelf:
+   - Live ★ X.X/10 score badge and genre chips, expandable synopsis, and smooth horizontal recommendation cards.
+5. Classic Video Player Restored:
+   - Original clean player controls preserved across embedded, HLS, native, and offline playback; official GitHub Release remains untouched on v1.5.4.
