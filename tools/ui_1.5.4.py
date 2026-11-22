@@ -2742,7 +2742,7 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
         "MainActivity Watch Screen v3 compact Server Switcher + Rich Playlist + More Anime",
     )
 
-    watch_helpers_154 = """ private android.graphics.drawable.GradientDrawable watchShape154(int fill,int stroke,int radiusDp){
+    watch_helpers_154 = r""" private android.graphics.drawable.GradientDrawable watchShape154(int fill,int stroke,int radiusDp){
   android.graphics.drawable.GradientDrawable d=new android.graphics.drawable.GradientDrawable();
   d.setColor(fill);d.setCornerRadius(dp(radiusDp));
   if(stroke!=0)d.setStroke(dp(1),stroke);
