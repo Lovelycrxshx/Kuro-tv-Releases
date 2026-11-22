@@ -2502,7 +2502,7 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
         "watchRetheme155",
         'void kuroTheme12WindowApplied(int floor){if(ui!=null)ui.setBackgroundColor(floor);if(root!=null){root.setBackgroundColor(floor);syncWindowSystemBars154();}}',
         'private Runnable watchRetheme155;\n'
-        'void kuroTheme12WindowApplied(int floor){if(ui!=null)ui.setBackgroundColor(floor);if(root!=null){root.setBackgroundColor(floor);syncWindowSystemBars154();}if(playerLayer!=null)playerLayer.setBackgroundColor(KuroTheme12.col(0xff110917));if(watchHeader!=null)watchHeader.refreshTheme155();if(watchRetheme155!=null&&playerLayer!=null)watchRetheme155.run();}',
+        'void kuroTheme12WindowApplied(int floor){if(ui!=null)ui.setBackgroundColor(floor);if(root!=null){root.setBackgroundColor(floor);syncWindowSystemBars154();}if(playerLayer!=null)playerLayer.setBackgroundColor(KuroTheme12.col(0xff110917));if(watchHeader instanceof WatchHeader)((WatchHeader)watchHeader).refreshTheme155();if(watchRetheme155!=null&&playerLayer!=null)watchRetheme155.run();}',
         "MainActivity kuroTheme12WindowApplied live watchRetheme155",
     )
     ma_text = patch_once(
