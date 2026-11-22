@@ -30,10 +30,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  APK_NAME: Kuro-tv-1.5.4
+  APK_NAME: Kuro-tv-beta-1.5.5
   SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
-  EXPECT_VERSION_NAME: "1.5.4"
-  EXPECT_VERSION_CODE: "96"
+  EXPECT_VERSION_NAME: "1.5.5-beta"
+  EXPECT_VERSION_CODE: "97"
 
 jobs:
   apk:
@@ -381,13 +381,10 @@ jobs:
             || { echo "::error::MainActivity missing checkpointsExport152."; exit 1; }
           grep -Fq 'themeAmoled152' "$PKG/MainActivity.java" \
             || { echo "::error::MainActivity missing themeAmoled152."; exit 1; }
-          python3 "$GITHUB_WORKSPACE/out/tools/player_1.5.3.py" "$PROJECT"
-          test -s "$PKG/KuroPlayerUi153.java" \
-            || { echo "::error::KuroPlayerUi153.java missing."; exit 1; }
-          grep -Fq 'KuroPlayerAction153' "$PKG/MainActivity.java" \
-            || { echo "::error::MainActivity missing KuroPlayerAction153."; exit 1; }
-          grep -Fq 'kuro-oled-hud153' "$PROJECT/assets/player-skin.js" \
-            || { echo "::error::player-skin.js missing kuro-oled-hud153."; exit 1; }
+          test ! -f "$PKG/KuroPlayerUi153.java" \
+            || { echo "::error::KuroPlayerUi153.java should not be present."; exit 1; }
+          ! grep -Fq 'kuro-oled-hud153' "$PROJECT/assets/player-skin.js" \
+            || { echo "::error::player-skin.js still contains 1.5.3 HUD skin."; exit 1; }
           python3 "$GITHUB_WORKSPACE/out/tools/ui_1.5.4.py" "$PROJECT"
           grep -Fq 'voiceSearch154' "$PKG/MainActivity.java" \
             || { echo "::error::MainActivity missing voiceSearch154."; exit 1; }
@@ -657,10 +654,12 @@ jobs:
               assert any(b"dismissEntry15" in d for d in dex_blobs), "dex missing dismissEntry15"
               assert any(b"themeAmoled152" in d for d in dex_blobs), "dex missing themeAmoled152"
               assert any(b"checkpointsExport152" in d for d in dex_blobs), "dex missing checkpointsExport152"
-              assert any(b"KuroPlayerUi153" in d for d in dex_blobs), "dex missing KuroPlayerUi153"
-              assert any(b"KuroPlayerAction153" in d for d in dex_blobs), "dex missing KuroPlayerAction153"
+              assert not any(b"KuroPlayerUi153" in d for d in dex_blobs), "dex still contains 1.5.3 custom player UI"
+              assert not any(b"KuroPlayerAction153" in d for d in dex_blobs), "dex still contains KuroPlayerAction153"
               skin_js = z.read("assets/player-skin.js").decode("utf-8")
-              assert "kuro-oled-hud153" in skin_js and "jw-timesegment" in skin_js, "assets/player-skin.js missing OLED segmented player skin"
+              assert "kuro-oled-hud153" not in skin_js and "kuro-video-skin" in skin_js, "assets/player-skin.js was not restored to classic player"
+              sp_html = z.read("assets/stream-player.html").decode("utf-8")
+              assert 'src="player-skin.js"' not in sp_html, "assets/stream-player.html was not restored to classic player"
               assert any(b"Update alerts are off" in d for d in dex_blobs), "dex missing Update alerts permission banner"
               assert b"ic_stat_kuro" in z.read("resources.arsc"), "resources.arsc missing ic_stat_kuro"
               assert "assets/beta-polish-1.5.2.js" in z.namelist(), "APK missing assets/beta-polish-1.5.2.js"
@@ -738,13 +737,6 @@ jobs:
           exit 0
 
       - name: Fail the run if the build failed
-        if: always() && steps.build.outcome != 'success'
-        run: |
-          echo "::error::compile failed - see dist/build-current.log on ${GITHUB_REF_NAME}"
-          exit 1
-
-          exit 1
- - name: Fail the run if the build failed
         if: always() && steps.build.outcome != 'success'
         run: |
           echo "::error::compile failed - see dist/build-current.log on ${GITHUB_REF_NAME}"
