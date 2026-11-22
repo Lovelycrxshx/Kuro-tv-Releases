@@ -1,28 +1,21 @@
-Kuro.tv 1.5.5-beta5 (versionCode 101) — Beta Build Notes
-========================================================
-Package:      app.lovelycrxshx.kuro
-Version:      1.5.5-beta5 (versionCode = 101)
-Signed APK:   Kuro-tv-beta-1.5.5.apk (53,172,696 bytes)
-SHA-256:      0cba9b5d0d2f46b4e849bc098fef2c5e07e9ed2e7888721ca2dbee0caaaff7bd
-Aligned SHA:  f83160ce216adebc07787b0d05719c72c8b1f24876c1c54f36a19283d02d6c9b
-Source Zip:   Kuro-tv-1.5.5-beta5-Source.zip (16,381,991 bytes)
-Source SHA:   ef5266ae75e5f1d050915d84ca31f3bf020e76620df821030f42980d6b6dc567
-Signer:       CN=Kuro Anime (SHA-256: 1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e)
+Kuro.tv 1.5.5-beta6 (versionCode 102)
+======================================
+Channel: Beta (Google Drive `Kuro` folder `1_lRTGIyahN-fABGstO6t4srd6TkJ0DOb` — `main` and GitHub Release `v1.5.4` untouched)
+Signer : CN=Kuro Anime (SHA-256: 1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e)
 
-Google Drive Links (Kuro folder: 1_lRTGIyahN-fABGstO6t4srd6TkJ0DOb):
-- APK File ID:     1MhfMYRgrDh2RB1W3KueEWppKNFuWkq3e
-- APK View / Share:https://drive.google.com/file/d/1MhfMYRgrDh2RB1W3KueEWppKNFuWkq3e/view?usp=sharing
-- APK Download:    https://drive.google.com/uc?id=1MhfMYRgrDh2RB1W3KueEWppKNFuWkq3e&export=download
-- Source File ID:  1NrdUWxJ7FCj5hhXV6xixKCSOo1aSG5Nv
-- Source View:     https://drive.google.com/file/d/1NrdUWxJ7FCj5hhXV6xixKCSOo1aSG5Nv/view?usp=sharing
+Changes in 1.5.5-beta6:
+1. Full App Scrolling Restored:
+   - Removed the `html:not(...), html:not(...) body { overflow-y: auto; }` override in `beta-ui-1.5.4.css` that interacted with `smooth-ui.css`'s `body { overscroll-behavior-y: contain; }` to trap vertical scroll gestures on `body` and block viewport scroll chaining across Home and all WebView pages.
+   - Kept `route-state538.js` and `setupHomeEntryScrollGuard155()` so Home opens cleanly at `scrollY = 0` on app launch without locking touch/wheel/D-pad scrolling.
+2. System Default Resolution Restored:
+   - Reverted hardware display mode (`preferredDisplayModeId`), mobile `<meta name="viewport">` (`width=device-width,initial-scale=1,viewport-fit=cover`), WebView `UseWideViewPort`/`LoadWithOverviewMode` (enabled only in Desktop Left-Rail mode), ExoPlayer track selection, and HLS/shader sizing back to native system default resolution.
+3. Forced 500 DPI Kept Unchanged:
+   - `KuroDisplay155` continues enforcing `Configuration.densityDpi = 500` (`density = 3.125f`) across `MainActivity`, `KuroOfflineActivity561`, `KuroDialogs581`, and post-`new WebView(...)` hooks.
 
-What's New in 1.5.5-beta5:
-1. 2K QHD (2560x1440 / 1440x2560) Render Resolution:
-   - Added KuroDisplay155 native display engine negotiating the highest-Hz 2K QHD (1440p / 2560p) hardware Display.Mode via WindowManager.LayoutParams.preferredDisplayModeId.
-   - Configured WebView 2K @ 500 DPI viewport rendering (461 CSS px portrait / 819 CSS px landscape / tablet-safe wide DP / 1180 CSS px Desktop-Site Leanback) with live orientation sync.
-   - Unlocked ExoPlayer 2K track selection (setMaxVideoSize(2560, 1440).setViewportSize(2560, 1440, true)), uncapped HLS level selection (capLevelToPlayerSize: false), upgraded WebGL2 shader pipeline (video-effects537.js) to 2K 1440p default output with up to 4x DPR support, and boosted Watch Screen poster/thumbnail decode & LruCache targets.
-2. Forced 500 DPI Across All Screens & Dialogs:
-   - Enforced Configuration.densityDpi = 500 and DisplayMetrics density = 3.125f across MainActivity, KuroOfflineActivity561, KuroDialogs581.themed(), Application resources, onConfigurationChanged, onResume, and immediately after every WebView instantiation (defeating Android Chromium's first-WebView-init DPI reset) regardless of system Display Size settings.
-3. Restored Smooth Home Vertical Touch Scrolling:
-   - Removed the beta4 window 'scroll' listener / data-k155-home-top lock in setupHomeEntryScrollGuard155() that fought Android WebView's native compositor touch scroll and caused Home to stay stuck at y = 0.
-   - Preserved clean boot-at-top behavior via one-shot initial scroll reset, route-state538.js Home scrollTarget bypass, preventScroll focus options, shelf-scoped overflow-anchor: none, and touch-action: pan-x pan-y on horizontal carousels/rails.
+Artifacts:
+- Signed APK : Kuro-tv-beta-1.5.5.apk (53,172,696 bytes)
+  Drive ID   : 15lynODm--4Z9TOlNyXrTUAAyrCgnBL20
+  SHA-256    : ea64cec3aaf750ce7eca9f55a473a5558c46dec9e35e5325e4b30ab9bb17d036
+- Source Zip : Kuro-tv-1.5.5-beta6-Source.zip (16,380,734 bytes)
+  Drive ID   : 1VhFkffCy51XoLiW_Tw4jUqhbZP9vpV8R
+  SHA-256    : 3780fd5e4a387b27b7bef4f65c0eef2d14a1b941a4961fa5ff3bbb6b7124c44f
