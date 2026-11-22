@@ -1,26 +1,26 @@
-/* Kuro 1.5.5-beta3 — one-time "What's new" card, shown once after the splash on
-   first launch of 1.5.5-beta3 and never again. Self-contained, dismissible by
+/* Kuro 1.5.5-beta5 — one-time "What's new" card, shown once after the splash on
+   first launch of 1.5.5-beta5 and never again. Self-contained, dismissible by
    button, backdrop tap, or Escape / Android back. */
 (function () {
   'use strict';
 
-  var STAMP = '1.5.5-beta4';
-  var KEY = 'kuro-beta-whatsnew-seen-1.5.5-beta4';
+  var STAMP = '1.5.5-beta5';
+  var KEY = 'kuro-beta-whatsnew-seen-1.5.5-beta5';
 
   try {
-    if (localStorage.getItem(KEY) === STAMP || localStorage.getItem('kuro-beta-whatsnew-seen-1.5.5-beta3')) {
+    if (localStorage.getItem(KEY) === STAMP || localStorage.getItem('kuro-beta-whatsnew-seen-1.5.5-beta4')) {
       localStorage.setItem(KEY, STAMP);
       return;
     }
   } catch (_) { return; }
 
   var ITEMS = [
-    ['Full 20-Theme & Pure Black OLED Sync', 'Every Watch Screen v3 card, border, SUB/DUB tab, active server pill, episode progress bar, badge, WatchHeader kuro.tv wordmark, and Title Detail / Browse overlay now dynamically changes colour across all 20 theme accents and Pure Black OLED mode — even live while a video is playing.'],
-    ['Watch Screen v3 Clarity Upgrade', 'New 1-tap < Prev • Episode • Next > + Auto-Next bar right below the player, compact SUB | DUB segmented Server Switcher with horizontal server pills, and upgraded 3-row Episode Playlist with 16:9 thumbnails, progress bars, ✓ Watched, Now Playing, and FILLER badges.'],
-    ['Classic Video Player Restored', 'Clean original video player controls across embedded servers, HLS streams, native playback, and offline downloads — zero oversized purple pill rings or floating circle artefacts.'],
-    ['Signature Violet Theme & Faster Loading', 'Default app colour set to Signature Violet across all screens & dialogs, plus built-in Encrypted DNS (1.1.1.1 / 8.8.8.8) to unblock carrier-restricted sources without a VPN, faster 8-lane catalog loading, backup video codec support, and Android TV / Fire TV support.'],
-    ['Cinematic Title Detail v2', 'Full-bleed banner header with ★ score, studio & runtime pills, interactive Franchise & Watch-Order strip, Canon / Filler / Recap badges, Skip Filler switch, 16:9 episode rows, and ⬇ Batch Offline Download.'],
-    ['Smart Multi-Filter Browse & Voice Search', 'Combinable OLED filter pills on Browse (Dub Available, ★ 8.0+, Airing/Completed, Genre, Format, Year), native Android Voice Search mic pill, and verified developer Discord profile link.']
+    ['2K Render Resolution & Forced 500 DPI', 'App-wide 2K QHD (2560\u00d71440 / 1440\u00d72560) rendering and forced 500 DPI (3.125\u00d7 density) across native screens, dialogs, WebView UI, ExoPlayer 2K track selection, WebGL2 video shaders, and high-DPI artwork.'],
+    ['Smooth Native Home Scrolling Restored', 'Fixed the Home screen scroll lock so vertical touch scrolling, fling momentum, wheel scrolling, and horizontal shelf swipes work effortlessly from the first touch while opening cleanly at the top.'],
+    ['Full 20-Theme & Pure Black OLED Sync', 'Every Watch Screen v3 card, border, SUB/DUB tab, active server pill, episode progress bar, badge, WatchHeader kuro.tv wordmark, and Title Detail / Browse overlay dynamically syncs across all 20 accents and Pure Black OLED mode.'],
+    ['Watch Screen v3 Clarity Upgrade', '1-tap < Prev \u2022 Episode \u2022 Next > + Auto-Next bar right below the player, compact SUB | DUB segmented Server Switcher with horizontal server pills, and 3-row Episode Playlist with 16:9 thumbnails and progress bars.'],
+    ['Classic Video Player & Encrypted DNS', 'Clean original video player controls across embedded servers, HLS streams, native playback, and offline downloads, plus built-in Encrypted DNS (1.1.1.1 / 8.8.8.8) to unblock carrier-restricted sources without a VPN.'],
+    ['Cinematic Title Detail v2 & Voice Search', 'Full-bleed banner header with \u2605 score, Franchise & Watch-Order strip, Canon / Filler / Recap badges, Skip Filler switch, Batch Offline Download, and native Android Voice Search.']
   ];
 
   function mark() {
@@ -42,12 +42,12 @@
 
     var tag = document.createElement('div');
     tag.className = 'kb-wn-tag';
-    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA4';
+    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA5';
 
     var h = document.createElement('h2');
     h.id = 'kb-wn-title';
     h.className = 'kb-wn-title';
-    h.textContent = 'What\u2019s new in 1.5.5-beta4';
+    h.textContent = 'What\u2019s new in 1.5.5-beta5';
 
     var list = document.createElement('ul');
     list.className = 'kb-wn-list';
@@ -72,7 +72,6 @@
       scrim.classList.add('is-out');
       document.removeEventListener('keydown', onKey, true);
       setTimeout(function () { if (scrim.parentNode) scrim.parentNode.removeChild(scrim); }, 220);
-      if (window.kuroPinHomeTop155) window.kuroPinHomeTop155();
     }
     function onKey(e) {
       if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); close(); }

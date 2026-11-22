@@ -10,8 +10,26 @@
 
   var META_CACHE_KEY = 'kuro-meta154-v1';
   var SKIP_FILLER_KEY = 'kuro-skip-filler-154';
-  var DEFAULT_VIEWPORT = 'width=device-width,initial-scale=1,viewport-fit=cover';
-  var DESKTOP_VIEWPORT = 'width=1180,initial-scale=1,viewport-fit=cover';
+  var VIEWPORT_2K_PORTRAIT = 'width=461,viewport-fit=cover';
+  var VIEWPORT_2K_LANDSCAPE = 'width=819,viewport-fit=cover';
+  var DESKTOP_VIEWPORT = 'width=1180,viewport-fit=cover';
+
+  function resolveMobile2KViewport155() {
+    var land = false;
+    var portDp = 461;
+    var landDp = 819;
+    try {
+      if (window.KuroNative && typeof window.KuroNative.displayInfo155 === 'function') {
+        var info = JSON.parse(window.KuroNative.displayInfo155() || '{}');
+        if (typeof info.landscape === 'boolean') land = info.landscape;
+        if (Number(info.viewportPortraitDp) > 461) portDp = Math.round(Number(info.viewportPortraitDp));
+        if (Number(info.viewportLandscapeDp) > 819) landDp = Math.round(Number(info.viewportLandscapeDp));
+      } else if (window.matchMedia) {
+        land = window.matchMedia('(orientation: landscape)').matches;
+      }
+    } catch (_) {}
+    return 'width=' + (land ? landDp : portDp) + ',viewport-fit=cover';
+  }
 
   /* ------------------------------------------------------------------------
      Safe helpers & local storage cache
@@ -80,15 +98,10 @@
   }
 
   /* ------------------------------------------------------------------------
-     Startup & Home-Entry Scroll Guard (1.5.5-beta4)
-     Guarantees opening/entering the app NEVER automatically scrolls down on
-     the Home page across:
-       - route-state538 startup scroll restoration (startup === 'last')
-       - Chromium scroll anchoring as Hero, Continue Watching, Popular & New
-         shelves populate asynchronously
-       - WebView status/nav-bar inset resizes & intro/whatsnew overlay focus
-     Unpins immediately on the user's first vertical touch drag, wheel, or
-     downward key press, or when navigating away from Home.
+     Startup Home Top Sanitizer (1.5.5-beta5)
+     Starts Home cleanly at scrollY = 0 on initial cold boot WITHOUT attaching
+     any window 'scroll' listener or timer that could ever fight or block native
+     Android WebView touch/compositor scrolling.
      ------------------------------------------------------------------------ */
   (function setupHomeEntryScrollGuard155() {
     try {
@@ -97,158 +110,38 @@
       }
     } catch (_) {}
 
-    // Sanitize any persisted Home scroll offset before onPageFinished runs
-    try {
-      var rawCp = localStorage.getItem('kuro-page-checkpoint-v1');
-      if (rawCp && rawCp.length <= 48000) {
-        var cp = JSON.parse(rawCp);
-        if (cp && cp.view === 'home' && cp.scroll) {
-          cp.scroll = 0;
-          localStorage.setItem('kuro-page-checkpoint-v1', JSON.stringify(cp));
+    function clearSavedHomeScroll() {
+      try {
+        var rawCp = localStorage.getItem('kuro-page-checkpoint-v1');
+        if (rawCp && rawCp.length <= 48000) {
+          var cp = JSON.parse(rawCp);
+          if (cp && (cp.view === 'home' || cp.page === 'home') && cp.scroll) {
+            cp.scroll = 0;
+            localStorage.setItem('kuro-page-checkpoint-v1', JSON.stringify(cp));
+          }
         }
-      }
-    } catch (_) {}
-
-    var homeTopPinned = true;
-    var touchStartX = 0;
-    var touchStartY = 0;
-    var touchFromOverlay = false;
-
-    function isStartupOverlayTarget(t) {
-      if (!t || !t.closest) return false;
-      return Boolean(t.closest('#km-intro-15, #kb-whatsnew, .km-sheet-15, #settings-overlay560, #account-overlay, #news-overlay'));
+      } catch (_) {}
     }
 
-    function snapHomeToTopNow() {
-      if (!homeTopPinned) return;
-      var v = curView();
-      if (v && v !== 'home') {
-        unpinHomeTop();
-        return;
-      }
-      var y = window.scrollY || window.pageYOffset ||
-        (document.documentElement && document.documentElement.scrollTop) ||
-        (document.body && document.body.scrollTop) || 0;
-      if (y > 0) {
-        try { window.scrollTo(0, 0); } catch (_) {}
-        if (document.documentElement) document.documentElement.scrollTop = 0;
-        if (document.body) document.body.scrollTop = 0;
-      }
+    clearSavedHomeScroll();
+    if (document.documentElement) {
+      document.documentElement.removeAttribute('data-k155-home-top');
     }
 
-    function pinHomeTop() {
-      var v = curView();
-      if (v && v !== 'home') return;
-      homeTopPinned = true;
-      if (document.documentElement) {
-        document.documentElement.setAttribute('data-k155-home-top', '1');
-      }
-      snapHomeToTopNow();
+    if ((curView() || 'home') === 'home') {
+      try { window.scrollTo(0, 0); } catch (_) {}
     }
 
-    function unpinHomeTop() {
-      if (!homeTopPinned) return;
-      homeTopPinned = false;
-      if (document.documentElement) {
-        document.documentElement.removeAttribute('data-k155-home-top');
-      }
-    }
-
-    window.kuroPinHomeTop155 = pinHomeTop;
-    window.kuroUnpinHomeTop155 = unpinHomeTop;
-
-    pinHomeTop();
-
-    // Wrap startup restore so entering the app on Home always stays at scrollY = 0
-    if (typeof window.kuroRestoreStartup560 === 'function' && !window.kuroRestoreStartup560.__k155Wrapped) {
-      var origRestoreStartup = window.kuroRestoreStartup560;
-      var wrappedRestoreStartup = function () {
-        var res = origRestoreStartup.apply(this, arguments);
-        if ((curView() || 'home') === 'home') {
-          pinHomeTop();
-          requestAnimationFrame(snapHomeToTopNow);
-          setTimeout(snapHomeToTopNow, 320);
-          setTimeout(snapHomeToTopNow, 1250);
-        } else {
-          unpinHomeTop();
-        }
-        return res;
+    if (typeof window.kuroSavePage === 'function' && !window.kuroSavePage.__k155CleanHome) {
+      var origSavePage = window.kuroSavePage;
+      var wrappedSavePage = function () {
+        var out = origSavePage.apply(this, arguments);
+        clearSavedHomeScroll();
+        return out;
       };
-      wrappedRestoreStartup.__k155Wrapped = true;
-      window.kuroRestoreStartup560 = wrappedRestoreStartup;
+      wrappedSavePage.__k155CleanHome = true;
+      window.kuroSavePage = wrappedSavePage;
     }
-
-    // Disengage if returnToShowOrigin() restores a browse position after Back from Detail
-    if (typeof window.returnToShowOrigin === 'function' && !window.returnToShowOrigin.__k155Wrapped) {
-      var origReturnOrigin = window.returnToShowOrigin;
-      var wrappedReturnOrigin = function () {
-        unpinHomeTop();
-        return origReturnOrigin.apply(this, arguments);
-      };
-      wrappedReturnOrigin.__k155Wrapped = true;
-      window.returnToShowOrigin = wrappedReturnOrigin;
-    }
-
-    // Genuine user scroll intent detectors (passive capture -> zero scroll latency)
-    window.addEventListener('touchstart', function (e) {
-      if (!homeTopPinned) return;
-      touchFromOverlay = isStartupOverlayTarget(e.target);
-      var t = e.touches && e.touches[0];
-      if (t) {
-        touchStartX = t.clientX;
-        touchStartY = t.clientY;
-      }
-    }, { capture: true, passive: true });
-
-    window.addEventListener('touchmove', function (e) {
-      if (!homeTopPinned || touchFromOverlay) return;
-      if (document.getElementById('km-intro-15') || document.getElementById('kb-whatsnew')) return;
-      var t = e.touches && e.touches[0];
-      if (!t) { unpinHomeTop(); return; }
-      var dx = Math.abs(t.clientX - touchStartX);
-      var dy = Math.abs(t.clientY - touchStartY);
-      if (dy > 6 && dy >= dx) {
-        unpinHomeTop();
-      }
-    }, { capture: true, passive: true });
-
-    window.addEventListener('wheel', function (e) {
-      if (!homeTopPinned) return;
-      if (isStartupOverlayTarget(e.target)) return;
-      if (document.getElementById('km-intro-15') || document.getElementById('kb-whatsnew')) return;
-      if (e.deltaY !== 0) unpinHomeTop();
-    }, { capture: true, passive: true });
-
-    window.addEventListener('pointerdown', function (e) {
-      if (!homeTopPinned) return;
-      if (isStartupOverlayTarget(e.target)) return;
-      // Scrollbar thumb drag near right viewport edge
-      if (typeof e.clientX === 'number' && window.innerWidth > 0 && e.clientX >= window.innerWidth - 22) {
-        unpinHomeTop();
-      }
-    }, { capture: true, passive: true });
-
-    window.addEventListener('keydown', function (e) {
-      if (!homeTopPinned) return;
-      if (document.getElementById('km-intro-15') || document.getElementById('kb-whatsnew')) return;
-      var k = e.key;
-      if (k === 'ArrowDown' || k === 'PageDown' || k === 'End' || k === ' ') {
-        unpinHomeTop();
-      }
-    }, { capture: true, passive: true });
-
-    // Re-arm top pin when explicitly clicking the Home dock button or header brand
-    document.addEventListener('click', function (e) {
-      var t = e.target && e.target.closest && e.target.closest('#header-home, nav.kuro-dock [data-nav="home"]');
-      if (t) {
-        setTimeout(pinHomeTop, 0);
-      }
-    }, true);
-
-    window.addEventListener('scroll', function () {
-      if (!homeTopPinned) return;
-      snapHomeToTopNow();
-    }, { passive: true });
   })();
 
   /* ------------------------------------------------------------------------
@@ -419,16 +312,21 @@
     var active = typeof explicitFlag === 'boolean' ? explicitFlag : isDesktopSiteActive();
     document.documentElement.dataset.siteView = active ? 'desktop' : 'mobile';
 
-    // On Android WebView, switching to Desktop site widens the layout viewport to 1180px
-    // so phones, tablets, and Android TV / Fire TV all render the widescreen Left-Rail UI cleanly.
+    // 2K QHD (2560x1440 / 1440x2560) @ forced 500 DPI (3.125x density):
+    // Mobile portrait = 461 CSS px (1440 / 3.125), landscape = 819 CSS px (2560 / 3.125),
+    // Desktop Left-Rail = 1180 CSS px.
     var vp = document.querySelector('meta[name="viewport"]');
     if (vp && window.KuroNative) {
-      var target = active ? DESKTOP_VIEWPORT : DEFAULT_VIEWPORT;
+      var target = active ? DESKTOP_VIEWPORT : resolveMobile2KViewport155();
       if (vp.getAttribute('content') !== target) vp.setAttribute('content', target);
     }
 
     ensureDesktopDecorations(active);
   }
+
+  window.addEventListener('orientationchange', function () {
+    setTimeout(function () { syncDesktopSite154(); }, 60);
+  }, { passive: true });
 
   window.kuroSyncDesktopSite154 = syncDesktopSite154;
   window.addEventListener('kuro-settings560-changed', function (ev) {
@@ -2371,6 +2269,7 @@
           '<p>Built-in carrier DNS unblock, temporary cache cleanup, and TV/low-RAM stability</p>' +
         '</div>' +
         '<div class="k154-perf-summary">' +
+          '<span class="k154-perf-chip is-accent">2K QHD · 500 DPI</span>' +
           '<span class="k154-perf-chip is-accent">' + esc(dnsChip) + '</span>' +
           '<span class="k154-perf-chip">' + esc(devLabel) + '</span>' +
           '<span class="k154-perf-chip">' + esc(cacheLabel) + '</span>' +

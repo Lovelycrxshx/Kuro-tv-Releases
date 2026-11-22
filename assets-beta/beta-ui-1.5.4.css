@@ -66,21 +66,34 @@ html[data-kuro-theme="light"] {
 }
 
 /* --------------------------------------------------------------------------
-   Startup & Home Scroll Stability (prevents smooth downward drift / scroll
-   anchoring jumps as Hero, Continue Watching, Popular & New shelves mount)
+   Startup & Home Scroll Stability + Native Touch Scroll Pass-Through
+   - Smooth native vertical scrolling on Home (zero scroll lock)
+   - Horizontal shelves/hero pass vertical finger drags cleanly to page scroll
+   - Child shelf overflow-anchor: none prevents async mount jumps
    -------------------------------------------------------------------------- */
 html {
   scroll-behavior: auto !important;
 }
 
-html[data-k155-home-top="1"],
-html[data-k155-home-top="1"] body,
-html[data-k155-home-top="1"] #main,
+html:not(.news-overlay-active):not(.watch-news-active):not(.account-modal-open),
+html:not(.news-overlay-active):not(.watch-news-active):not(.account-modal-open) body {
+  overflow-y: auto;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
 #main.home-surface576 > #spotlight,
 #main.home-surface576 > #km-continue-15,
 #main.home-surface576 > .home-rail,
 #main.home-surface576 .shelf {
-  overflow-anchor: none !important;
+  overflow-anchor: none;
+}
+
+.hero-track581,
+.shelf,
+.km-continue-row-15,
+.chip-row581 {
+  touch-action: pan-x pan-y;
 }
 
 /* --------------------------------------------------------------------------

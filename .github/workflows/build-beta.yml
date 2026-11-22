@@ -31,9 +31,9 @@ concurrency:
 
 env:
   APK_NAME: Kuro-tv-beta-1.5.5
-  SOURCE_ID: 1zPnkw9umK86Oq2p8iq3rWlnL9pycyZT8
-  EXPECT_VERSION_NAME: "1.5.5-beta4"
-  EXPECT_VERSION_CODE: "100"
+  SOURCE_ID: 1NrdUWxJ7FCj5hhXV6xixKCSOo1aSG5Nv
+  EXPECT_VERSION_NAME: "1.5.5-beta5"
+  EXPECT_VERSION_CODE: "101"
 
 jobs:
   apk:
@@ -713,9 +713,24 @@ jobs:
               assert any(b"tintLogoBitmap" in d for d in dex_blobs), "dex missing tintLogoBitmap"
               assert any(b"refreshTheme155" in d for d in dex_blobs), "dex missing refreshTheme155"
               wn_js = z.read("assets/beta-whatsnew-1.5.js").decode("utf-8")
-              assert "var STAMP = '1.5.5-beta4';" in wn_js, "beta-whatsnew-1.5.js STAMP is not 1.5.5-beta4"
+              assert "var STAMP = '1.5.5-beta5';" in wn_js, "beta-whatsnew-1.5.js STAMP is not 1.5.5-beta5"
               assert "preventScroll: true" in wn_js, "beta-whatsnew-1.5.js missing preventScroll"
               assert "setupHomeEntryScrollGuard155" in ui154_js, "beta-ui-1.5.4.js missing setupHomeEntryScrollGuard155"
+              assert "resolveMobile2KViewport155" in ui154_js, "beta-ui-1.5.4.js missing resolveMobile2KViewport155"
+              assert "addEventListener('scroll'" not in ui154_js, "beta-ui-1.5.4.js still contains scroll lock listener"
+              ui154_css = z.read("assets/beta-ui-1.5.4.css").decode("utf-8")
+              assert "data-k155-home-top" not in ui154_css, "beta-ui-1.5.4.css still contains data-k155-home-top lock"
+              ix_html = z.read("assets/index.html").decode("utf-8")
+              assert 'content="width=461,viewport-fit=cover"' in ix_html, "assets/index.html missing 2K@500DPI viewport"
+              sp_js = z.read("assets/stream-player.js").decode("utf-8")
+              assert "capLevelToPlayerSize:false" in sp_js, "assets/stream-player.js missing uncapped 2K HLS"
+              ve_js = z.read("assets/video-effects537.js").decode("utf-8")
+              assert "const maxH=settings.detail===32?2160:1440" in ve_js, "assets/video-effects537.js missing 2K 1440p target"
+              assert "Math.min(devicePixelRatio||1,4)" in ve_js, "assets/video-effects537.js missing 500DPI DPR cap"
+              assert any(b"KuroDisplay155" in d for d in dex_blobs), "dex missing KuroDisplay155"
+              assert any(b"displayInfo155" in d for d in dex_blobs), "dex missing displayInfo155"
+              assert any(b"applyExoPlayer2K" in d for d in dex_blobs), "dex missing applyExoPlayer2K"
+              assert any(b"Render 2K QHD (2560x1440)" in d for d in dex_blobs), "dex missing 2K QHD diagnostics"
               rs_js = z.read("assets/route-state538.js").decode("utf-8")
               assert "if(page==='home'){scrollTarget=null;window.scrollTo(0,0);return}" in rs_js, "route-state538.js missing Home no-autoscroll guard"
               assert "scroll-behavior: smooth" not in z.read("assets/smooth-ui.css").decode("utf-8"), "smooth-ui.css still has smooth scroll"
@@ -724,7 +739,7 @@ jobs:
               assert "INTRO_HOLD = 3600;" in motion_js, "beta-motion-1.5.js missing 3600ms INTRO_HOLD"
               motion_css = z.read("assets/beta-motion-1.5.css").decode("utf-8")
               assert "km-iris .54s cubic-bezier(.62,.02,.9,.4) 3s forwards" in motion_css, "beta-motion-1.5.css missing 3s iris timing"
-          print("APK 1.5.5-beta4 verified: Home Entry No-Auto-Scroll + Full 20-Theme & OLED Watch Screen v3")
+          print("APK 1.5.5-beta5 verified: 2K QHD (2560x1440) + Forced 500 DPI + Home Scroll Restored + Watch Screen v3")
           PY
           sha256sum "$RUNNER_TEMP/$APK_NAME-aligned.apk"
 
