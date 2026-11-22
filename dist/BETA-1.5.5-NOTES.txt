@@ -7,6 +7,11 @@ SHA-256:      1bb75ca84f34d9f7dbb3030a84859059ce920d02fdfbf898b69ce4634e773d57
 Aligned SHA:  3031049a7f7ae691d06e3c908783c7ae868995e1be1f2c7ce1b9f7bd86b08489
 Signer:       CN=Kuro Anime (SHA-256: 1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e)
 
+Google Drive Links (Kuro folder: 1_lRTGIyahN-fABGstO6t4srd6TkJ0DOb):
+- File ID:         1pCItRB1Cg2WZfhlqVvPcXoHAVvCtPaDD
+- View / Share:    https://drive.google.com/file/d/1pCItRB1Cg2WZfhlqVvPcXoHAVvCtPaDD/view?usp=sharing
+- Direct Download: https://drive.google.com/uc?id=1pCItRB1Cg2WZfhlqVvPcXoHAVvCtPaDD&export=download
+
 What's New in 1.5.5-beta2 (Watch Screen v3 — Concept 1):
 1. Quick Episode Action Strip directly below the classic 16:9 player:
    - ‹ Prev | Episode N • Title | Next › | glowing ✦ Auto-Next toggle pill (synced with PlaybackPanel & SharedPreferences).
