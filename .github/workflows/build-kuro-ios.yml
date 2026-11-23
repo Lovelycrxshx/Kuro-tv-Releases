@@ -33,7 +33,8 @@ jobs:
           FILE_ID: ${{ inputs.drive_file_id || '1lLY-3MjZQmEKxY879vX9zuZf21OYzchh' }}
         run: |
           mkdir -p /tmp/ios_work
-          curl -fsSL "https://drive.usercontent.google.com/download?id=${FILE_ID}&export=download&confirm=t" \
+          curl -fsSL --retry 4 --retry-delay 2 --retry-all-errors \
+            "https://drive.usercontent.google.com/download?id=${FILE_ID}&export=download&confirm=t" \
             -o /tmp/ios_work/source.zip
           unzip -q /tmp/ios_work/source.zip -d /tmp/ios_work
           ls -la /tmp/ios_work/Kuro-1.5.5-iOS-Source
