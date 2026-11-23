@@ -61,6 +61,7 @@ jobs:
             ARCHS=arm64 \
             ONLY_ACTIVE_ARCH=NO \
             PRODUCT_BUNDLE_IDENTIFIER=app.kurotv.ios \
+            CODE_SIGN_ENTITLEMENTS="" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -94,27 +95,27 @@ jobs:
 
           cd "$GITHUB_WORKSPACE/dist"
           shasum -a 256 Kuro-1.5.5-iOS.ipa > Kuro-1.5.5-iOS.ipa.sha256
-          tail -n 120 /tmp/ios_work/xcodebuild.log > kuro-ios-build.log
-          cat /tmp/ios_work/verify.log >> kuro-ios-build.log
           ls -lh Kuro-1.5.5-iOS.ipa Kuro-1.5.5-iOS.ipa.sha256
 
-      - name: Upload IPA Artifact
-        uses: actions/upload-artifact@v4
+      - name: Commit Built IPA & Build Log to Branch
         if: always()
-        with:
-          name: Kuro-1.5.5-iOS-IPA
-          path: |
-            dist/Kuro-1.5.5-iOS.ipa
-            dist/Kuro-1.5.5-iOS.ipa.sha256
-            dist/kuro-ios-build.log
-            /tmp/ios_work/xcodebuild.log
-
-      - name: Commit Built IPA to Branch
         run: |
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          if [ -f /tmp/ios_work/xcodebuild.log ]; then
+            grep -E "error:|warning:|SUCCEEDED|FAILED" /tmp/ios_work/xcodebuild.log | tail -n 120 > "$GITHUB_WORKSPACE/dist/kuro-ios-build.log" || true
+            echo "--- TAIL ---" >> "$GITHUB_WORKSPACE/dist/kuro-ios-build.log"
+            tail -n 80 /tmp/ios_work/xcodebuild.log >> "$GITHUB_WORKSPACE/dist/kuro-ios-build.log"
+          fi
+          if [ -f /tmp/ios_work/verify.log ]; then
+            cat /tmp/ios_work/verify.log >> "$GITHUB_WORKSPACE/dist/kuro-ios-build.log"
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase origin "${GITHUB_REF_NAME}"
-          git add dist/Kuro-1.5.5-iOS.ipa dist/Kuro-1.5.5-iOS.ipa.sha256 dist/kuro-ios-build.log
+          git add -f dist/kuro-ios-build.log
+          if [ -f dist/Kuro-1.5.5-iOS.ipa ]; then
+            git add -f dist/Kuro-1.5.5-iOS.ipa dist/Kuro-1.5.5-iOS.ipa.sha256
+          fi
           if ! git diff --cached --quiet; then
             git commit -m "kuro-ios: runner log + ad-hoc signed IPA (app.kurotv.ios)"
             git push origin "HEAD:${GITHUB_REF_NAME}"
