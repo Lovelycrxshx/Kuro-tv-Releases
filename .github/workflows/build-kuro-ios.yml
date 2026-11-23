@@ -30,7 +30,7 @@ jobs:
 
       - name: Download Kuro iOS Source Archive
         env:
-          FILE_ID: ${{ inputs.drive_file_id || '1nLZVZUQTOA8NPkXieZNe-yGIN72YfSoS' }}
+          FILE_ID: ${{ inputs.drive_file_id || '1k2CvqQSYTfEJ9G2iG-v3QQOyIXIWEaF2' }}
         run: |
           mkdir -p /tmp/ios_work
           curl -fsSL "https://drive.usercontent.google.com/download?id=${FILE_ID}&export=download&confirm=t" \
