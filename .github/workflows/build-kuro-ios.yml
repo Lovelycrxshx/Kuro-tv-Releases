@@ -1,0 +1,121 @@
+name: Build Kuro iOS IPA
+
+on:
+  push:
+    branches: ['arena/**']
+  workflow_dispatch:
+    inputs:
+      drive_file_id:
+        description: "Google Drive File ID of Kuro-1.5.5-iOS-Source.zip"
+        required: false
+        default: "1nLZVZUQTOA8NPkXieZNe-yGIN72YfSoS"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kuro-ios-ipa
+  cancel-in-progress: false
+
+jobs:
+  build-ios:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[kuro-ios]')
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Download Kuro iOS Source Archive
+        env:
+          FILE_ID: ${{ inputs.drive_file_id || '1nLZVZUQTOA8NPkXieZNe-yGIN72YfSoS' }}
+        run: |
+          mkdir -p /tmp/ios_work
+          curl -fsSL "https://drive.usercontent.google.com/download?id=${FILE_ID}&export=download&confirm=t" \
+            -o /tmp/ios_work/source.zip
+          unzip -q /tmp/ios_work/source.zip -d /tmp/ios_work
+          ls -la /tmp/ios_work/Kuro-1.5.5-iOS-Source
+
+      - name: Ensure XcodeGen is installed
+        run: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+          xcodebuild -version
+
+      - name: Generate Xcode Project & Compile Release arm64 iOS App
+        run: |
+          set -eo pipefail
+          cd /tmp/ios_work/Kuro-1.5.5-iOS-Source
+          xcodegen generate
+
+          xcodebuild \
+            -project KuroIOS.xcodeproj \
+            -scheme Kuro \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath /tmp/ios_work/derived \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
+            PRODUCT_BUNDLE_IDENTIFIER=app.kurotv.ios \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tee /tmp/ios_work/xcodebuild.log
+
+      - name: Ad-Hoc Sign & Package Kuro-1.5.5-iOS.ipa
+        run: |
+          set -euo pipefail
+          APP_PATH="/tmp/ios_work/derived/Build/Products/Release-iphoneos/Kuro.app"
+          test -d "$APP_PATH"
+
+          rm -rf /tmp/ios_work/ipa_stage
+          mkdir -p /tmp/ios_work/ipa_stage/Payload
+          cp -R "$APP_PATH" /tmp/ios_work/ipa_stage/Payload/Kuro.app
+
+          codesign --force --sign - \
+            --entitlements /tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Kuro.entitlements \
+            --timestamp=none \
+            /tmp/ios_work/ipa_stage/Payload/Kuro.app
+
+          echo "=== Verified Info.plist & Mach-O Binary ===" | tee /tmp/ios_work/verify.log
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" /tmp/ios_work/ipa_stage/Payload/Kuro.app/Info.plist | tee -a /tmp/ios_work/verify.log
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" /tmp/ios_work/ipa_stage/Payload/Kuro.app/Info.plist | tee -a /tmp/ios_work/verify.log
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" /tmp/ios_work/ipa_stage/Payload/Kuro.app/Info.plist | tee -a /tmp/ios_work/verify.log
+          file /tmp/ios_work/ipa_stage/Payload/Kuro.app/Kuro | tee -a /tmp/ios_work/verify.log
+          codesign -dvv /tmp/ios_work/ipa_stage/Payload/Kuro.app 2>&1 | tee -a /tmp/ios_work/verify.log
+
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          cd /tmp/ios_work/ipa_stage
+          zip -qry "$GITHUB_WORKSPACE/dist/Kuro-1.5.5-iOS.ipa" Payload
+
+          cd "$GITHUB_WORKSPACE/dist"
+          shasum -a 256 Kuro-1.5.5-iOS.ipa > Kuro-1.5.5-iOS.ipa.sha256
+          tail -n 120 /tmp/ios_work/xcodebuild.log > kuro-ios-build.log
+          cat /tmp/ios_work/verify.log >> kuro-ios-build.log
+          ls -lh Kuro-1.5.5-iOS.ipa Kuro-1.5.5-iOS.ipa.sha256
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Kuro-1.5.5-iOS-IPA
+          path: |
+            dist/Kuro-1.5.5-iOS.ipa
+            dist/Kuro-1.5.5-iOS.ipa.sha256
+            dist/kuro-ios-build.log
+            /tmp/ios_work/xcodebuild.log
+
+      - name: Commit Built IPA to Branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git add dist/Kuro-1.5.5-iOS.ipa dist/Kuro-1.5.5-iOS.ipa.sha256 dist/kuro-ios-build.log
+          if ! git diff --cached --quiet; then
+            git commit -m "kuro-ios: runner log + ad-hoc signed IPA (app.kurotv.ios)"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
