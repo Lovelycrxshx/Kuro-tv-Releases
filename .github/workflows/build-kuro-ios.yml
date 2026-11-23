@@ -139,15 +139,16 @@ jobs:
             echo "Selected Simulator UDID: $UDID" | tee -a /tmp/ios_work/verify.log
             if [ -n "$UDID" ]; then
               xcrun simctl boot "$UDID" 2>/dev/null || true
-              xcrun simctl bootstatus "$UDID" -b
+              open -g -a Simulator --args -CurrentDeviceUDID "$UDID" || true
+              python3 -c "import subprocess, sys; subprocess.run(['xcrun','simctl','bootstatus',sys.argv[1],'-b'], timeout=90)" "$UDID" 2>>/tmp/ios_work/verify.log || sleep 15
               xcrun simctl ui "$UDID" appearance dark || true
               xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 || true
-              xcrun simctl install "$UDID" "$SIM_APP"
+              xcrun simctl install "$UDID" "$SIM_APP" 2>>/tmp/ios_work/verify.log
               xcrun simctl launch "$UDID" app.kurotv.ios --kuro-sim-screenshot-tour | tee -a /tmp/ios_work/verify.log
-              sleep 12
-              xcrun simctl io "$UDID" screenshot /tmp/ios_work/kuro-ios-home.png
+              sleep 14
+              xcrun simctl io "$UDID" screenshot /tmp/ios_work/kuro-ios-home.png 2>>/tmp/ios_work/verify.log
               sleep 10
-              xcrun simctl io "$UDID" screenshot /tmp/ios_work/kuro-ios-browse.png
+              xcrun simctl io "$UDID" screenshot /tmp/ios_work/kuro-ios-browse.png 2>>/tmp/ios_work/verify.log
               xcrun simctl shutdown "$UDID" 2>/dev/null || true
               ls -lh /tmp/ios_work/kuro-ios-*.png 2>&1 | tee -a /tmp/ios_work/verify.log
             fi
