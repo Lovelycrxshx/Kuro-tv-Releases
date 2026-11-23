@@ -9,6 +9,10 @@ on:
         description: "Google Drive File ID of Kuro-1.5.5-iOS-Source.zip"
         required: false
         default: "1CRK0gon2yzj4lUfOhG-h8O81OXFdPW9N"
+      mode:
+        description: "Build mode: full or sim-zip"
+        required: false
+        default: "full"
 
 permissions:
   contents: write
@@ -18,8 +22,57 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build-sim-zip:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'sim-zip'
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - name: Download Kuro iOS Source Archive
+        env:
+          FILE_ID: ${{ inputs.drive_file_id || '1CRK0gon2yzj4lUfOhG-h8O81OXFdPW9N' }}
+        run: |
+          mkdir -p /tmp/ios_sim_zip
+          curl -fsSL --retry 4 --retry-delay 2 --retry-all-errors \
+            "https://drive.usercontent.google.com/download?id=${FILE_ID}&export=download&confirm=t" \
+            -o /tmp/ios_sim_zip/source.zip
+          unzip -q /tmp/ios_sim_zip/source.zip -d /tmp/ios_sim_zip
+
+      - name: Compile Universal (x86_64 + arm64) iOS Simulator Kuro.app.zip for Mobile Browser Cloud Simulators
+        run: |
+          set -euo pipefail
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          cd /tmp/ios_sim_zip/Kuro-1.5.5-iOS-Source
+          xcodegen generate
+          xcodebuild \
+            -project KuroIOS.xcodeproj \
+            -scheme Kuro \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -derivedDataPath /tmp/ios_sim_zip/derived \
+            ARCHS="x86_64 arm64" \
+            ONLY_ACTIVE_ARCH=NO \
+            PRODUCT_BUNDLE_IDENTIFIER=app.kurotv.ios \
+            CODE_SIGN_ENTITLEMENTS="" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+          SIM_APP="/tmp/ios_sim_zip/derived/Build/Products/Release-iphonesimulator/Kuro.app"
+          file "$SIM_APP/Kuro"
+          ditto -c -k --sequesterRsrc --keepParent "$SIM_APP" /tmp/ios_sim_zip/Kuro-1.5.5-iOS-Simulator.zip
+          ls -lh /tmp/ios_sim_zip/Kuro-1.5.5-iOS-Simulator.zip
+
+      - name: Upload Simulator App Zip Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kuro-ios-simulator-zip
+          path: /tmp/ios_sim_zip/Kuro-1.5.5-iOS-Simulator.zip
+          retention-days: 7
+
   build-ios:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[kuro-ios]')
+    if: (github.event_name == 'workflow_dispatch' && inputs.mode != 'sim-zip') || contains(github.event.head_commit.message, '[kuro-ios]')
     runs-on: macos-15
     timeout-minutes: 30
     steps:
