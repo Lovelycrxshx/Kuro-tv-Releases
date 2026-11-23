@@ -8,7 +8,7 @@ on:
       drive_file_id:
         description: "Google Drive File ID of Kuro-1.5.5-iOS-Source.zip"
         required: false
-        default: "1Iy1HszzD6AlUk9Y7QHwKqPdYHNIkUVDs"
+        default: "1CRK0gon2yzj4lUfOhG-h8O81OXFdPW9N"
 
 permissions:
   contents: write
@@ -30,7 +30,7 @@ jobs:
 
       - name: Download Kuro iOS Source Archive
         env:
-          FILE_ID: ${{ inputs.drive_file_id || '1Iy1HszzD6AlUk9Y7QHwKqPdYHNIkUVDs' }}
+          FILE_ID: ${{ inputs.drive_file_id || '1CRK0gon2yzj4lUfOhG-h8O81OXFdPW9N' }}
         run: |
           mkdir -p /tmp/ios_work
           curl -fsSL --retry 4 --retry-delay 2 --retry-all-errors \
