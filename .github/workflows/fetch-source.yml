@@ -10,7 +10,7 @@ name: fetch current source for editing
 
 on:
   push:
-    branches: [arena/98533644-kuro-tv-releases]
+    branches: ['arena/**']
   workflow_dispatch:
 
 permissions:
@@ -26,9 +26,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
-      OUT: staging/Kuro-tv-5.81-Source.zip
-      MIN_BYTES: 15000000
+      SOURCE_ID: 1VhFkffCy51XoLiW_Tw4jUqhbZP9vpV8R
+      OUT: staging/Kuro-tv-1.5.5-beta6-Source.zip
+      MIN_BYTES: 10000000
     steps:
       - uses: actions/checkout@v5
 
@@ -45,8 +45,8 @@ jobs:
             echo "::error::download is only $SIZE bytes - that is not the source zip"
             head -c 300 "$OUT"; exit 1
           fi
-          unzip -l "$OUT" | head -5
-          unzip -l "$OUT" | grep -q 'Kuro-tv-5.81-Source/build.gradle' \
+          unzip -l "$OUT" | head -10
+          unzip -l "$OUT" | grep -q 'settings.gradle' \
             || { echo "::error::zip does not contain the project tree"; exit 1; }
 
       - name: Commit it for the agent
