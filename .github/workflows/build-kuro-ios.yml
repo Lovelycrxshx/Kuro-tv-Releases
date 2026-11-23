@@ -27,6 +27,11 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 15
     steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
       - name: Download Kuro iOS Source Archive
         env:
           FILE_ID: ${{ inputs.drive_file_id || '1CRK0gon2yzj4lUfOhG-h8O81OXFdPW9N' }}
@@ -61,15 +66,17 @@ jobs:
             build
           SIM_APP="/tmp/ios_sim_zip/derived/Build/Products/Release-iphonesimulator/Kuro.app"
           file "$SIM_APP/Kuro"
-          ditto -c -k --sequesterRsrc --keepParent "$SIM_APP" /tmp/ios_sim_zip/Kuro-1.5.5-iOS-Simulator.zip
-          ls -lh /tmp/ios_sim_zip/Kuro-1.5.5-iOS-Simulator.zip
+          ditto -c -k --sequesterRsrc --keepParent "$SIM_APP" "$GITHUB_WORKSPACE/dist/Kuro-1.5.5-iOS-Simulator.zip"
+          ls -lh "$GITHUB_WORKSPACE/dist/Kuro-1.5.5-iOS-Simulator.zip"
 
-      - name: Upload Simulator App Zip Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: kuro-ios-simulator-zip
-          path: /tmp/ios_sim_zip/Kuro-1.5.5-iOS-Simulator.zip
-          retention-days: 7
+      - name: Commit Universal Simulator Zip to Branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git add -f dist/Kuro-1.5.5-iOS-Simulator.zip
+          git commit -m "ci: package universal iphonesimulator Kuro.app.zip for mobile browser cloud testing"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
 
   build-ios:
     if: (github.event_name == 'workflow_dispatch' && inputs.mode != 'sim-zip') || contains(github.event.head_commit.message, '[kuro-ios]')
