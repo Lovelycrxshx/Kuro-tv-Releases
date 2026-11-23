@@ -135,8 +135,7 @@ jobs:
               chosen = candidates[0][2]
           print(chosen)
           PYEOF
-            sed -i '' 's/^          //' /tmp/ios_work/pick_sim.py 2>/dev/null || true
-            UDID=$(python3 /tmp/ios_work/pick_sim.py)
+            UDID=$(python3 /tmp/ios_work/pick_sim.py 2>>/tmp/ios_work/verify.log)
             echo "Selected Simulator UDID: $UDID" | tee -a /tmp/ios_work/verify.log
             if [ -n "$UDID" ]; then
               xcrun simctl boot "$UDID" 2>/dev/null || true
