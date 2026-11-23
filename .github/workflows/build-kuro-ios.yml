@@ -8,7 +8,7 @@ on:
       drive_file_id:
         description: "Google Drive File ID of Kuro-1.5.5-iOS-Source.zip"
         required: false
-        default: "1lLY-3MjZQmEKxY879vX9zuZf21OYzchh"
+        default: "1Iy1HszzD6AlUk9Y7QHwKqPdYHNIkUVDs"
 
 permissions:
   contents: write
