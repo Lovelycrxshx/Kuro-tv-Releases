@@ -1,11 +1,11 @@
-/* Kuro 1.5.5-beta7 — one-time "What's new" card, shown once after the splash on
-   first launch of 1.5.5-beta7 and never again. Self-contained, dismissible by
+/* Kuro 1.5.5-beta8 — one-time "What's new" card, shown once after the splash on
+   first launch of 1.5.5-beta8 and never again. Self-contained, dismissible by
    button, backdrop tap, or Escape / Android back. */
 (function () {
   'use strict';
 
-  var STAMP = '1.5.5-beta7';
-  var KEY = 'kuro-beta-whatsnew-seen-1.5.5-beta7';
+  var STAMP = '1.5.5-beta8';
+  var KEY = 'kuro-beta-whatsnew-seen-1.5.5-beta8';
 
   try {
     if (localStorage.getItem(KEY) === STAMP) {
@@ -14,11 +14,10 @@
   } catch (_) { return; }
 
   var ITEMS = [
-    ['Auto-Play Next Restored & Crash Fixed', 'Fixed the dialog window-token crash and restored end-to-end Auto-Play Next across embedded web servers, direct HLS streams, and the native player, with SUB/DUB preference carried forward automatically.'],
-    ['Offline Downloads & Batch Queue Stability', 'Fixed background DownloadManager thread-affinity crashes and repaired batch offline download IDs and resume checkpoints so single and batch episodes download and play offline reliably.'],
-    ['Dialog & Thread-Safety Hardening', 'Added Activity lifecycle and BadTokenException protection across every dialog, bottom sheet, and updater prompt, plus lock-free multi-threaded theme palette lookups.'],
-    ['Accurate Episode Progress & Android Back', 'Fixed episode progress badges, Discord Rich Presence timestamps, Episode 0 / .5 playback, and Android Back dismissal across batch sheets, source pickers, and overlays.'],
-    ['System Resolution + 500 DPI & 20-Theme OLED', 'Keeps native system resolution with crisp 500 DPI scaling, full 20-accent + Pure Black OLED sync, and built-in Encrypted DNS (1.1.1.1 / 8.8.8.8).']
+    ['App-Themed Up Next Card', 'Replaced the stock Android alert popup with a sleek Kuro-themed Up Next card featuring episode artwork, title & episode count, smooth live accent countdown bar, tap-to-hold pause, and themed Play Now / Cancel controls across all 20 accents and Pure Black OLED.'],
+    ['Controllable App DPI & UI Size', 'Full control over App DPI (System Default or 280\u2013640 DPI) and App UI Size (75%\u2013135%), plus Up Next card size and countdown duration (5s\u201315s) right in Settings and Watch Tools.'],
+    ['Instant Preview & Fast Density Apply', 'Preview the themed Up Next card directly from Settings or Watch Tools, and apply new App DPI & UI Size across native and WebView surfaces without replaying the launch intro.'],
+    ['Auto-Play Next & Offline Stability', 'Reliable end-to-end Auto-Play Next across embedded web servers, HLS, and native playback with SUB/DUB carry-over, safe dialog tokens, and main-looper DownloadManager protection.']
   ];
 
   function mark() {
@@ -26,7 +25,7 @@
   }
 
   function show() {
-    if (document.getElementById('kb-whatsnew')) return;
+    if (document.getElementById('kb-whatsnew') || document.getElementById('settings-overlay560')) return;
 
     var scrim = document.createElement('div');
     scrim.id = 'kb-whatsnew';
@@ -40,12 +39,12 @@
 
     var tag = document.createElement('div');
     tag.className = 'kb-wn-tag';
-    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA7';
+    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA8';
 
     var h = document.createElement('h2');
     h.id = 'kb-wn-title';
     h.className = 'kb-wn-title';
-    h.textContent = 'What\u2019s new in 1.5.5-beta7';
+    h.textContent = 'What\u2019s new in 1.5.5-beta8';
 
     var list = document.createElement('ul');
     list.className = 'kb-wn-list';

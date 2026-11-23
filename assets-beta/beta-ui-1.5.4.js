@@ -2241,13 +2241,16 @@
         '<b aria-hidden="true">\u203a</b>' +
       '</button>';
 
+      var dispInfoPerf = readDisplay155();
+      var dispPerfChip = (dispInfoPerf.dpi <= 0 ? ('System ' + dispInfoPerf.baseDpi) : String(dispInfoPerf.baseDpi)) + ' DPI \u00b7 ' + dispInfoPerf.uiScale + '% Size';
+
       sec.innerHTML =
         '<div class="settings-group-head560">' +
           '<h3>Network &amp; compatibility</h3>' +
           '<p>Built-in carrier DNS unblock, temporary cache cleanup, and TV/low-RAM stability</p>' +
         '</div>' +
         '<div class="k154-perf-summary">' +
-          '<span class="k154-perf-chip is-accent">500 DPI · System Res</span>' +
+          '<span class="k154-perf-chip is-accent" data-k155-perf-dpi-chip="1">' + esc(dispPerfChip) + '</span>' +
           '<span class="k154-perf-chip is-accent">' + esc(dnsChip) + '</span>' +
           '<span class="k154-perf-chip">' + esc(devLabel) + '</span>' +
           '<span class="k154-perf-chip">' + esc(cacheLabel) + '</span>' +
@@ -2289,6 +2292,434 @@
     }
 
     renderPerfGroup();
+  }
+
+  /* ------------------------------------------------------------------------
+     Display, App DPI, UI Size & Auto-Play Next Settings Card (1.5.5-beta8)
+     ------------------------------------------------------------------------ */
+  function readDisplay155() {
+    var def = {
+      dpi: 500,
+      dpiMode: 'custom',
+      systemDpi: 420,
+      baseDpi: 500,
+      uiScale: 100,
+      effectiveDpi: 500,
+      widthDp: Math.round(window.innerWidth || 360),
+      heightDp: Math.round(window.innerHeight || 780),
+      autoNextEnabled: true,
+      autoNextSec: 8,
+      upNextScale: 100,
+      physicalWidth: 0,
+      physicalHeight: 0
+    };
+    try {
+      if (window.KuroNative && typeof window.KuroNative.displayInfo155 === 'function') {
+        var parsed = JSON.parse(window.KuroNative.displayInfo155() || '{}');
+        if (parsed && typeof parsed === 'object') {
+          Object.keys(def).forEach(function (k) {
+            if (parsed[k] !== undefined && parsed[k] !== null) def[k] = parsed[k];
+          });
+        }
+      } else {
+        var rawLocal = JSON.parse(localStorage.getItem('kuro-display-155-web') || '{}');
+        if (rawLocal && typeof rawLocal === 'object') {
+          Object.keys(def).forEach(function (k) {
+            if (rawLocal[k] !== undefined && rawLocal[k] !== null) def[k] = rawLocal[k];
+          });
+        }
+      }
+    } catch (_) {}
+    def.dpi = Number(def.dpi) || 0;
+    if (def.dpi > 0) def.dpi = Math.max(280, Math.min(640, Math.round(def.dpi)));
+    def.systemDpi = Math.max(160, Math.min(800, Number(def.systemDpi) || 420));
+    def.baseDpi = def.dpi <= 0 ? def.systemDpi : def.dpi;
+    def.uiScale = Math.max(75, Math.min(135, Math.round(Number(def.uiScale) || 100)));
+    def.effectiveDpi = Math.max(220, Math.min(760, Math.round(def.baseDpi * (def.uiScale / 100))));
+    def.autoNextSec = Math.max(3, Math.min(20, Math.round(Number(def.autoNextSec) || 8)));
+    def.upNextScale = Math.max(80, Math.min(125, Math.round(Number(def.upNextScale) || 100)));
+    def.autoNextEnabled = def.autoNextEnabled !== false;
+    return def;
+  }
+
+  function applyHtmlSizeAttr155(uiScale) {
+    var html = document.documentElement;
+    if (!html) return;
+    var sc = Number(uiScale) || 100;
+    if (sc <= 92) html.setAttribute('data-k155-size', 'compact');
+    else if (sc >= 110) html.setAttribute('data-k155-size', 'spacious');
+    else html.setAttribute('data-k155-size', 'default');
+  }
+
+  function syncDisplay155(rawFromNative) {
+    var info = rawFromNative && typeof rawFromNative === 'object' ? rawFromNative : readDisplay155();
+    applyHtmlSizeAttr155(info.uiScale);
+    var perfChip = document.querySelector('[data-k155-perf-dpi-chip]');
+    if (perfChip) {
+      perfChip.textContent = (info.dpi <= 0 ? ('System ' + info.baseDpi) : String(info.baseDpi)) + ' DPI \u00b7 ' + info.uiScale + '% Size';
+    }
+  }
+  window.kuroSyncDisplay155 = syncDisplay155;
+
+  function mountDisplaySettingsGroup155() {
+    var overlay = document.getElementById('settings-overlay560');
+    if (!overlay) return;
+    var body = document.getElementById('settings-body560') || overlay.querySelector('.settings-body560');
+    if (!body) return;
+    if (document.getElementById('k155-display-group')) return;
+
+    var groups = body.querySelectorAll('.settings-group560');
+    if (!groups || !groups.length) return;
+
+    var sec = document.createElement('section');
+    sec.className = 'settings-group560';
+    sec.id = 'k155-display-group';
+    sec.setAttribute('data-search560', 'display app dpi density ui size scale zoom compact large auto play next episode countdown up next card preview');
+    if (groups[0] && groups[0].nextSibling) {
+      body.insertBefore(sec, groups[0].nextSibling);
+    } else {
+      body.appendChild(sec);
+    }
+
+    var saved = readDisplay155();
+    var draft = {
+      dpi: saved.dpi,
+      systemDpi: saved.systemDpi,
+      uiScale: saved.uiScale,
+      autoNextEnabled: saved.autoNextEnabled,
+      autoNextSec: saved.autoNextSec,
+      upNextScale: saved.upNextScale,
+      physicalWidth: saved.physicalWidth,
+      physicalHeight: saved.physicalHeight
+    };
+
+    function persistDraftLive(recreateNow) {
+      try {
+        localStorage.setItem('kuro-display-155-web', JSON.stringify(draft));
+      } catch (_) {}
+      applyHtmlSizeAttr155(draft.uiScale);
+      if (window.KuroNative && typeof window.KuroNative.setAutoNextEnabled155 === 'function') {
+        try { window.KuroNative.setAutoNextEnabled155(!!draft.autoNextEnabled); } catch (_) {}
+      }
+      if (window.KuroNative && typeof window.KuroNative.saveDisplay155 === 'function') {
+        try {
+          if (recreateNow) {
+            try {
+              localStorage.setItem('kuro-skip-intro-once-155', String(Date.now()));
+              localStorage.setItem('kuro-reopen-display-155', String(Date.now()));
+              if (typeof window.kuroSavePage === 'function') window.kuroSavePage();
+            } catch (_) {}
+          }
+          window.KuroNative.saveDisplay155(
+            Number(draft.dpi) || 0,
+            Number(draft.uiScale) || 100,
+            Number(draft.autoNextSec) || 8,
+            Number(draft.upNextScale) || 100,
+            !!recreateNow
+          );
+        } catch (_) {}
+      }
+      if (!recreateNow) {
+        syncDisplay155(readDisplay155());
+      }
+    }
+
+    function isDensityDirty() {
+      return draft.dpi !== saved.dpi || draft.uiScale !== saved.uiScale;
+    }
+
+    function renderCard() {
+      var baseDpi = draft.dpi <= 0 ? draft.systemDpi : draft.dpi;
+      var effDpi = Math.max(220, Math.min(760, Math.round(baseDpi * (draft.uiScale / 100))));
+      var pw = Number(draft.physicalWidth) || Math.round((window.innerWidth || 360) * (window.devicePixelRatio || 3));
+      var estWidthDp = Math.max(260, Math.round(pw / (effDpi / 160)));
+      var dpiLabel = draft.dpi <= 0 ? ('System (' + draft.systemDpi + ' DPI)') : (draft.dpi + ' DPI');
+      var dirty = isDensityDirty();
+
+      var dpiPresets = [
+        { val: 0, label: 'System (' + draft.systemDpi + ')' },
+        { val: 360, label: '360' },
+        { val: 400, label: '400' },
+        { val: 440, label: '440' },
+        { val: 480, label: '480' },
+        { val: 500, label: '500' },
+        { val: 540, label: '540' },
+        { val: 600, label: '600' }
+      ];
+      var sizePresets = [80, 90, 95, 100, 105, 110, 120];
+      var secPresets = [5, 8, 10, 15];
+      var cardPresets = [
+        { val: 85, label: 'Compact' },
+        { val: 100, label: 'Default' },
+        { val: 115, label: 'Large' }
+      ];
+
+      var dpiChipsHtml = dpiPresets.map(function (p) {
+        var active = draft.dpi === p.val;
+        return '<button type="button" class="k155-chip' + (active ? ' is-active' : '') + '" data-k155-dpi="' + p.val + '">' + esc(p.label) + '</button>';
+      }).join('');
+
+      var sizeChipsHtml = sizePresets.map(function (s) {
+        var active = draft.uiScale === s;
+        return '<button type="button" class="k155-chip' + (active ? ' is-active' : '') + '" data-k155-scale="' + s + '">' + s + '%</button>';
+      }).join('');
+
+      var secChipsHtml = secPresets.map(function (s) {
+        var active = draft.autoNextSec === s;
+        return '<button type="button" class="k155-chip' + (active ? ' is-active' : '') + '" data-k155-sec="' + s + '">' + s + 's</button>';
+      }).join('');
+
+      var cardChipsHtml = cardPresets.map(function (c) {
+        var active = Math.abs(draft.upNextScale - c.val) <= 4;
+        return '<button type="button" class="k155-chip' + (active ? ' is-active' : '') + '" data-k155-card="' + c.val + '">' + esc(c.label) + '</button>';
+      }).join('');
+
+      sec.innerHTML =
+        '<div class="settings-group-head560">' +
+          '<h3>Display, App DPI &amp; Auto-Play</h3>' +
+          '<p>Controllable App DPI, global UI size, and themed Up Next episode card</p>' +
+        '</div>' +
+        '<div class="k155-disp-card">' +
+          '<div class="k155-disp-status">' +
+            '<span class="k154-perf-chip is-accent">' + esc(dpiLabel) + '</span>' +
+            '<span class="k154-perf-chip is-accent">UI Size ' + draft.uiScale + '%</span>' +
+            '<span class="k154-perf-chip">Effective ' + effDpi + ' DPI \u00b7 ~' + estWidthDp + ' dp</span>' +
+            '<span class="k154-perf-chip">Up Next ' + (draft.autoNextEnabled ? (draft.autoNextSec + 's') : 'Off') + '</span>' +
+          '</div>' +
+
+          '<div class="k155-disp-section">' +
+            '<div class="k155-disp-head">' +
+              '<span class="k155-disp-title">App DPI Density</span>' +
+              '<span class="k155-disp-val" data-k155-dpi-readout>' + esc(dpiLabel) + '</span>' +
+            '</div>' +
+            '<div class="k155-disp-sub">Lower DPI fits more posters and controls on screen; higher DPI makes native &amp; Web UI larger and bolder.</div>' +
+            '<div class="k155-disp-slider-row">' +
+              '<button type="button" class="k155-step-btn" data-k155-dpi-step="-10" aria-label="Decrease App DPI">\u2212</button>' +
+              '<input type="range" class="k155-range" min="280" max="640" step="10" value="' + baseDpi + '" data-k155-dpi-slider aria-label="App DPI slider">' +
+              '<button type="button" class="k155-step-btn" data-k155-dpi-step="10" aria-label="Increase App DPI">+</button>' +
+            '</div>' +
+            '<div class="k155-chip-row">' + dpiChipsHtml + '</div>' +
+          '</div>' +
+
+          '<div class="k155-disp-section">' +
+            '<div class="k155-disp-head">' +
+              '<span class="k155-disp-title">App UI Size</span>' +
+              '<span class="k155-disp-val" data-k155-scale-readout>' + draft.uiScale + '% (' + effDpi + ' eff DPI)</span>' +
+            '</div>' +
+            '<div class="k155-disp-sub">Scales typography, cards, player controls, and dialogs proportionally across the entire app.</div>' +
+            '<div class="k155-disp-slider-row">' +
+              '<button type="button" class="k155-step-btn" data-k155-scale-step="-5" aria-label="Decrease UI Size">\u2212</button>' +
+              '<input type="range" class="k155-range" min="75" max="135" step="5" value="' + draft.uiScale + '" data-k155-scale-slider aria-label="App UI Size slider">' +
+              '<button type="button" class="k155-step-btn" data-k155-scale-step="5" aria-label="Increase UI Size">+</button>' +
+            '</div>' +
+            '<div class="k155-chip-row">' + sizeChipsHtml + '</div>' +
+          '</div>' +
+
+          '<div class="k155-disp-section">' +
+            '<div class="k155-autonext-row">' +
+              '<div>' +
+                '<div class="k155-disp-title">Themed Auto-Play Next Episode</div>' +
+                '<div class="k155-disp-sub">Kuro accent &amp; OLED Up Next card with poster, countdown bar &amp; tap-to-hold</div>' +
+              '</div>' +
+              '<button type="button" class="k155-toggle-btn' + (draft.autoNextEnabled ? ' is-on' : '') + '" data-k155-autonext-toggle>' + (draft.autoNextEnabled ? 'ON' : 'OFF') + '</button>' +
+            '</div>' +
+            '<div class="k155-disp-head">' +
+              '<span class="k155-disp-sub">Countdown duration</span>' +
+              '<span class="k155-disp-val">' + draft.autoNextSec + ' seconds</span>' +
+            '</div>' +
+            '<div class="k155-chip-row">' + secChipsHtml + '</div>' +
+            '<div class="k155-disp-head">' +
+              '<span class="k155-disp-sub">Up Next card size</span>' +
+              '<span class="k155-disp-val">' + draft.upNextScale + '%</span>' +
+            '</div>' +
+            '<div class="k155-chip-row">' + cardChipsHtml + '</div>' +
+          '</div>' +
+
+          '<div class="k155-disp-hint' + (dirty ? ' is-dirty' : '') + '">' +
+            (dirty
+              ? 'Tap \u201cApply Display Density\u201d below to reload full native + WebView viewport at ' + effDpi + ' effective DPI.'
+              : 'Active display density: ' + esc(dpiLabel) + ' \u00b7 ' + draft.uiScale + '% UI Size (' + effDpi + ' effective DPI).') +
+          '</div>' +
+
+          '<div class="k155-disp-actions">' +
+            '<button type="button" class="k155-btn-primary" data-k155-apply>\u2713 Apply Display Density</button>' +
+            '<button type="button" class="k155-btn-secondary" data-k155-preview>\u25b6 Preview Up Next UI</button>' +
+            '<button type="button" class="k155-btn-secondary" data-k155-reset>Reset Default</button>' +
+          '</div>' +
+        '</div>';
+
+      var dpiSlider = sec.querySelector('[data-k155-dpi-slider]');
+      if (dpiSlider) {
+        dpiSlider.oninput = function () {
+          draft.dpi = Math.max(280, Math.min(640, Math.round(Number(dpiSlider.value) / 10) * 10));
+          var rd = sec.querySelector('[data-k155-dpi-readout]');
+          if (rd) rd.textContent = draft.dpi + ' DPI';
+        };
+        dpiSlider.onchange = function () {
+          draft.dpi = Math.max(280, Math.min(640, Math.round(Number(dpiSlider.value) / 10) * 10));
+          persistDraftLive(false);
+          renderCard();
+        };
+      }
+
+      sec.querySelectorAll('[data-k155-dpi-step]').forEach(function (btn) {
+        btn.onclick = function () {
+          var delta = Number(btn.getAttribute('data-k155-dpi-step')) || 0;
+          var cur = draft.dpi <= 0 ? draft.systemDpi : draft.dpi;
+          draft.dpi = Math.max(280, Math.min(640, Math.round((cur + delta) / 10) * 10));
+          persistDraftLive(false);
+          renderCard();
+        };
+      });
+
+      sec.querySelectorAll('[data-k155-dpi]').forEach(function (btn) {
+        btn.onclick = function () {
+          draft.dpi = Number(btn.getAttribute('data-k155-dpi')) || 0;
+          persistDraftLive(false);
+          renderCard();
+        };
+      });
+
+      var scaleSlider = sec.querySelector('[data-k155-scale-slider]');
+      if (scaleSlider) {
+        scaleSlider.oninput = function () {
+          draft.uiScale = Math.max(75, Math.min(135, Math.round(Number(scaleSlider.value) / 5) * 5));
+          var eff = Math.max(220, Math.min(760, Math.round((draft.dpi <= 0 ? draft.systemDpi : draft.dpi) * (draft.uiScale / 100))));
+          var rd = sec.querySelector('[data-k155-scale-readout]');
+          if (rd) rd.textContent = draft.uiScale + '% (' + eff + ' eff DPI)';
+        };
+        scaleSlider.onchange = function () {
+          draft.uiScale = Math.max(75, Math.min(135, Math.round(Number(scaleSlider.value) / 5) * 5));
+          persistDraftLive(false);
+          renderCard();
+        };
+      }
+
+      sec.querySelectorAll('[data-k155-scale-step]').forEach(function (btn) {
+        btn.onclick = function () {
+          var delta = Number(btn.getAttribute('data-k155-scale-step')) || 0;
+          draft.uiScale = Math.max(75, Math.min(135, Math.round((draft.uiScale + delta) / 5) * 5));
+          persistDraftLive(false);
+          renderCard();
+        };
+      });
+
+      sec.querySelectorAll('[data-k155-scale]').forEach(function (btn) {
+        btn.onclick = function () {
+          draft.uiScale = Math.max(75, Math.min(135, Number(btn.getAttribute('data-k155-scale')) || 100));
+          persistDraftLive(false);
+          renderCard();
+        };
+      });
+
+      var toggleBtn = sec.querySelector('[data-k155-autonext-toggle]');
+      if (toggleBtn) {
+        toggleBtn.onclick = function () {
+          draft.autoNextEnabled = !draft.autoNextEnabled;
+          persistDraftLive(false);
+          renderCard();
+          toast('Auto-Play Next ' + (draft.autoNextEnabled ? 'enabled' : 'disabled') + '.');
+        };
+      }
+
+      sec.querySelectorAll('[data-k155-sec]').forEach(function (btn) {
+        btn.onclick = function () {
+          draft.autoNextSec = Number(btn.getAttribute('data-k155-sec')) || 8;
+          persistDraftLive(false);
+          renderCard();
+          toast('Up Next countdown set to ' + draft.autoNextSec + 's.');
+        };
+      });
+
+      sec.querySelectorAll('[data-k155-card]').forEach(function (btn) {
+        btn.onclick = function () {
+          draft.upNextScale = Number(btn.getAttribute('data-k155-card')) || 100;
+          persistDraftLive(false);
+          renderCard();
+          toast('Up Next card size set to ' + draft.upNextScale + '%.');
+        };
+      });
+
+      var previewBtn = sec.querySelector('[data-k155-preview]');
+      if (previewBtn) {
+        previewBtn.onclick = function () {
+          persistDraftLive(false);
+          if (window.KuroNative && typeof window.KuroNative.previewAutoNext155 === 'function') {
+            try { window.KuroNative.previewAutoNext155(); } catch (_) {}
+          } else {
+            toast('Up Next preview opens on Android devices.');
+          }
+        };
+      }
+
+      var applyBtn = sec.querySelector('[data-k155-apply]');
+      if (applyBtn) {
+        applyBtn.onclick = function () {
+          saved.dpi = draft.dpi;
+          saved.uiScale = draft.uiScale;
+          saved.autoNextEnabled = draft.autoNextEnabled;
+          saved.autoNextSec = draft.autoNextSec;
+          saved.upNextScale = draft.upNextScale;
+          if (window.KuroNative && typeof window.KuroNative.saveDisplay155 === 'function') {
+            persistDraftLive(true);
+          } else {
+            persistDraftLive(false);
+            renderCard();
+            toast('Display & UI Size saved.');
+          }
+        };
+      }
+
+      var resetBtn = sec.querySelector('[data-k155-reset]');
+      if (resetBtn) {
+        resetBtn.onclick = function () {
+          draft.dpi = 500;
+          draft.uiScale = 100;
+          draft.autoNextEnabled = true;
+          draft.autoNextSec = 8;
+          draft.upNextScale = 100;
+          if (window.KuroNative && typeof window.KuroNative.saveDisplay155 === 'function') {
+            persistDraftLive(true);
+          } else {
+            persistDraftLive(false);
+            renderCard();
+            toast('Reset to 500 DPI \u00b7 100% UI Size.');
+          }
+        };
+      }
+    }
+
+    renderCard();
+  }
+
+  function maybeReopenDisplaySettings155() {
+    var reopenTs = 0;
+    try {
+      reopenTs = Number(localStorage.getItem('kuro-reopen-display-155') || '0');
+      if (reopenTs > 0) localStorage.removeItem('kuro-reopen-display-155');
+    } catch (_) {}
+    if (!reopenTs || Date.now() - reopenTs > 15000) return;
+    var tries = 0;
+    var t = setInterval(function () {
+      tries++;
+      if (window.kuroSettings560 && typeof window.kuroSettings560.open === 'function') {
+        clearInterval(t);
+        try { window.kuroSettings560.open(); } catch (_) {}
+        setTimeout(function () {
+          mountDisplaySettingsGroup155();
+          mountPerfSettingsGroup154();
+          var grp = document.getElementById('k155-display-group');
+          if (grp && typeof grp.scrollIntoView === 'function') {
+            try { grp.scrollIntoView({ block: 'start' }); } catch (_) {}
+          }
+          var inf = readDisplay155();
+          var lbl = inf.dpi <= 0 ? ('System ' + inf.baseDpi + ' DPI') : (inf.baseDpi + ' DPI');
+          toast('Applied \u00b7 ' + lbl + ' \u00b7 ' + inf.uiScale + '% UI Size');
+        }, 90);
+      } else if (tries > 25) {
+        clearInterval(t);
+      }
+    }, 80);
   }
 
   function isInternalNode154(n) {
@@ -2335,6 +2766,7 @@
           enhanceBrowseCommandBar154();
         }
         if (document.getElementById('settings-overlay560')) {
+          mountDisplaySettingsGroup155();
           mountPerfSettingsGroup154();
         }
         if (document.querySelector('#main > .profile-page547')) {
@@ -2458,6 +2890,7 @@
 
   function init154() {
     syncDesktopSite154();
+    syncDisplay155();
     pruneHiddenControls154();
     hookDetailView154();
     hookBrowseFilters154();
@@ -2465,12 +2898,14 @@
     hookOverlayBack155();
     startObserver154();
     if (document.getElementById('settings-overlay560')) {
+      mountDisplaySettingsGroup155();
       mountPerfSettingsGroup154();
     }
     if (document.querySelector('#main > .profile-page547')) {
       renderAccountHub154(false);
     }
     decorateRenderedPosters154();
+    maybeReopenDisplaySettings155();
   }
 
   if (document.readyState === 'loading') {

@@ -1611,6 +1611,264 @@ html[data-site-view="desktop"] .k154-dpad-focus {
   border-color: var(--accent-line, rgba(180, 120, 238, 0.36));
 }
 
+/* ==========================================================================
+   DISPLAY, APP DPI, UI SIZE & AUTO-PLAY NEXT CONTROLS (1.5.5-BETA8):
+   - Full CSP-safe styles (no inline style attributes)
+   - Reactive to all 20 Kuro accents & Pure Black OLED
+   ========================================================================== */
+.k155-disp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--k154-border-strong, rgba(255, 255, 255, 0.14));
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+}
+
+html[data-pure-black="1"] .k155-disp-card {
+  background: #06080c;
+  border-color: rgba(255, 255, 255, 0.13);
+}
+
+.k155-disp-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.k155-disp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px 12px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--k154-border, rgba(255, 255, 255, 0.08));
+}
+
+html[data-pure-black="1"] .k155-disp-section {
+  background: #000000;
+  border-color: rgba(255, 255, 255, 0.11);
+}
+
+.k155-disp-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.k155-disp-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--fg, #f4f6fb);
+  letter-spacing: -0.01em;
+}
+
+.k155-disp-val {
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent, #b478ee);
+}
+
+.k155-disp-sub {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--k154-text-dim, rgba(226, 230, 242, 0.68));
+}
+
+.k155-disp-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.k155-step-btn {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 10px;
+  border: 1px solid var(--k154-border-strong, rgba(255, 255, 255, 0.15));
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fg, #f4f6fb);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.k155-step-btn:active {
+  transform: scale(0.95);
+}
+
+.k155-range {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 6px;
+  accent-color: var(--accent, #b478ee);
+  cursor: pointer;
+}
+
+.k155-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.k155-chip {
+  padding: 6px 10px;
+  min-height: 31px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--fg, #eef2fa);
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
+}
+
+html[data-pure-black="1"] .k155-chip {
+  background: #0b0e14;
+}
+
+.k155-chip.is-active {
+  background: var(--accent, #b478ee);
+  border-color: var(--accent, #b478ee);
+  color: var(--accent-ink, #140b1a);
+  box-shadow: 0 4px 14px var(--accent-soft, rgba(180, 120, 238, 0.28));
+}
+
+.k155-chip:active {
+  transform: scale(0.96);
+}
+
+.k155-autonext-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.k155-toggle-btn {
+  padding: 6px 13px;
+  min-height: 32px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fg, #eef2fa);
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.k155-toggle-btn.is-on {
+  background: var(--accent-soft, rgba(180, 120, 238, 0.2));
+  border-color: var(--accent, #b478ee);
+  color: var(--accent, #b478ee);
+}
+
+.k155-disp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.k155-btn-primary,
+.k155-btn-secondary {
+  flex: 1 1 130px;
+  min-height: 40px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform 0.12s ease, opacity 0.15s ease;
+}
+
+.k155-btn-primary {
+  background: var(--accent, #b478ee);
+  border: 1px solid var(--accent, #b478ee);
+  color: var(--accent-ink, #140b1a);
+  box-shadow: 0 8px 20px var(--accent-soft, rgba(180, 120, 238, 0.3));
+}
+
+.k155-btn-secondary {
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid var(--k154-border-strong, rgba(255, 255, 255, 0.15));
+  color: var(--fg, #f4f6fb);
+}
+
+html[data-pure-black="1"] .k155-btn-secondary {
+  background: #0b0f16;
+}
+
+.k155-btn-primary:active,
+.k155-btn-secondary:active {
+  transform: scale(0.97);
+}
+
+.k155-disp-hint {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--k154-text-dim, rgba(226, 230, 242, 0.65));
+}
+
+.k155-disp-hint.is-dirty {
+  color: var(--accent, #b478ee);
+  font-weight: 700;
+}
+
+/* Live WebView UI Size presets (works alongside native effectiveDpi) */
+html[data-k155-size="compact"] header {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+html[data-k155-size="compact"] .poster-title {
+  font-size: 11.5px;
+}
+
+html[data-k155-size="compact"] .section-title {
+  font-size: 16px;
+}
+
+html[data-k155-size="spacious"] .poster-title {
+  font-size: 13.5px;
+}
+
+html[data-k155-size="spacious"] .section-title {
+  font-size: 19px;
+}
+
+html[data-k155-size="spacious"] .btn,
+html[data-k155-size="spacious"] .settings-row560 {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+@media (min-width: 455px) and (max-width: 759px) {
+  html:not([data-site-view="desktop"]) .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .k154-franchise-pill,
   .k154-skip-filler-btn,
@@ -1618,7 +1876,10 @@ html[data-site-view="desktop"] .k154-dpad-focus {
   .k154-switch-dot::after,
   .k154-mic-btn,
   .k154-surprise-btn,
-  .k154-pill {
+  .k154-pill,
+  .k155-chip,
+  .k155-btn-primary,
+  .k155-btn-secondary {
     transition: none !important;
     animation: none !important;
   }

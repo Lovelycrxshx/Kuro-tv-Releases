@@ -3179,39 +3179,156 @@ KURO_DISPLAY_155_JAVA = """package app.lovelycrxshx.kuro;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.util.DisplayMetrics;
 import org.json.JSONObject;
 
 /**
- * Kuro 1.5.5-beta6 — System Default Resolution + Forced 500 DPI Engine.
- * Keeps hardware/window resolution and WebView viewport at native system default
- * while enforcing Configuration.densityDpi = 500 (density = 3.125f).
+ * Kuro 1.5.5-beta8 — Controllable App DPI, Global UI Size & Auto-Next Timing Engine.
+ * Preserves native hardware system resolution while letting users choose System DPI or
+ * any custom App DPI (280..640, default 500), global App UI Size (75%..135%, default 100%),
+ * Auto-Play Next countdown seconds (3..20s, default 8s), and Up Next card scale (80%..125%).
  */
 public final class KuroDisplay155 {
+    public static final String PREFS = "kuro-display-155";
     public static final int FORCE_DPI = 500;
-    public static final float FORCE_DENSITY = 500f / 160f; // 3.125f
+    public static final float FORCE_DENSITY = 500f / 160f;
+    private static final int SYSTEM_DPI = detectHardwareSystemDpi();
+
+    private static volatile boolean loaded = false;
+    private static volatile int cfgDpi = FORCE_DPI;       // 0 = System DPI, else 280..640
+    private static volatile int cfgUiScale = 100;         // 75..135 (%)
+    private static volatile int cfgAutoNextSec = 8;       // 3..20 (s)
+    private static volatile int cfgUpNextScale = 100;     // 80..125 (%)
 
     private KuroDisplay155() {}
+
+    private static int detectHardwareSystemDpi() {
+        try {
+            Resources sys = Resources.getSystem();
+            if (sys != null) {
+                DisplayMetrics dm = sys.getDisplayMetrics();
+                if (dm != null && dm.densityDpi >= 120 && dm.densityDpi <= 960) {
+                    return dm.densityDpi;
+                }
+            }
+        } catch (Throwable ignored) {}
+        return 420;
+    }
+
+    private static int clamp(int v, int lo, int hi) {
+        return v < lo ? lo : (v > hi ? hi : v);
+    }
+
+    public static void ensureLoaded(Context context) {
+        if (loaded || context == null) return;
+        synchronized (KuroDisplay155.class) {
+            if (loaded) return;
+            try {
+                SharedPreferences sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+                int d = sp.getInt("dpi", FORCE_DPI);
+                cfgDpi = d <= 0 ? 0 : clamp(d, 280, 640);
+                cfgUiScale = clamp(sp.getInt("uiScale", 100), 75, 135);
+                cfgAutoNextSec = clamp(sp.getInt("autoNextSec", 8), 3, 20);
+                cfgUpNextScale = clamp(sp.getInt("upNextScale", 100), 80, 125);
+                loaded = true;
+            } catch (Throwable ignored) {}
+        }
+    }
+
+    public static void saveConfig(Context context, int dpi, int uiScale, int autoNextSec, int upNextScale) {
+        int cleanDpi = dpi <= 0 ? 0 : clamp(dpi, 280, 640);
+        int cleanScale = clamp(uiScale, 75, 135);
+        int cleanSec = clamp(autoNextSec, 3, 20);
+        int cleanCard = clamp(upNextScale, 80, 125);
+        synchronized (KuroDisplay155.class) {
+            cfgDpi = cleanDpi;
+            cfgUiScale = cleanScale;
+            cfgAutoNextSec = cleanSec;
+            cfgUpNextScale = cleanCard;
+            loaded = true;
+            if (context != null) {
+                try {
+                    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                        .edit()
+                        .putInt("dpi", cleanDpi)
+                        .putInt("uiScale", cleanScale)
+                        .putInt("autoNextSec", cleanSec)
+                        .putInt("upNextScale", cleanCard)
+                        .commit();
+                } catch (Throwable ignored) {}
+            }
+        }
+        if (context != null) {
+            enforce500Dpi(context);
+        }
+    }
+
+    public static int systemDpi() {
+        return SYSTEM_DPI;
+    }
+
+    public static int configuredDpi(Context context) {
+        ensureLoaded(context);
+        return cfgDpi;
+    }
+
+    public static int baseDpi(Context context) {
+        ensureLoaded(context);
+        return cfgDpi <= 0 ? SYSTEM_DPI : cfgDpi;
+    }
+
+    public static int uiScale(Context context) {
+        ensureLoaded(context);
+        return cfgUiScale;
+    }
+
+    public static int effectiveDpi(Context context) {
+        ensureLoaded(context);
+        int base = cfgDpi <= 0 ? SYSTEM_DPI : cfgDpi;
+        return clamp(Math.round(base * (cfgUiScale / 100f)), 220, 760);
+    }
+
+    public static float effectiveDensity(Context context) {
+        return effectiveDpi(context) / 160f;
+    }
+
+    public static int autoNextSeconds(Context context) {
+        ensureLoaded(context);
+        return cfgAutoNextSec;
+    }
+
+    public static int upNextScale(Context context) {
+        ensureLoaded(context);
+        return cfgUpNextScale;
+    }
+
+    public static float upNextScaleFactor(Context context) {
+        return upNextScale(context) / 100f;
+    }
 
     public static Context wrapContext(Context base) {
         if (base == null) return null;
         try {
+            ensureLoaded(base);
+            int effDpi = effectiveDpi(base);
+            float effDensity = effDpi / 160f;
             Resources res = base.getResources();
             if (res == null) return base;
             DisplayMetrics rawDm = res.getDisplayMetrics();
             Configuration cfg = new Configuration(res.getConfiguration());
-            cfg.densityDpi = FORCE_DPI;
+            cfg.densityDpi = effDpi;
             if (rawDm != null && rawDm.widthPixels > 0 && rawDm.heightPixels > 0) {
-                int wDp = Math.max(320, Math.round(rawDm.widthPixels / FORCE_DENSITY));
-                int hDp = Math.max(320, Math.round(rawDm.heightPixels / FORCE_DENSITY));
+                int wDp = Math.max(260, Math.round(rawDm.widthPixels / effDensity));
+                int hDp = Math.max(260, Math.round(rawDm.heightPixels / effDensity));
                 cfg.screenWidthDp = wDp;
                 cfg.screenHeightDp = hDp;
                 cfg.smallestScreenWidthDp = Math.min(wDp, hDp);
             }
             Context wrapped = base.createConfigurationContext(cfg);
-            applyMetricsToResources(wrapped.getResources());
+            applyMetricsToResources(wrapped.getResources(), effDpi, effDensity);
             return wrapped;
         } catch (RuntimeException ignored) {
             return base;
@@ -3221,31 +3338,34 @@ public final class KuroDisplay155 {
     public static void enforce500Dpi(Context context) {
         if (context == null) return;
         try {
-            applyMetricsToResources(context.getResources());
+            ensureLoaded(context);
+            int effDpi = effectiveDpi(context);
+            float effDensity = effDpi / 160f;
+            applyMetricsToResources(context.getResources(), effDpi, effDensity);
             Context app = context.getApplicationContext();
             if (app != null && app != context) {
-                applyMetricsToResources(app.getResources());
+                applyMetricsToResources(app.getResources(), effDpi, effDensity);
             }
         } catch (RuntimeException ignored) {}
     }
 
-    private static void applyMetricsToResources(Resources res) {
+    private static void applyMetricsToResources(Resources res, int effDpi, float effDensity) {
         if (res == null) return;
         Configuration cfg = res.getConfiguration();
         float fontScale = (cfg != null && cfg.fontScale > 0f) ? cfg.fontScale : 1f;
         if (cfg != null) {
-            cfg.densityDpi = FORCE_DPI;
+            cfg.densityDpi = effDpi;
         }
         DisplayMetrics dm = res.getDisplayMetrics();
         if (dm != null) {
-            dm.density = FORCE_DENSITY;
-            dm.densityDpi = FORCE_DPI;
-            dm.xdpi = FORCE_DPI;
-            dm.ydpi = FORCE_DPI;
-            dm.scaledDensity = FORCE_DENSITY * fontScale;
+            dm.density = effDensity;
+            dm.densityDpi = effDpi;
+            dm.xdpi = effDpi;
+            dm.ydpi = effDpi;
+            dm.scaledDensity = effDensity * fontScale;
             if (cfg != null && dm.widthPixels > 0 && dm.heightPixels > 0) {
-                int wDp = Math.max(320, Math.round(dm.widthPixels / FORCE_DENSITY));
-                int hDp = Math.max(320, Math.round(dm.heightPixels / FORCE_DENSITY));
+                int wDp = Math.max(260, Math.round(dm.widthPixels / effDensity));
+                int hDp = Math.max(260, Math.round(dm.heightPixels / effDensity));
                 cfg.screenWidthDp = wDp;
                 cfg.screenHeightDp = hDp;
                 cfg.smallestScreenWidthDp = Math.min(wDp, hDp);
@@ -3259,30 +3379,56 @@ public final class KuroDisplay155 {
     }
 
     public static String infoJson(Context context) {
+        return infoJson(context, true);
+    }
+
+    public static String infoJson(Context context, boolean autoNextEnabled) {
         try {
             enforce500Dpi(context);
-            DisplayMetrics dm = context.getResources().getDisplayMetrics();
+            DisplayMetrics dm = context != null && context.getResources() != null
+                ? context.getResources().getDisplayMetrics() : null;
             int pw = dm != null ? dm.widthPixels : 0;
             int ph = dm != null ? dm.heightPixels : 0;
+            int effDpi = effectiveDpi(context);
+            float effDensity = effDpi / 160f;
+            int wDp = pw > 0 ? Math.round(pw / effDensity) : 360;
+            int hDp = ph > 0 ? Math.round(ph / effDensity) : 780;
+            int rawCfg = configuredDpi(context);
             return new JSONObject()
-                .put("dpi", FORCE_DPI)
-                .put("density", (double) FORCE_DENSITY)
+                .put("dpi", rawCfg)
+                .put("dpiMode", rawCfg <= 0 ? "system" : "custom")
+                .put("systemDpi", SYSTEM_DPI)
+                .put("baseDpi", baseDpi(context))
+                .put("uiScale", uiScale(context))
+                .put("effectiveDpi", effDpi)
+                .put("density", (double) effDensity)
+                .put("widthDp", wDp)
+                .put("heightDp", hDp)
+                .put("autoNextEnabled", autoNextEnabled)
+                .put("autoNextSec", autoNextSeconds(context))
+                .put("upNextScale", upNextScale(context))
                 .put("resolutionMode", "system-default")
                 .put("physicalWidth", pw)
                 .put("physicalHeight", ph)
                 .toString();
         } catch (Exception e) {
-            return "{\\"dpi\\":500,\\"density\\":3.125,\\"resolutionMode\\":\\"system-default\\"}";
+            return "{\\"dpi\\":500,\\"baseDpi\\":500,\\"uiScale\\":100,\\"effectiveDpi\\":500,\\"density\\":3.125,\\"resolutionMode\\":\\"system-default\\"}";
         }
     }
 
     public static String diagnosticsSummary(Context context) {
         enforce500Dpi(context);
-        DisplayMetrics dm = context.getResources().getDisplayMetrics();
-        int dpi = dm != null ? dm.densityDpi : FORCE_DPI;
+        DisplayMetrics dm = context != null && context.getResources() != null
+            ? context.getResources().getDisplayMetrics() : null;
         int pw = dm != null ? dm.widthPixels : 0;
         int ph = dm != null ? dm.heightPixels : 0;
-        return "System Resolution (" + pw + "x" + ph + ") \\u00b7 Forced " + dpi + " DPI";
+        int rawCfg = configuredDpi(context);
+        int base = baseDpi(context);
+        int scale = uiScale(context);
+        int eff = effectiveDpi(context);
+        return "System Resolution (" + pw + "x" + ph + ") \\u00b7 "
+            + (rawCfg <= 0 ? ("System " + base) : ("App " + base))
+            + " DPI \\u00b7 UI " + scale + "% (" + eff + " eff DPI)";
     }
 }
 """
@@ -3292,7 +3438,7 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
     disp_path = root / "src/app/lovelycrxshx/kuro/KuroDisplay155.java"
     disp_path.write_text(KURO_DISPLAY_155_JAVA, encoding="utf-8")
 
-    # 1. MainActivity: System default resolution & viewport + forced 500 DPI kept unchanged
+    # 1. MainActivity: System default resolution & viewport + controllable App DPI & UI Size
     ma_path = root / "src/app/lovelycrxshx/kuro/MainActivity.java"
     ma_text = ma_path.read_text(encoding="utf-8")
     ma_text = patch_once(
@@ -3323,13 +3469,20 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
         "player=new WebView(this);KuroDisplay155.enforce500Dpi(this);",
         "MainActivity player WebView 500DPI",
     )
-    ma_text = patch_once(
-        ma_text,
-        "KuroDisplay155.enforce500Dpi(this);if(ui!=null){ui.getSettings().setTextZoom(zoom);",
-        'if(ui!=null){ui.getSettings().setTextZoom(zoom);ui.getSettings().setUseWideViewPort(desktopUi154);ui.getSettings().setLoadWithOverviewMode(desktopUi154);if(uiReady)ui.evaluateJavascript("window.kuroSyncDesktopSite154&&window.kuroSyncDesktopSite154("+desktopUi154+")",null);}',
-        'KuroDisplay155.enforce500Dpi(this);if(ui!=null){ui.getSettings().setTextZoom(zoom);ui.getSettings().setUseWideViewPort(desktopUi154);ui.getSettings().setLoadWithOverviewMode(desktopUi154);if(uiReady)ui.evaluateJavascript("window.kuroSyncDesktopSite154&&window.kuroSyncDesktopSite154("+desktopUi154+")",null);}',
-        "MainActivity.applyWindowPreferences560 system viewport + 500DPI",
-    )
+    if "Math.round(zoom*KuroDisplay155.uiScale(this)/100f)" not in ma_text:
+        for old_zoom_snippet in (
+            'KuroDisplay155.enforce500Dpi(this);if(ui!=null){ui.getSettings().setTextZoom(zoom);ui.getSettings().setUseWideViewPort(desktopUi154);ui.getSettings().setLoadWithOverviewMode(desktopUi154);if(uiReady)ui.evaluateJavascript("window.kuroSyncDesktopSite154&&window.kuroSyncDesktopSite154("+desktopUi154+")",null);}',
+            'if(ui!=null){ui.getSettings().setTextZoom(zoom);ui.getSettings().setUseWideViewPort(desktopUi154);ui.getSettings().setLoadWithOverviewMode(desktopUi154);if(uiReady)ui.evaluateJavascript("window.kuroSyncDesktopSite154&&window.kuroSyncDesktopSite154("+desktopUi154+")",null);}',
+        ):
+            if old_zoom_snippet in ma_text:
+                ma_text = ma_text.replace(
+                    old_zoom_snippet,
+                    'KuroDisplay155.enforce500Dpi(this);int effZoom155=Math.max(60,Math.min(180,Math.round(zoom*KuroDisplay155.uiScale(this)/100f)));if(ui!=null){ui.getSettings().setTextZoom(effZoom155);ui.getSettings().setUseWideViewPort(desktopUi154);ui.getSettings().setLoadWithOverviewMode(desktopUi154);if(uiReady)ui.evaluateJavascript("window.kuroSyncDesktopSite154&&window.kuroSyncDesktopSite154("+desktopUi154+");window.kuroSyncDisplay155&&window.kuroSyncDisplay155()",null);}',
+                    1,
+                )
+                break
+        else:
+            raise SystemExit("ui_1.5.4.py: missing applyWindowPreferences560 zoom anchor in MainActivity.java")
     ma_text = patch_once(
         ma_text,
         "KuroDisplay155.diagnosticsSummary(this)",
@@ -3337,13 +3490,24 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
         '") \u00b7 WebView "+web+" \u00b7 "+KuroDisplay155.diagnosticsSummary(this)+" \u00b7 Available device storage',
         "MainActivity.diagnostics560 500DPI",
     )
-    ma_text = patch_once(
-        ma_text,
-        "public String displayInfo155()",
-        "  @JavascriptInterface public String diagnostics560(){return MainActivity.this.diagnostics560();}",
-        "  @JavascriptInterface public String diagnostics560(){return MainActivity.this.diagnostics560();}\n  @JavascriptInterface public String displayInfo155(){return KuroDisplay155.infoJson(MainActivity.this);}",
-        "MainActivity.Bridge.displayInfo155",
+    bridge_display_methods = (
+        "  @JavascriptInterface public String diagnostics560(){return MainActivity.this.diagnostics560();}\n"
+        "  @JavascriptInterface public String displayInfo155(){return KuroDisplay155.infoJson(MainActivity.this,isAutoNextEnabled155());}\n"
+        "  @JavascriptInterface public void setAutoNextEnabled155(boolean on){main.post(()->{getPreferences(MODE_PRIVATE).edit().putBoolean(\"auto_next\",on).apply();if(!on)cancelAutoNext573();});}\n"
+        "  @JavascriptInterface public String saveDisplay155(int dpi,int uiScale,int autoNextSec,int upNextScale,boolean recreateNow){KuroDisplay155.saveConfig(MainActivity.this,dpi,uiScale,autoNextSec,upNextScale);main.post(()->{applyWindowPreferences560();if(recreateNow&&!isFinishing()&&!isDestroyed()){try{recreate();}catch(RuntimeException ignored){}}});return KuroDisplay155.infoJson(MainActivity.this,isAutoNextEnabled155());}\n"
+        "  @JavascriptInterface public void previewAutoNext155(){main.post(MainActivity.this::previewAutoNextDialog155);}\n"
+        "  @JavascriptInterface public void openDisplayDialog155(){main.post(MainActivity.this::openDisplayControllerFromMain155);}"
     )
+    if "saveDisplay155(" not in ma_text:
+        for old_bridge_disp in (
+            "  @JavascriptInterface public String diagnostics560(){return MainActivity.this.diagnostics560();}\n  @JavascriptInterface public String displayInfo155(){return KuroDisplay155.infoJson(MainActivity.this);}",
+            "  @JavascriptInterface public String diagnostics560(){return MainActivity.this.diagnostics560();}",
+        ):
+            if old_bridge_disp in ma_text:
+                ma_text = ma_text.replace(old_bridge_disp, bridge_display_methods, 1)
+                break
+        else:
+            raise SystemExit("ui_1.5.4.py: missing Bridge diagnostics560 anchor in MainActivity.java")
     ma_text = patch_once(
         ma_text,
         "protected void attachBaseContext(Context newBase)",
@@ -3360,7 +3524,7 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
     )
     ma_path.write_text(ma_text, encoding="utf-8")
 
-    # 2. KuroOfflineActivity561: Forced 500 DPI kept unchanged, system default resolution
+    # 2. KuroOfflineActivity561: Controllable App DPI & UI Size, system default resolution
     oa_path = root / "src/app/lovelycrxshx/kuro/KuroOfflineActivity561.java"
     oa_text = oa_path.read_text(encoding="utf-8")
     oa_text = patch_once(
@@ -3379,7 +3543,7 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
     )
     oa_path.write_text(oa_text, encoding="utf-8")
 
-    # 3. KuroDialogs581: preserve Activity window token in themed() while keeping 500 DPI + safeShow155 guards
+    # 3. KuroDialogs581: preserve Activity window token + themed Up Next card + Display & DPI controller
     dg_path = root / "src/app/lovelycrxshx/kuro/KuroDialogs581.java"
     dg_text = dg_path.read_text(encoding="utf-8")
     dialog_helpers_155 = """    static Activity findActivity155(Context c) {
@@ -3418,7 +3582,7 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
         }
     }
 
-    /** Context for stock alert dialogs: keeps Activity IBinder token intact while enforcing 500 DPI. */
+    /** Context for stock alert dialogs: keeps Activity IBinder token intact while enforcing App DPI. */
     public static Context themed(Context context) {
         KuroDisplay155.enforce500Dpi(context);
         return new ContextThemeWrapper(context, KuroTheme12.dialogTheme());
@@ -3457,6 +3621,769 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
         "            safeShow155(dialog, activity);\n            return dialog;",
         "KuroDialogs581 Builder.show safeShow155",
     )
+
+    kuro_autonext_and_display_ui_155 = """
+    public interface DisplayHost155 {
+        boolean isAutoNextEnabled();
+        void setAutoNextEnabled(boolean on);
+        void onDisplayApplied(boolean recreateNow);
+        void onPreviewUpNext();
+    }
+
+    public static final class AutoNextHandle155 {
+        public final Dialog dialog;
+        public final android.widget.ImageView posterView;
+        private final TextView timerBadge;
+        private final TextView statusLine;
+        private final View progressFill;
+        private int trackWidthPx = 0;
+        public boolean paused = false;
+
+        AutoNextHandle155(Dialog d, android.widget.ImageView pv, TextView tb, TextView sl, View pf) {
+            dialog = d;
+            posterView = pv;
+            timerBadge = tb;
+            statusLine = sl;
+            progressFill = pf;
+        }
+
+        public void updateProgress(long remainingMs, long totalMs, String epTag) {
+            if (paused) return;
+            int sec = (int) Math.max(1L, (remainingMs + 999L) / 1000L);
+            timerBadge.setText("\\u23f8 " + sec + "s");
+            statusLine.setText("Playing " + epTag + " in " + sec + (sec == 1 ? " second" : " seconds") + " \\u00b7 Tap timer to hold");
+            float frac = totalMs > 0 ? Math.max(0f, Math.min(1f, 1f - (remainingMs / (float) totalMs))) : 1f;
+            View parent = (View) progressFill.getParent();
+            int w = parent != null ? parent.getWidth() : trackWidthPx;
+            if (w > 0) {
+                trackWidthPx = w;
+                ViewGroup.LayoutParams lp = progressFill.getLayoutParams();
+                int targetW = Math.max(1, Math.round(w * frac));
+                if (lp.width != targetW) {
+                    lp.width = targetW;
+                    progressFill.setLayoutParams(lp);
+                }
+            }
+        }
+    }
+
+    private static int sdp155(Context c, float dpVal, float scale) {
+        return Math.max(1, Math.round(dpVal * scale * c.getResources().getDisplayMetrics().density));
+    }
+
+    private static GradientDrawable box155(int fill, int stroke, int strokePx, float radiusPx) {
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(fill);
+        g.setCornerRadius(radiusPx);
+        if (strokePx > 0) g.setStroke(strokePx, stroke);
+        return g;
+    }
+
+    private static StateListDrawable pillStates155(boolean primary, int strokePx, float radiusPx) {
+        StateListDrawable s = new StateListDrawable();
+        int focusFill = primary ? PURPLE_SOFT : SELECTED;
+        int idleFill = primary ? PURPLE : CARD;
+        int idleStroke = primary ? PURPLE : BORDER;
+        s.addState(new int[]{android.R.attr.state_focused}, box155(focusFill, PURPLE_SOFT, strokePx, radiusPx));
+        s.addState(new int[]{android.R.attr.state_pressed}, box155(focusFill, PURPLE_SOFT, strokePx, radiusPx));
+        s.addState(new int[]{}, box155(idleFill, idleStroke, strokePx, radiusPx));
+        return s;
+    }
+
+    private static void attachBounce155(View v) {
+        v.setOnTouchListener((view, ev) -> {
+            int a = ev.getActionMasked();
+            if (a == android.view.MotionEvent.ACTION_DOWN) {
+                view.animate().scaleX(0.97f).scaleY(0.97f).setDuration(90).start();
+            } else if (a == android.view.MotionEvent.ACTION_UP || a == android.view.MotionEvent.ACTION_CANCEL) {
+                view.animate().scaleX(1f).scaleY(1f).setDuration(130).start();
+            }
+            return false;
+        });
+    }
+
+    public static AutoNextHandle155 createAutoNext155(
+            Activity activity,
+            String showTitle,
+            String epBadgeText,
+            String epHeadline,
+            String epMetaLine,
+            int totalSeconds,
+            Runnable onCancel,
+            Runnable onPlayNow,
+            Runnable onOpenTuning
+    ) {
+        KuroDisplay155.enforce500Dpi(activity);
+        retint();
+        final float sc = KuroDisplay155.upNextScaleFactor(activity);
+        final int stroke1 = Math.max(1, Math.round(activity.getResources().getDisplayMetrics().density));
+
+        final Dialog dialog = new Dialog(activity);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setCanceledOnTouchOutside(true);
+
+        LinearLayout root = new LinearLayout(activity);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setTag("kuro-autonext-card-155");
+        int padH = sdp155(activity, 18, sc);
+        int padV = sdp155(activity, 16, sc);
+        root.setPadding(padH, padV, padH, padV);
+        root.setBackground(box155(PANEL, BORDER, stroke1, sdp155(activity, 22, sc)));
+
+        // Top accent glow bar matching KuroDialogs581 & KuroUpdateDialog582
+        View accentBar = new View(activity);
+        GradientDrawable glow = new GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            new int[]{PURPLE, PURPLE_SOFT, KuroTheme12.col(0x00a65be4)}
+        );
+        glow.setCornerRadius(sdp155(activity, 99, sc));
+        accentBar.setBackground(glow);
+        LinearLayout.LayoutParams glowLp = new LinearLayout.LayoutParams(sdp155(activity, 68, sc), Math.max(sdp155(activity, 3, sc), 3));
+        glowLp.bottomMargin = sdp155(activity, 12, sc);
+        root.addView(accentBar, glowLp);
+
+        // Header Row: [▶ UP NEXT] ............ [⏸ 8s] [⚙]
+        LinearLayout headRow = new LinearLayout(activity);
+        headRow.setOrientation(LinearLayout.HORIZONTAL);
+        headRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView upNextPill = new TextView(activity);
+        upNextPill.setText("\\u25b6  UP NEXT");
+        upNextPill.setTextColor(PURPLE_SOFT);
+        upNextPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f * sc);
+        upNextPill.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        upNextPill.setLetterSpacing(0.08f);
+        upNextPill.setPadding(sdp155(activity, 10, sc), sdp155(activity, 4, sc), sdp155(activity, 10, sc), sdp155(activity, 4, sc));
+        upNextPill.setBackground(box155(SELECTED, PURPLE, stroke1, sdp155(activity, 999, sc)));
+        headRow.addView(upNextPill, new LinearLayout.LayoutParams(-2, -2));
+
+        View headSpacer = new View(activity);
+        headRow.addView(headSpacer, new LinearLayout.LayoutParams(0, 1, 1f));
+
+        final TextView timerChip = new TextView(activity);
+        timerChip.setText("\\u23f8 " + totalSeconds + "s");
+        timerChip.setTextColor(INK);
+        timerChip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f * sc);
+        timerChip.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        timerChip.setGravity(Gravity.CENTER);
+        timerChip.setFocusable(true);
+        timerChip.setClickable(true);
+        timerChip.setPadding(sdp155(activity, 10, sc), sdp155(activity, 4, sc), sdp155(activity, 10, sc), sdp155(activity, 4, sc));
+        timerChip.setBackground(pillStates155(false, stroke1, sdp155(activity, 999, sc)));
+        headRow.addView(timerChip, new LinearLayout.LayoutParams(-2, -2));
+
+        if (onOpenTuning != null) {
+            TextView tuneBtn = new TextView(activity);
+            tuneBtn.setText("\\u2699");
+            tuneBtn.setContentDescription("Display, DPI and Auto-Next settings");
+            tuneBtn.setTextColor(MUTED);
+            tuneBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f * sc);
+            tuneBtn.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            tuneBtn.setGravity(Gravity.CENTER);
+            tuneBtn.setFocusable(true);
+            tuneBtn.setClickable(true);
+            tuneBtn.setBackground(pillStates155(false, stroke1, sdp155(activity, 999, sc)));
+            int gearSz = sdp155(activity, 28, sc);
+            LinearLayout.LayoutParams gearLp = new LinearLayout.LayoutParams(gearSz, gearSz);
+            gearLp.leftMargin = sdp155(activity, 6, sc);
+            tuneBtn.setOnClickListener(v -> {
+                try { dialog.dismiss(); } catch (RuntimeException ignored) {}
+                onOpenTuning.run();
+            });
+            headRow.addView(tuneBtn, gearLp);
+        }
+
+        root.addView(headRow, new LinearLayout.LayoutParams(-1, -2));
+
+        // Episode Media Card: [Poster + EP Badge] + [Series Title / Episode Headline / Meta]
+        LinearLayout mediaCard = new LinearLayout(activity);
+        mediaCard.setOrientation(LinearLayout.HORIZONTAL);
+        mediaCard.setGravity(Gravity.CENTER_VERTICAL);
+        int mcPad = sdp155(activity, 11, sc);
+        mediaCard.setPadding(mcPad, mcPad, mcPad, mcPad);
+        mediaCard.setBackground(box155(CARD, DIVIDER, stroke1, sdp155(activity, 15, sc)));
+        LinearLayout.LayoutParams mcLp = new LinearLayout.LayoutParams(-1, -2);
+        mcLp.topMargin = sdp155(activity, 12, sc);
+        root.addView(mediaCard, mcLp);
+
+        int posterW = sdp155(activity, 54, sc);
+        int posterH = sdp155(activity, 74, sc);
+        final int posterRad = sdp155(activity, 10, sc);
+        android.widget.FrameLayout posterWrap = new android.widget.FrameLayout(activity);
+        posterWrap.setBackground(box155(SELECTED, BORDER, stroke1, posterRad));
+        posterWrap.setClipToOutline(true);
+        posterWrap.setOutlineProvider(new android.view.ViewOutlineProvider() {
+            @Override public void getOutline(View view, android.graphics.Outline outline) {
+                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), posterRad);
+            }
+        });
+
+        TextView posterFallback = new TextView(activity);
+        posterFallback.setText("\\u25b6");
+        posterFallback.setTextColor(PURPLE_SOFT);
+        posterFallback.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f * sc);
+        posterFallback.setGravity(Gravity.CENTER);
+        posterWrap.addView(posterFallback, new android.widget.FrameLayout.LayoutParams(-1, -1));
+
+        android.widget.ImageView posterImg = new android.widget.ImageView(activity);
+        posterImg.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+        posterWrap.addView(posterImg, new android.widget.FrameLayout.LayoutParams(-1, -1));
+
+        if (epBadgeText != null && !epBadgeText.isEmpty()) {
+            TextView epCorner = new TextView(activity);
+            epCorner.setText(epBadgeText);
+            epCorner.setTextColor(Color.WHITE);
+            epCorner.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9.5f * sc);
+            epCorner.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            epCorner.setPadding(sdp155(activity, 5, sc), sdp155(activity, 2, sc), sdp155(activity, 5, sc), sdp155(activity, 2, sc));
+            epCorner.setBackground(box155(KuroTheme12.col(0x99000000), PURPLE, stroke1, sdp155(activity, 6, sc)));
+            android.widget.FrameLayout.LayoutParams badgeLp = new android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.START);
+            int bm = sdp155(activity, 4, sc);
+            badgeLp.setMargins(bm, bm, bm, bm);
+            posterWrap.addView(epCorner, badgeLp);
+        }
+
+        mediaCard.addView(posterWrap, new LinearLayout.LayoutParams(posterW, posterH));
+
+        LinearLayout metaCol = new LinearLayout(activity);
+        metaCol.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams metaLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        metaLp.leftMargin = sdp155(activity, 12, sc);
+        mediaCard.addView(metaCol, metaLp);
+
+        if (showTitle != null && !showTitle.isEmpty()) {
+            TextView showTv = new TextView(activity);
+            showTv.setText(showTitle);
+            showTv.setTextColor(MUTED);
+            showTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f * sc);
+            showTv.setSingleLine(true);
+            showTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            metaCol.addView(showTv, new LinearLayout.LayoutParams(-1, -2));
+        }
+
+        TextView epHeadTv = new TextView(activity);
+        epHeadTv.setText(epHeadline);
+        epHeadTv.setTextColor(INK);
+        epHeadTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f * sc);
+        epHeadTv.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        epHeadTv.setMaxLines(2);
+        epHeadTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams ehLp = new LinearLayout.LayoutParams(-1, -2);
+        ehLp.topMargin = sdp155(activity, 2, sc);
+        metaCol.addView(epHeadTv, ehLp);
+
+        if (epMetaLine != null && !epMetaLine.isEmpty()) {
+            TextView metaTv = new TextView(activity);
+            metaTv.setText(epMetaLine);
+            metaTv.setTextColor(PURPLE_SOFT);
+            metaTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f * sc);
+            metaTv.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            metaTv.setSingleLine(true);
+            metaTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            LinearLayout.LayoutParams mtLp = new LinearLayout.LayoutParams(-1, -2);
+            mtLp.topMargin = sdp155(activity, 4, sc);
+            metaCol.addView(metaTv, mtLp);
+        }
+
+        // Smooth Animated Countdown Bar
+        int barH = Math.max(4, sdp155(activity, 6, sc));
+        int barRad = sdp155(activity, 99, sc);
+        android.widget.FrameLayout barTrack = new android.widget.FrameLayout(activity);
+        barTrack.setBackground(box155(DIVIDER, 0, 0, barRad));
+        LinearLayout.LayoutParams btLp = new LinearLayout.LayoutParams(-1, barH);
+        btLp.topMargin = sdp155(activity, 13, sc);
+        root.addView(barTrack, btLp);
+
+        View barFill = new View(activity);
+        GradientDrawable fillGrad = new GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            new int[]{PURPLE, PURPLE_SOFT}
+        );
+        fillGrad.setCornerRadius(barRad);
+        barFill.setBackground(fillGrad);
+        barTrack.addView(barFill, new android.widget.FrameLayout.LayoutParams(1, -1));
+
+        final TextView statusTv = new TextView(activity);
+        String cleanEpTag = (epBadgeText != null && !epBadgeText.isEmpty()) ? epBadgeText : "next episode";
+        statusTv.setText("Playing " + cleanEpTag + " in " + totalSeconds + " seconds \\u00b7 Tap timer to hold");
+        statusTv.setTextColor(MUTED);
+        statusTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f * sc);
+        LinearLayout.LayoutParams stLp = new LinearLayout.LayoutParams(-1, -2);
+        stLp.topMargin = sdp155(activity, 7, sc);
+        root.addView(statusTv, stLp);
+
+        // Action Row: [Cancel]   [▶ Play Ep X]
+        LinearLayout actions = new LinearLayout(activity);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams actLp = new LinearLayout.LayoutParams(-1, -2);
+        actLp.topMargin = sdp155(activity, 14, sc);
+        root.addView(actions, actLp);
+
+        int btnH = sdp155(activity, 44, sc);
+        int btnRad = sdp155(activity, 13, sc);
+
+        TextView cancelBtn = new TextView(activity);
+        cancelBtn.setText("Cancel");
+        cancelBtn.setTextColor(INK);
+        cancelBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f * sc);
+        cancelBtn.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        cancelBtn.setGravity(Gravity.CENTER);
+        cancelBtn.setMinHeight(btnH);
+        cancelBtn.setFocusable(true);
+        cancelBtn.setClickable(true);
+        cancelBtn.setBackground(pillStates155(false, stroke1, btnRad));
+        attachBounce155(cancelBtn);
+        cancelBtn.setOnClickListener(v -> {
+            if (onCancel != null) onCancel.run();
+        });
+        actions.addView(cancelBtn, new LinearLayout.LayoutParams(0, btnH, 1f));
+
+        TextView playBtn = new TextView(activity);
+        String playLabel = (epBadgeText != null && !epBadgeText.isEmpty()) ? ("\\u25b6  Play " + epBadgeText) : "\\u25b6  Play now";
+        playBtn.setText(playLabel);
+        playBtn.setTextColor(KuroTheme12.col(0xff140b1a));
+        playBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f * sc);
+        playBtn.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        playBtn.setGravity(Gravity.CENTER);
+        playBtn.setMinHeight(btnH);
+        playBtn.setFocusable(true);
+        playBtn.setClickable(true);
+        playBtn.setBackground(pillStates155(true, stroke1, btnRad));
+        attachBounce155(playBtn);
+        playBtn.setOnClickListener(v -> {
+            if (onPlayNow != null) onPlayNow.run();
+        });
+        LinearLayout.LayoutParams playLp = new LinearLayout.LayoutParams(0, btnH, 1.38f);
+        playLp.leftMargin = sdp155(activity, 9, sc);
+        actions.addView(playBtn, playLp);
+
+        final AutoNextHandle155 handle = new AutoNextHandle155(dialog, posterImg, timerChip, statusTv, barFill);
+        timerChip.setOnClickListener(v -> {
+            handle.paused = !handle.paused;
+            if (handle.paused) {
+                timerChip.setText("\\u25b6 Hold");
+                statusTv.setText("Countdown paused \\u00b7 Tap Play when ready");
+            } else {
+                timerChip.setText("\\u23f8 Resumed");
+            }
+        });
+
+        dialog.setContentView(root);
+        dialog.setOnShowListener(ignored -> {
+            Window window = dialog.getWindow();
+            if (window == null) return;
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            WindowManager.LayoutParams attr = window.getAttributes();
+            attr.dimAmount = 0.62f;
+            DisplayMetrics dm = activity.getResources().getDisplayMetrics();
+            int maxW = sdp155(activity, 396, sc);
+            attr.width = Math.max(sdp155(activity, 260, 1f), Math.min(maxW, Math.round(dm.widthPixels * 0.90f)));
+            attr.height = WindowManager.LayoutParams.WRAP_CONTENT;
+            window.setAttributes(attr);
+            root.setAlpha(0f);
+            root.setScaleX(0.97f);
+            root.setScaleY(0.97f);
+            root.setTranslationY(sdp155(activity, 14, 1f));
+            root.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f)
+                .setDuration(200).setInterpolator(new DecelerateInterpolator()).start();
+            playBtn.requestFocus();
+        });
+
+        return handle;
+    }
+
+    public static Dialog openDisplayController155(Activity activity, DisplayHost155 host) {
+        if (!canShow155(activity)) return null;
+        KuroDisplay155.enforce500Dpi(activity);
+        retint();
+        final int stroke1 = Math.max(1, Math.round(activity.getResources().getDisplayMetrics().density));
+
+        final int sysDpi = KuroDisplay155.systemDpi();
+        final int[] draftDpi = {KuroDisplay155.configuredDpi(activity)};
+        final int[] draftScale = {KuroDisplay155.uiScale(activity)};
+        final int[] draftSec = {KuroDisplay155.autoNextSeconds(activity)};
+        final int[] draftCard = {KuroDisplay155.upNextScale(activity)};
+        final boolean[] draftAutoNext = {host == null || host.isAutoNextEnabled()};
+
+        final Dialog dialog = new Dialog(activity);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setCanceledOnTouchOutside(true);
+
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setFillViewport(false);
+        scroll.setBackground(box155(PANEL, BORDER, stroke1, sdp155(activity, 22, 1f)));
+
+        LinearLayout root = new LinearLayout(activity);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = sdp155(activity, 18, 1f);
+        root.setPadding(pad, pad, pad, pad);
+        scroll.addView(root, new ViewGroup.LayoutParams(-1, -2));
+
+        View accentBar = new View(activity);
+        GradientDrawable glow = new GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            new int[]{PURPLE, PURPLE_SOFT, KuroTheme12.col(0x00a65be4)}
+        );
+        glow.setCornerRadius(sdp155(activity, 99, 1f));
+        accentBar.setBackground(glow);
+        LinearLayout.LayoutParams glowLp = new LinearLayout.LayoutParams(sdp155(activity, 64, 1f), Math.max(3, sdp155(activity, 3, 1f)));
+        glowLp.bottomMargin = sdp155(activity, 10, 1f);
+        root.addView(accentBar, glowLp);
+
+        TextView titleTv = new TextView(activity);
+        titleTv.setText("Display, App DPI & Auto-Next");
+        titleTv.setTextColor(INK);
+        titleTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        titleTv.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        root.addView(titleTv, new LinearLayout.LayoutParams(-1, -2));
+
+        final TextView subTv = new TextView(activity);
+        subTv.setTextColor(MUTED);
+        subTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(-1, -2);
+        subLp.topMargin = sdp155(activity, 3, 1f);
+        subLp.bottomMargin = sdp155(activity, 12, 1f);
+        root.addView(subTv, subLp);
+
+        // Section 1: App DPI
+        LinearLayout dpiBox = new LinearLayout(activity);
+        dpiBox.setOrientation(LinearLayout.VERTICAL);
+        int boxPad = sdp155(activity, 12, 1f);
+        dpiBox.setPadding(boxPad, boxPad, boxPad, boxPad);
+        dpiBox.setBackground(box155(CARD, DIVIDER, stroke1, sdp155(activity, 14, 1f)));
+        root.addView(dpiBox, new LinearLayout.LayoutParams(-1, -2));
+
+        final TextView dpiReadout = new TextView(activity);
+        dpiReadout.setTextColor(INK);
+        dpiReadout.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        dpiReadout.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        dpiBox.addView(dpiReadout, new LinearLayout.LayoutParams(-1, -2));
+
+        final android.widget.SeekBar dpiSeek = new android.widget.SeekBar(activity);
+        dpiSeek.setMax(36); // 280 + i*10 -> 280..640
+        LinearLayout.LayoutParams skLp = new LinearLayout.LayoutParams(-1, -2);
+        skLp.topMargin = sdp155(activity, 6, 1f);
+        dpiBox.addView(dpiSeek, skLp);
+
+        android.widget.HorizontalScrollView dpiHScroll = new android.widget.HorizontalScrollView(activity);
+        dpiHScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout dpiChipRow = new LinearLayout(activity);
+        dpiChipRow.setOrientation(LinearLayout.HORIZONTAL);
+        dpiHScroll.addView(dpiChipRow, new ViewGroup.LayoutParams(-2, -2));
+        LinearLayout.LayoutParams dchLp = new LinearLayout.LayoutParams(-1, -2);
+        dchLp.topMargin = sdp155(activity, 6, 1f);
+        dpiBox.addView(dpiHScroll, dchLp);
+
+        final int[] dpiPresetVals = {0, 360, 400, 440, 480, 500, 540, 600};
+        final List<TextView> dpiPresetViews = new ArrayList<>();
+
+        // Section 2: App UI Size
+        LinearLayout scaleBox = new LinearLayout(activity);
+        scaleBox.setOrientation(LinearLayout.VERTICAL);
+        scaleBox.setPadding(boxPad, boxPad, boxPad, boxPad);
+        scaleBox.setBackground(box155(CARD, DIVIDER, stroke1, sdp155(activity, 14, 1f)));
+        LinearLayout.LayoutParams scBoxLp = new LinearLayout.LayoutParams(-1, -2);
+        scBoxLp.topMargin = sdp155(activity, 10, 1f);
+        root.addView(scaleBox, scBoxLp);
+
+        final TextView scaleReadout = new TextView(activity);
+        scaleReadout.setTextColor(INK);
+        scaleReadout.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        scaleReadout.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        scaleBox.addView(scaleReadout, new LinearLayout.LayoutParams(-1, -2));
+
+        final android.widget.SeekBar scaleSeek = new android.widget.SeekBar(activity);
+        scaleSeek.setMax(12); // 75 + i*5 -> 75..135
+        LinearLayout.LayoutParams sskLp = new LinearLayout.LayoutParams(-1, -2);
+        sskLp.topMargin = sdp155(activity, 6, 1f);
+        scaleBox.addView(scaleSeek, sskLp);
+
+        android.widget.HorizontalScrollView scaleHScroll = new android.widget.HorizontalScrollView(activity);
+        scaleHScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout scaleChipRow = new LinearLayout(activity);
+        scaleChipRow.setOrientation(LinearLayout.HORIZONTAL);
+        scaleHScroll.addView(scaleChipRow, new ViewGroup.LayoutParams(-2, -2));
+        LinearLayout.LayoutParams schLp = new LinearLayout.LayoutParams(-1, -2);
+        schLp.topMargin = sdp155(activity, 6, 1f);
+        scaleBox.addView(scaleHScroll, schLp);
+
+        final int[] scalePresetVals = {80, 90, 95, 100, 105, 110, 120};
+        final List<TextView> scalePresetViews = new ArrayList<>();
+
+        // Section 3: Auto-Next Countdown & Card Size
+        LinearLayout anBox = new LinearLayout(activity);
+        anBox.setOrientation(LinearLayout.VERTICAL);
+        anBox.setPadding(boxPad, boxPad, boxPad, boxPad);
+        anBox.setBackground(box155(CARD, DIVIDER, stroke1, sdp155(activity, 14, 1f)));
+        LinearLayout.LayoutParams anBoxLp = new LinearLayout.LayoutParams(-1, -2);
+        anBoxLp.topMargin = sdp155(activity, 10, 1f);
+        root.addView(anBox, anBoxLp);
+
+        LinearLayout anHead = new LinearLayout(activity);
+        anHead.setOrientation(LinearLayout.HORIZONTAL);
+        anHead.setGravity(Gravity.CENTER_VERTICAL);
+        TextView anTitle = new TextView(activity);
+        anTitle.setText("Auto-Play Next & Card Size");
+        anTitle.setTextColor(INK);
+        anTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        anTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        anHead.addView(anTitle, new LinearLayout.LayoutParams(0, -2, 1f));
+
+        final TextView anToggle = new TextView(activity);
+        anToggle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        anToggle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        anToggle.setPadding(sdp155(activity, 11, 1f), sdp155(activity, 5, 1f), sdp155(activity, 11, 1f), sdp155(activity, 5, 1f));
+        anToggle.setFocusable(true);
+        anToggle.setClickable(true);
+        anHead.addView(anToggle, new LinearLayout.LayoutParams(-2, -2));
+        anBox.addView(anHead, new LinearLayout.LayoutParams(-1, -2));
+
+        LinearLayout secRow = new LinearLayout(activity);
+        secRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams secRowLp = new LinearLayout.LayoutParams(-1, -2);
+        secRowLp.topMargin = sdp155(activity, 8, 1f);
+        anBox.addView(secRow, secRowLp);
+        final int[] secVals = {5, 8, 10, 15};
+        final List<TextView> secViews = new ArrayList<>();
+
+        LinearLayout cardRow = new LinearLayout(activity);
+        cardRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams cardRowLp = new LinearLayout.LayoutParams(-1, -2);
+        cardRowLp.topMargin = sdp155(activity, 7, 1f);
+        anBox.addView(cardRow, cardRowLp);
+        final int[] cardVals = {85, 100, 115};
+        final String[] cardNames = {"Compact", "Default", "Large"};
+        final List<TextView> cardViews = new ArrayList<>();
+
+        final boolean[] syncingSeek = {false};
+        final Runnable refreshUi = () -> {
+            int base = draftDpi[0] <= 0 ? sysDpi : draftDpi[0];
+            int eff = Math.max(220, Math.min(760, Math.round(base * (draftScale[0] / 100f))));
+            String dLbl = draftDpi[0] <= 0 ? ("System (" + sysDpi + " DPI)") : (draftDpi[0] + " DPI");
+            subTv.setText(dLbl + " \\u00b7 UI Size " + draftScale[0] + "% \\u00b7 Effective " + eff + " DPI");
+            dpiReadout.setText("App DPI: " + dLbl);
+            scaleReadout.setText("App UI Size: " + draftScale[0] + "% (" + eff + " eff DPI)");
+
+            syncingSeek[0] = true;
+            dpiSeek.setProgress(Math.max(0, Math.min(36, Math.round((base - 280) / 10f))));
+            scaleSeek.setProgress(Math.max(0, Math.min(12, Math.round((draftScale[0] - 75) / 5f))));
+            syncingSeek[0] = false;
+
+            for (int i = 0; i < dpiPresetViews.size(); i++) {
+                boolean on = draftDpi[0] == dpiPresetVals[i];
+                TextView tv = dpiPresetViews.get(i);
+                tv.setTextColor(on ? KuroTheme12.col(0xff140b1a) : INK);
+                tv.setBackground(pillStates155(on, stroke1, sdp155(activity, 999, 1f)));
+            }
+            for (int i = 0; i < scalePresetViews.size(); i++) {
+                boolean on = draftScale[0] == scalePresetVals[i];
+                TextView tv = scalePresetViews.get(i);
+                tv.setTextColor(on ? KuroTheme12.col(0xff140b1a) : INK);
+                tv.setBackground(pillStates155(on, stroke1, sdp155(activity, 999, 1f)));
+            }
+            anToggle.setText(draftAutoNext[0] ? "Auto-Next ON" : "Auto-Next OFF");
+            anToggle.setTextColor(draftAutoNext[0] ? KuroTheme12.col(0xff140b1a) : INK);
+            anToggle.setBackground(pillStates155(draftAutoNext[0], stroke1, sdp155(activity, 999, 1f)));
+
+            for (int i = 0; i < secViews.size(); i++) {
+                boolean on = draftSec[0] == secVals[i];
+                TextView tv = secViews.get(i);
+                tv.setTextColor(on ? KuroTheme12.col(0xff140b1a) : INK);
+                tv.setBackground(pillStates155(on, stroke1, sdp155(activity, 999, 1f)));
+            }
+            for (int i = 0; i < cardViews.size(); i++) {
+                boolean on = Math.abs(draftCard[0] - cardVals[i]) <= 4;
+                TextView tv = cardViews.get(i);
+                tv.setTextColor(on ? KuroTheme12.col(0xff140b1a) : INK);
+                tv.setBackground(pillStates155(on, stroke1, sdp155(activity, 999, 1f)));
+            }
+        };
+
+        for (int i = 0; i < dpiPresetVals.length; i++) {
+            final int val = dpiPresetVals[i];
+            TextView chip = new TextView(activity);
+            chip.setText(val == 0 ? ("System (" + sysDpi + ")") : String.valueOf(val));
+            chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+            chip.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            chip.setGravity(Gravity.CENTER);
+            chip.setFocusable(true);
+            chip.setClickable(true);
+            chip.setPadding(sdp155(activity, 11, 1f), sdp155(activity, 6, 1f), sdp155(activity, 11, 1f), sdp155(activity, 6, 1f));
+            chip.setOnClickListener(v -> { draftDpi[0] = val; refreshUi.run(); });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+            if (i > 0) lp.leftMargin = sdp155(activity, 6, 1f);
+            dpiChipRow.addView(chip, lp);
+            dpiPresetViews.add(chip);
+        }
+
+        for (int i = 0; i < scalePresetVals.length; i++) {
+            final int val = scalePresetVals[i];
+            TextView chip = new TextView(activity);
+            chip.setText(val + "%");
+            chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+            chip.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            chip.setGravity(Gravity.CENTER);
+            chip.setFocusable(true);
+            chip.setClickable(true);
+            chip.setPadding(sdp155(activity, 11, 1f), sdp155(activity, 6, 1f), sdp155(activity, 11, 1f), sdp155(activity, 6, 1f));
+            chip.setOnClickListener(v -> { draftScale[0] = val; refreshUi.run(); });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+            if (i > 0) lp.leftMargin = sdp155(activity, 6, 1f);
+            scaleChipRow.addView(chip, lp);
+            scalePresetViews.add(chip);
+        }
+
+        for (int i = 0; i < secVals.length; i++) {
+            final int val = secVals[i];
+            TextView chip = new TextView(activity);
+            chip.setText(val + "s");
+            chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+            chip.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            chip.setGravity(Gravity.CENTER);
+            chip.setFocusable(true);
+            chip.setClickable(true);
+            chip.setPadding(0, sdp155(activity, 6, 1f), 0, sdp155(activity, 6, 1f));
+            chip.setOnClickListener(v -> { draftSec[0] = val; refreshUi.run(); });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
+            if (i > 0) lp.leftMargin = sdp155(activity, 6, 1f);
+            secRow.addView(chip, lp);
+            secViews.add(chip);
+        }
+
+        for (int i = 0; i < cardVals.length; i++) {
+            final int val = cardVals[i];
+            TextView chip = new TextView(activity);
+            chip.setText("Card: " + cardNames[i]);
+            chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+            chip.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            chip.setGravity(Gravity.CENTER);
+            chip.setFocusable(true);
+            chip.setClickable(true);
+            chip.setPadding(0, sdp155(activity, 6, 1f), 0, sdp155(activity, 6, 1f));
+            chip.setOnClickListener(v -> { draftCard[0] = val; refreshUi.run(); });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
+            if (i > 0) lp.leftMargin = sdp155(activity, 6, 1f);
+            cardRow.addView(chip, lp);
+            cardViews.add(chip);
+        }
+
+        dpiSeek.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(android.widget.SeekBar sb, int progress, boolean fromUser) {
+                if (!fromUser || syncingSeek[0]) return;
+                draftDpi[0] = 280 + progress * 10;
+                refreshUi.run();
+            }
+            @Override public void onStartTrackingTouch(android.widget.SeekBar sb) {}
+            @Override public void onStopTrackingTouch(android.widget.SeekBar sb) {}
+        });
+
+        scaleSeek.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(android.widget.SeekBar sb, int progress, boolean fromUser) {
+                if (!fromUser || syncingSeek[0]) return;
+                draftScale[0] = 75 + progress * 5;
+                refreshUi.run();
+            }
+            @Override public void onStartTrackingTouch(android.widget.SeekBar sb) {}
+            @Override public void onStopTrackingTouch(android.widget.SeekBar sb) {}
+        });
+
+        anToggle.setOnClickListener(v -> { draftAutoNext[0] = !draftAutoNext[0]; refreshUi.run(); });
+
+        // Footer Buttons: [Reset] [▶ Preview] [✓ Apply]
+        LinearLayout actions = new LinearLayout(activity);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams actLp = new LinearLayout.LayoutParams(-1, -2);
+        actLp.topMargin = sdp155(activity, 14, 1f);
+        root.addView(actions, actLp);
+
+        int btnH = sdp155(activity, 42, 1f);
+        int btnRad = sdp155(activity, 12, 1f);
+
+        TextView resetBtn = new TextView(activity);
+        resetBtn.setText("Reset");
+        resetBtn.setTextColor(INK);
+        resetBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+        resetBtn.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        resetBtn.setGravity(Gravity.CENTER);
+        resetBtn.setFocusable(true);
+        resetBtn.setClickable(true);
+        resetBtn.setBackground(pillStates155(false, stroke1, btnRad));
+        resetBtn.setOnClickListener(v -> {
+            draftDpi[0] = 500;
+            draftScale[0] = 100;
+            draftSec[0] = 8;
+            draftCard[0] = 100;
+            draftAutoNext[0] = true;
+            refreshUi.run();
+        });
+        actions.addView(resetBtn, new LinearLayout.LayoutParams(0, btnH, 0.85f));
+
+        TextView prevBtn = new TextView(activity);
+        prevBtn.setText("\\u25b6 Preview");
+        prevBtn.setTextColor(INK);
+        prevBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+        prevBtn.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        prevBtn.setGravity(Gravity.CENTER);
+        prevBtn.setFocusable(true);
+        prevBtn.setClickable(true);
+        prevBtn.setBackground(pillStates155(false, stroke1, btnRad));
+        prevBtn.setOnClickListener(v -> {
+            KuroDisplay155.saveConfig(activity, draftDpi[0], draftScale[0], draftSec[0], draftCard[0]);
+            if (host != null) host.setAutoNextEnabled(draftAutoNext[0]);
+            try { dialog.dismiss(); } catch (RuntimeException ignored) {}
+            if (host != null) host.onPreviewUpNext();
+        });
+        LinearLayout.LayoutParams pvLp = new LinearLayout.LayoutParams(0, btnH, 1.05f);
+        pvLp.leftMargin = sdp155(activity, 7, 1f);
+        actions.addView(prevBtn, pvLp);
+
+        TextView applyBtn = new TextView(activity);
+        applyBtn.setText("\\u2713 Apply");
+        applyBtn.setTextColor(KuroTheme12.col(0xff140b1a));
+        applyBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        applyBtn.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        applyBtn.setGravity(Gravity.CENTER);
+        applyBtn.setFocusable(true);
+        applyBtn.setClickable(true);
+        applyBtn.setBackground(pillStates155(true, stroke1, btnRad));
+        applyBtn.setOnClickListener(v -> {
+            boolean densityChanged = draftDpi[0] != KuroDisplay155.configuredDpi(activity)
+                || draftScale[0] != KuroDisplay155.uiScale(activity);
+            KuroDisplay155.saveConfig(activity, draftDpi[0], draftScale[0], draftSec[0], draftCard[0]);
+            if (host != null) host.setAutoNextEnabled(draftAutoNext[0]);
+            try { dialog.dismiss(); } catch (RuntimeException ignored) {}
+            if (host != null) host.onDisplayApplied(densityChanged);
+        });
+        LinearLayout.LayoutParams apLp = new LinearLayout.LayoutParams(0, btnH, 1.15f);
+        apLp.leftMargin = sdp155(activity, 7, 1f);
+        actions.addView(applyBtn, apLp);
+
+        refreshUi.run();
+        dialog.setContentView(scroll);
+        dialog.setOnShowListener(ignored -> {
+            Window window = dialog.getWindow();
+            if (window == null) return;
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            WindowManager.LayoutParams attr = window.getAttributes();
+            attr.dimAmount = 0.72f;
+            DisplayMetrics dm = activity.getResources().getDisplayMetrics();
+            attr.width = Math.min(sdp155(activity, 430, 1f), Math.round(dm.widthPixels * 0.92f));
+            attr.height = WindowManager.LayoutParams.WRAP_CONTENT;
+            window.setAttributes(attr);
+            applyBtn.requestFocus();
+        });
+
+        safeShow155(dialog, activity);
+        return dialog;
+    }
+}
+"""
+    if "createAutoNext155(" not in dg_text:
+        if not dg_text.rstrip().endswith("    }\n}"):
+            raise SystemExit("ui_1.5.4.py: unexpected tail of KuroDialogs581.java")
+        idx = dg_text.rfind("}")
+        dg_text = dg_text[:idx] + kuro_autonext_and_display_ui_155
     dg_path.write_text(dg_text, encoding="utf-8")
 
     # 4. Keep system default responsive viewport in assets/index.html + allow 500DPI DPR in video-effects537.js
@@ -3866,11 +4793,19 @@ def patch_stability_and_autonext_155(root: pathlib.Path) -> None:
     )
     pn_path.write_text(pn_text, encoding="utf-8")
 
-    # 6. MainActivity: Auto-Play Next end-to-end reliability + default true + dialog safety
+    # 6. MainActivity: Themed Auto-Play Next Card + Display/DPI Controller + end-to-end reliability
     ma_path = root / "src/app/lovelycrxshx/kuro/MainActivity.java"
     ma_text = ma_path.read_text(encoding="utf-8")
 
-    old_autonext_block = (
+    ma_text = patch_once(
+        ma_text,
+        "private android.app.Dialog autoNextDialog573;private Runnable autoNextTick573;",
+        " private AlertDialog autoNextDialog573;private Runnable autoNextTick573;",
+        " private android.app.Dialog autoNextDialog573;private Runnable autoNextTick573;",
+        "MainActivity autoNextDialog573 widen to Dialog",
+    )
+
+    old_autonext_block_orig = (
         ' private void cancelAutoNext573(){\n'
         '  if(autoNextTick573!=null)main.removeCallbacks(autoNextTick573);autoNextTick573=null;\n'
         '  AlertDialog d=autoNextDialog573;autoNextDialog573=null;if(d!=null&&d.isShowing())d.dismiss();\n'
@@ -3891,7 +4826,7 @@ def patch_stability_and_autonext_155(root: pathlib.Path) -> None:
         '  }};main.post(autoNextTick573);\n'
         ' }'
     )
-    new_autonext_block = (
+    old_autonext_block_beta7 = (
         ' private boolean isAutoNextEnabled155(){return getPreferences(MODE_PRIVATE).getBoolean("auto_next",true);}\n'
         ' private void triggerAutoNext155(String session,int rawNext154){if(session==null||session.isEmpty())return;if(autoNextDialog573!=null&&autoNextDialog573.isShowing())return;offerAutoNext573(session,rawNext154);}\n'
         ' private void cancelAutoNext573(){\n'
@@ -3917,7 +4852,114 @@ def patch_stability_and_autonext_155(root: pathlib.Path) -> None:
         '  }};main.post(autoNextTick573);\n'
         ' }'
     )
-    ma_text = patch_once(ma_text, "isAutoNextEnabled155()", old_autonext_block, new_autonext_block, "MainActivity safe & default-on offerAutoNext573")
+    new_autonext_block = (
+        ' private boolean isAutoNextEnabled155(){return getPreferences(MODE_PRIVATE).getBoolean("auto_next",true);}\n'
+        ' private void triggerAutoNext155(String session,int rawNext154){if(session==null||session.isEmpty())return;if(autoNextDialog573!=null&&autoNextDialog573.isShowing())return;offerAutoNext573(session,rawNext154);}\n'
+        ' private void cancelAutoNext573(){\n'
+        '  if(autoNextTick573!=null)main.removeCallbacks(autoNextTick573);autoNextTick573=null;\n'
+        '  android.app.Dialog d=autoNextDialog573;autoNextDialog573=null;if(d!=null)try{if(d.isShowing())d.dismiss();}catch(RuntimeException ignored){}\n'
+        ' }\n'
+        ' private String resolveWatchPoster155(JSONObject wi,JSONObject nextObj){\n'
+        '  if(nextObj!=null){String t=nextObj.optString("image",nextObj.optString("thumb","")).trim();if(!t.isEmpty())return t;}\n'
+        '  if(wi==null)return "";\n'
+        '  String ei=wi.optString("episodeImage","").trim();if(!ei.isEmpty())return ei;\n'
+        '  JSONObject ai=wi.optJSONObject("animeInfo");if(ai!=null){String u=ai.optString("image","").trim();if(!u.isEmpty())return u;}\n'
+        '  JSONObject an=wi.optJSONObject("anime");if(an!=null){String u=an.optString("image","").trim();if(!u.isEmpty())return u;}\n'
+        '  return wi.optString("image","").trim();\n'
+        ' }\n'
+        ' private void openDisplayControllerFromMain155(){\n'
+        '  KuroDialogs581.themed(this);\n'
+        '  KuroDialogs581.openDisplayController155(this,new KuroDialogs581.DisplayHost155(){\n'
+        '   @Override public boolean isAutoNextEnabled(){return isAutoNextEnabled155();}\n'
+        '   @Override public void setAutoNextEnabled(boolean on){getPreferences(MODE_PRIVATE).edit().putBoolean("auto_next",on).apply();if(!on)cancelAutoNext573();if(ui!=null&&uiReady)ui.evaluateJavascript("window.kuroSyncDisplay155&&window.kuroSyncDisplay155()",null);}\n'
+        '   @Override public void onDisplayApplied(boolean recreateNow){\n'
+        '    KuroDisplay155.enforce500Dpi(MainActivity.this);applyWindowPreferences560();\n'
+        '    if(playerLayer!=null&&watchInfo561!=null){\n'
+        '     if(recreateNow){String snap=watchInfo561.toString();openWatch(snap);Toast.makeText(MainActivity.this,"Applied · "+KuroDisplay155.effectiveDpi(MainActivity.this)+" effective DPI",Toast.LENGTH_SHORT).show();}\n'
+        '     else Toast.makeText(MainActivity.this,"Auto-Next & Display updated",Toast.LENGTH_SHORT).show();\n'
+        '    }else if(recreateNow&&!isFinishing()&&!isDestroyed()){\n'
+        '     if(ui!=null&&uiReady)ui.evaluateJavascript("try{localStorage.setItem(\'kuro-skip-intro-once-155\',String(Date.now()));if(window.kuroSavePage)window.kuroSavePage();}catch(e){}",v->{if(!isFinishing()&&!isDestroyed())try{recreate();}catch(RuntimeException ignored){}});\n'
+        '     else try{recreate();}catch(RuntimeException ignored){}\n'
+        '    }else Toast.makeText(MainActivity.this,"Display & Auto-Next saved",Toast.LENGTH_SHORT).show();\n'
+        '   }\n'
+        '   @Override public void onPreviewUpNext(){previewAutoNextDialog155();}\n'
+        '  });\n'
+        ' }\n'
+        ' private void previewAutoNextDialog155(){\n'
+        '  if(!KuroDialogs581.canShow155(this))return;\n'
+        '  cancelAutoNext573();\n'
+        '  String showTitle=watchInfo561!=null?watchInfo561.optString("title","Kuro Anime"):"Kuro Anime";\n'
+        '  String posterUrl=resolveWatchPoster155(watchInfo561,null);\n'
+        '  final int totalSec=KuroDisplay155.autoNextSeconds(this);\n'
+        '  final long totalMs=totalSec*1000L;\n'
+        '  final String epBadge="EP 3";\n'
+        '  KuroDialogs581.AutoNextHandle155 h=KuroDialogs581.createAutoNext155(\n'
+        '   this,showTitle,epBadge,"Episode 3 · Preview Up Next Card","Episode 3 of 12 · Themed Auto-Play Next",totalSec,\n'
+        '   this::cancelAutoNext573,\n'
+        '   ()->{cancelAutoNext573();Toast.makeText(MainActivity.this,"Up Next preview: Play Episode 3",Toast.LENGTH_SHORT).show();},\n'
+        '   this::openDisplayControllerFromMain155);\n'
+        '  final android.app.Dialog d=h.dialog;\n'
+        '  autoNextDialog573=d;\n'
+        '  d.setOnCancelListener(dialog->cancelAutoNext573());\n'
+        '  d.setOnDismissListener(dialog->{if(autoNextDialog573==d){if(autoNextTick573!=null)main.removeCallbacks(autoNextTick573);autoNextTick573=null;autoNextDialog573=null;}});\n'
+        '  if(!KuroDialogs581.safeShow155(d,this)){autoNextDialog573=null;return;}\n'
+        '  if(!posterUrl.isEmpty())loadPoster(h.posterView,posterUrl);\n'
+        '  final long[] remMs={totalMs};final long[] lastAt={android.os.SystemClock.elapsedRealtime()};\n'
+        '  autoNextTick573=new Runnable(){@Override public void run(){\n'
+        '   if(autoNextDialog573!=d||!activityResumed){cancelAutoNext573();return;}\n'
+        '   long now=android.os.SystemClock.elapsedRealtime();long dt=Math.max(0L,now-lastAt[0]);lastAt[0]=now;\n'
+        '   if(!h.paused){remMs[0]-=dt;if(remMs[0]<=0L){cancelAutoNext573();Toast.makeText(MainActivity.this,"Up Next preview finished",Toast.LENGTH_SHORT).show();return;}try{h.updateProgress(remMs[0],totalMs,"Ep 3");}catch(RuntimeException ignored){}}\n'
+        '   main.postDelayed(this,60);\n'
+        '  }};main.post(autoNextTick573);\n'
+        ' }\n'
+        ' private void offerAutoNext573(String session,int rawNext154){\n'
+        '  final int next=nextPlayableEpisode154(watchInfo561,rawNext154);\n'
+        '  if(next<0||!KuroDialogs581.canShow155(this)||!activityResumed||isInPictureInPictureMode()||playerLayer==null||ui==null||!session.equals(watchSession)||!isAutoNextEnabled155())return;\n'
+        '  cancelAutoNext573();\n'
+        '  final int totalSec=KuroDisplay155.autoNextSeconds(this);\n'
+        '  final long totalMs=totalSec*1000L;\n'
+        '  String showTitle=watchInfo561!=null?watchInfo561.optString("title","Anime"):"Anime";\n'
+        '  String nextEpNum="",nextEpName="";int totalEps=0;JSONObject nextObj=null;\n'
+        '  try{JSONArray epsArr=watchInfo561!=null?watchInfo561.optJSONArray("episodes"):null;if(epsArr!=null){totalEps=epsArr.length();nextObj=epsArr.optJSONObject(next);if(nextObj!=null){nextEpNum=nextObj.optString("number","").trim();nextEpName=nextObj.optString("name",nextObj.optString("title","")).trim();}}}catch(Exception ignored){}\n'
+        '  if(!nextEpName.isEmpty()&&!nextEpNum.isEmpty()&&nextEpName.equalsIgnoreCase("Episode "+nextEpNum))nextEpName="";\n'
+        '  final String numFallback=nextEpNum.isEmpty()?String.valueOf(next+1):nextEpNum;\n'
+        '  final String epBadge="EP "+numFallback;\n'
+        '  final String epHeadline=nextEpName.isEmpty()?("Episode "+numFallback):("Ep "+numFallback+" \\u00b7 "+nextEpName);\n'
+        '  int skippedFiller=Math.max(0,next-rawNext154);\n'
+        '  final String epMeta=(totalEps>0?("Episode "+numFallback+" of "+totalEps):"Next episode in queue")+(skippedFiller>0?(" \\u00b7 Skipped "+skippedFiller+" filler"):"");\n'
+        '  final String posterUrl=resolveWatchPoster155(watchInfo561,nextObj);\n'
+        '  final Runnable advance=()->{if(!session.equals(watchSession)||!activityResumed||isInPictureInPictureMode()||playerLayer==null||ui==null||!isAutoNextEnabled155()){cancelAutoNext573();return;}cancelAutoNext573();closePlayer();if(ui!=null)ui.evaluateJavascript("window.kuroChooseEpisode&&window.kuroChooseEpisode("+next+")",null);};\n'
+        '  final KuroDialogs581.AutoNextHandle155 h=KuroDialogs581.createAutoNext155(this,showTitle,epBadge,epHeadline,epMeta,totalSec,this::cancelAutoNext573,advance,this::openDisplayControllerFromMain155);\n'
+        '  final android.app.Dialog d=h.dialog;\n'
+        '  autoNextDialog573=d;d.setOnCancelListener(dialog->cancelAutoNext573());d.setOnDismissListener(dialog->{if(autoNextDialog573==d){if(autoNextTick573!=null)main.removeCallbacks(autoNextTick573);autoNextTick573=null;autoNextDialog573=null;}});\n'
+        '  if(!KuroDialogs581.safeShow155(d,this)){autoNextDialog573=null;return;}\n'
+        '  if(!posterUrl.isEmpty())loadPoster(h.posterView,posterUrl);\n'
+        '  final long[] remMs={totalMs};final long[] lastAt={android.os.SystemClock.elapsedRealtime()};\n'
+        '  final String tickLabel="Ep "+numFallback;\n'
+        '  autoNextTick573=new Runnable(){@Override public void run(){\n'
+        '   if(autoNextDialog573!=d||!session.equals(watchSession)||!activityResumed||isInPictureInPictureMode()||!isAutoNextEnabled155()){cancelAutoNext573();return;}\n'
+        '   long now=android.os.SystemClock.elapsedRealtime();long dt=Math.max(0L,now-lastAt[0]);lastAt[0]=now;\n'
+        '   if(!h.paused){remMs[0]-=dt;if(remMs[0]<=0L){advance.run();return;}try{h.updateProgress(remMs[0],totalMs,tickLabel);}catch(RuntimeException ignored){}}\n'
+        '   main.postDelayed(this,60);\n'
+        '  }};main.post(autoNextTick573);\n'
+        ' }'
+    )
+    if "KuroDialogs581.createAutoNext155(" not in ma_text:
+        if old_autonext_block_beta7 in ma_text:
+            ma_text = ma_text.replace(old_autonext_block_beta7, new_autonext_block, 1)
+        elif old_autonext_block_orig in ma_text:
+            ma_text = ma_text.replace(old_autonext_block_orig, new_autonext_block, 1)
+        else:
+            raise SystemExit("ui_1.5.4.py: missing offerAutoNext573 anchor in MainActivity.java")
+
+    # Add Display, DPI & Auto-Next button inside Watch Tools drawer + long-press on Auto-Next pill
+    ma_text = patch_once(
+        ma_text,
+        'autoNextPill155.setOnLongClickListener(v->{openDisplayControllerFromMain155();return true;});',
+        'styleAutoNextPill155.accept(isAutoNextEnabled155());LinearLayout.LayoutParams anLp155=new LinearLayout.LayoutParams(-2,dp(36));',
+        'styleAutoNextPill155.accept(isAutoNextEnabled155());autoNextPill155.setOnLongClickListener(v->{openDisplayControllerFromMain155();return true;});LinearLayout.LayoutParams anLp155=new LinearLayout.LayoutParams(-2,dp(36));',
+        "MainActivity autoNextPill155 long-press Display & Auto-Next Controller",
+    ) if 'styleAutoNextPill155.accept(isAutoNextEnabled155());LinearLayout.LayoutParams' in ma_text or 'autoNextPill155.setOnLongClickListener' in ma_text else ma_text
 
     # Watch UI pill + PlaybackPanel sync default auto_next=true and cancelAutoNext573 on toggle off
     ma_text = patch_once(
@@ -3926,6 +4968,20 @@ def patch_stability_and_autonext_155(root: pathlib.Path) -> None:
         'styleAutoNextPill155.accept(getPreferences(MODE_PRIVATE).getBoolean("auto_next",false));',
         "styleAutoNextPill155.accept(isAutoNextEnabled155());",
         "MainActivity styleAutoNextPill155 default true",
+    )
+    ma_text = patch_once(
+        ma_text,
+        'autoNextPill155.setOnLongClickListener(v->{openDisplayControllerFromMain155();return true;});',
+        'styleAutoNextPill155.accept(isAutoNextEnabled155());LinearLayout.LayoutParams anLp155=new LinearLayout.LayoutParams(-2,dp(36));',
+        'styleAutoNextPill155.accept(isAutoNextEnabled155());autoNextPill155.setOnLongClickListener(v->{openDisplayControllerFromMain155();return true;});LinearLayout.LayoutParams anLp155=new LinearLayout.LayoutParams(-2,dp(36));',
+        "MainActivity autoNextPill155 long-press Display & Auto-Next Controller (post-sync)",
+    )
+    ma_text = patch_once(
+        ma_text,
+        'displayToolsBtn155.setTag("watch-display-dpi-155")',
+        'toolsDrawer155.addView(fxActions,new LinearLayout.LayoutParams(-1,-2));addGap(toolsDrawer155,8);toolsDrawer155.addView(diagnostics573,new LinearLayout.LayoutParams(-1,-2));',
+        'toolsDrawer155.addView(fxActions,new LinearLayout.LayoutParams(-1,-2));addGap(toolsDrawer155,8);TextView displayToolsBtn155=chip("\\u229e  Display, App DPI & Auto-Next",false);displayToolsBtn155.setTag("watch-display-dpi-155");displayToolsBtn155.setMinHeight(dp(44));displayToolsBtn155.setOnClickListener(v->openDisplayControllerFromMain155());toolsDrawer155.addView(displayToolsBtn155,new LinearLayout.LayoutParams(-1,-2));addGap(toolsDrawer155,8);toolsDrawer155.addView(diagnostics573,new LinearLayout.LayoutParams(-1,-2));',
+        "MainActivity toolsDrawer155 Display, App DPI & Auto-Next button",
     )
     ma_text = patch_once(
         ma_text,
