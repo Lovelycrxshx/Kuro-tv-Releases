@@ -462,7 +462,10 @@
     var mins = -1;
     try {
       if (window.KuroNative && typeof window.KuroNative.progress15 === 'function') {
-        mins = Number(window.KuroNative.progress15(String(item.source || ''), String(item.url || ''), num));
+        var rawMs = Number(window.KuroNative.progress15(String(item.source || ''), String(item.url || ''), num));
+        if (Number.isFinite(rawMs) && rawMs >= 30000) {
+          mins = Math.max(1, Math.round(rawMs / 60000));
+        }
       }
     } catch (_) {
       mins = -1;
@@ -1508,14 +1511,14 @@
           var remainText = '18:40 remaining';
           if (window.KuroNative && typeof window.KuroNative.progress15 === 'function') {
             try {
-              var pRaw = window.KuroNative.progress15(String(h.item.title || '') + '::' + epNum);
-              var pObj = pRaw ? JSON.parse(pRaw) : null;
-              if (pObj && Number(pObj.duration) > 60000 && Number(pObj.position) > 0) {
-                var remSec = Math.max(0, Math.round((Number(pObj.duration) - Number(pObj.position)) / 1000));
+              var posMs = Number(window.KuroNative.progress15(String(h.item.source || ''), String(h.item.url || ''), epNum));
+              var estDurMs = 24 * 60 * 1000;
+              if (Number.isFinite(posMs) && posMs > 30000 && posMs < estDurMs) {
+                var remSec = Math.max(0, Math.round((estDurMs - posMs) / 1000));
                 var mins = Math.floor(remSec / 60);
                 var secs = remSec % 60;
                 remainText = mins + ':' + (secs < 10 ? '0' : '') + secs + ' remaining';
-                var ratio = Math.max(10, Math.min(100, Math.round((Number(pObj.position) / Number(pObj.duration)) * 10) * 10));
+                var ratio = Math.max(10, Math.min(100, Math.round((posMs / estDurMs) * 10) * 10));
                 pctStep = ratio;
               }
             } catch (_) {}
@@ -2417,12 +2420,49 @@
     nextSource(title, false);
   };
 
+  function hookOverlayBack155() {
+    if (typeof window.kuroBack !== 'function' || window.kuroBack.__k155Back) return;
+    var origBack = window.kuroBack;
+    var wrappedBack = function () {
+      var wn = document.getElementById('kb-whatsnew');
+      if (wn) {
+        var wnBtn = wn.querySelector('.kb-wn-ok');
+        if (wnBtn) wnBtn.click(); else wn.remove();
+        return true;
+      }
+      var choice = document.querySelector('.choice-backdrop567');
+      if (choice) {
+        var cBtn = choice.querySelector('.choice-close567');
+        if (cBtn) cBtn.click(); else choice.remove();
+        return;
+      }
+      var batch = document.getElementById('k154-batch-sheet');
+      if (batch) {
+        batch.remove();
+        return;
+      }
+      var tm = document.getElementById('tracker-match553');
+      if (tm) {
+        tm.remove();
+        return;
+      }
+      if (window.km15 && typeof window.km15.isSheetOpen === 'function' && window.km15.isSheetOpen()) {
+        window.km15.closeSheet();
+        return;
+      }
+      return origBack.apply(this, arguments);
+    };
+    wrappedBack.__k155Back = true;
+    window.kuroBack = wrappedBack;
+  }
+
   function init154() {
     syncDesktopSite154();
     pruneHiddenControls154();
     hookDetailView154();
     hookBrowseFilters154();
     hookAccountTrackerHub154();
+    hookOverlayBack155();
     startObserver154();
     if (document.getElementById('settings-overlay560')) {
       mountPerfSettingsGroup154();

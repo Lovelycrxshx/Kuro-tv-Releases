@@ -1,29 +1,24 @@
-/* Kuro 1.5.5-beta6 — one-time "What's new" card, shown once after the splash on
-   first launch of 1.5.5-beta6 and never again. Self-contained, dismissible by
+/* Kuro 1.5.5-beta7 — one-time "What's new" card, shown once after the splash on
+   first launch of 1.5.5-beta7 and never again. Self-contained, dismissible by
    button, backdrop tap, or Escape / Android back. */
 (function () {
   'use strict';
 
-  var STAMP = '1.5.5-beta6';
-  var KEY = 'kuro-beta-whatsnew-seen-1.5.5-beta6';
+  var STAMP = '1.5.5-beta7';
+  var KEY = 'kuro-beta-whatsnew-seen-1.5.5-beta7';
 
   try {
-    if (
-      localStorage.getItem(KEY) === STAMP ||
-      localStorage.getItem('kuro-beta-whatsnew-seen-1.5.5-beta5') ||
-      localStorage.getItem('kuro-beta-whatsnew-seen-1.5.5-beta4')
-    ) {
-      localStorage.setItem(KEY, STAMP);
+    if (localStorage.getItem(KEY) === STAMP) {
       return;
     }
   } catch (_) { return; }
 
   var ITEMS = [
-    ['Smooth Native Scrolling Fixed', 'Removed the root CSS overflow container trap and WebView overview-zoom lock so vertical touch scrolling, fling momentum, and shelf swipes work smoothly across Home, Browse, Library, Simulcasts, and Detail screens.'],
-    ['System Default Resolution + 500 DPI Kept', 'Restored native system default screen resolution and standard responsive viewport while keeping the crisp 500 DPI (3.125\u00d7 density) UI scaling intact.'],
-    ['Full 20-Theme & Pure Black OLED Sync', 'Every Watch Screen v3 card, border, SUB/DUB tab, active server pill, episode progress bar, badge, WatchHeader kuro.tv wordmark, and Title Detail / Browse overlay dynamically syncs across all 20 accents and Pure Black OLED mode.'],
-    ['Watch Screen v3 Clarity Upgrade', '1-tap < Prev \u2022 Episode \u2022 Next > + Auto-Next bar right below the player, compact SUB | DUB segmented Server Switcher with horizontal server pills, and 3-row Episode Playlist with 16:9 thumbnails and progress bars.'],
-    ['Classic Video Player & Encrypted DNS', 'Clean original video player controls across embedded servers, HLS streams, native playback, and offline downloads, plus built-in Encrypted DNS (1.1.1.1 / 8.8.8.8) to unblock carrier-restricted sources without a VPN.']
+    ['Auto-Play Next Restored & Crash Fixed', 'Fixed the dialog window-token crash and restored end-to-end Auto-Play Next across embedded web servers, direct HLS streams, and the native player, with SUB/DUB preference carried forward automatically.'],
+    ['Offline Downloads & Batch Queue Stability', 'Fixed background DownloadManager thread-affinity crashes and repaired batch offline download IDs and resume checkpoints so single and batch episodes download and play offline reliably.'],
+    ['Dialog & Thread-Safety Hardening', 'Added Activity lifecycle and BadTokenException protection across every dialog, bottom sheet, and updater prompt, plus lock-free multi-threaded theme palette lookups.'],
+    ['Accurate Episode Progress & Android Back', 'Fixed episode progress badges, Discord Rich Presence timestamps, Episode 0 / .5 playback, and Android Back dismissal across batch sheets, source pickers, and overlays.'],
+    ['System Resolution + 500 DPI & 20-Theme OLED', 'Keeps native system resolution with crisp 500 DPI scaling, full 20-accent + Pure Black OLED sync, and built-in Encrypted DNS (1.1.1.1 / 8.8.8.8).']
   ];
 
   function mark() {
@@ -45,12 +40,12 @@
 
     var tag = document.createElement('div');
     tag.className = 'kb-wn-tag';
-    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA6';
+    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA7';
 
     var h = document.createElement('h2');
     h.id = 'kb-wn-title';
     h.className = 'kb-wn-title';
-    h.textContent = 'What\u2019s new in 1.5.5-beta6';
+    h.textContent = 'What\u2019s new in 1.5.5-beta7';
 
     var list = document.createElement('ul');
     list.className = 'kb-wn-list';

@@ -116,8 +116,27 @@ def patch_offline(root: pathlib.Path) -> None:
     path = root / "src/app/lovelycrxshx/kuro/KuroOffline561.java"
     text = path.read_text(encoding="utf-8")
     batch_method = """
+    static boolean validDownloadId155(String id) {
+        return KuroPlayback561.validKey(id) || (id != null && id.matches("kuro561:[0-9a-fA-F]{1,8}"));
+    }
+
+    private static String resolveBatchCheckpointKey155(String rawKey) {
+        if (KuroPlayback561.validKey(rawKey)) return rawKey;
+        if (rawKey != null && rawKey.startsWith("zenkai|")) {
+            int first = rawKey.indexOf('|');
+            int last = rawKey.lastIndexOf('|');
+            if (first > 0 && last > first + 1 && last + 1 < rawKey.length()) {
+                String showUrl = rawKey.substring(first + 1, last);
+                String epNum = rawKey.substring(last + 1);
+                String computed = KuroPlayback561.key("zenkai", showUrl, epNum);
+                if (KuroPlayback561.validKey(computed)) return computed;
+            }
+        }
+        return "";
+    }
+
     static void confirmBatchDownload154(Activity activity, String rawJson) {
-        if (activity == null || activity.isFinishing() || activity.isDestroyed() || rawJson == null || rawJson.length() > 250000) return;
+        if (!KuroDialogs581.canShow155(activity) || rawJson == null || rawJson.length() > 250000) return;
         final List<JSONObject> valid = new ArrayList<>();
         try {
             org.json.JSONArray arr = new org.json.JSONArray(rawJson);
@@ -137,20 +156,21 @@ def patch_offline(root: pathlib.Path) -> None:
         String firstEp = limit(valid.get(0).optString("episode", "1"), 16);
         String lastEp = limit(valid.get(valid.size() - 1).optString("episode", firstEp), 16);
         String rangeLabel = valid.size() == 1 ? ("Episode " + firstEp) : ("Episodes " + firstEp + " – " + lastEp + " (" + valid.size() + " episodes)");
-        new AlertDialog.Builder(KuroDialogs581.themed(activity))
+        AlertDialog.Builder builder = new AlertDialog.Builder(KuroDialogs581.themed(activity))
                 .setTitle("Batch download " + valid.size() + (valid.size() == 1 ? " episode?" : " episodes?"))
                 .setMessage(showTitle + "\\n" + rangeLabel + "\\n\\nQueues verified direct HLS streams into Kuro offline storage. Only store content you have permission to keep.")
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Queue " + valid.size(), (d, w) -> {
                     int queued = 0;
+                    try { manager(activity); } catch (RuntimeException ignored) {}
                     for (JSONObject row : valid) {
                         try {
                             String addr = row.optString("address", "");
-                            String key = row.optString("key", "");
+                            String ckey = resolveBatchCheckpointKey155(row.optString("key", ""));
                             String t = limit(row.optString("title", "Video"), 120);
                             String ep = limit(row.optString("episode", ""), 20);
-                            String id = "kuro561:" + Integer.toHexString((addr + "|" + key).hashCode());
-                            JSONObject meta = new JSONObject().put("title", t).put("episode", ep).put("key", KuroPlayback561.validKey(key) ? key : "");
+                            String id = KuroPlayback561.sha(ckey + "\\n" + addr);
+                            JSONObject meta = new JSONObject().put("title", t).put("episode", ep).put("key", ckey);
                             DownloadRequest req = new DownloadRequest.Builder(id, android.net.Uri.parse(addr))
                                     .setMimeType(MimeTypes.APPLICATION_M3U8)
                                     .setData(meta.toString().getBytes(StandardCharsets.UTF_8))
@@ -165,8 +185,8 @@ def patch_offline(root: pathlib.Path) -> None:
                     } else {
                         Toast.makeText(activity, "Could not start batch download on this device.", Toast.LENGTH_LONG).show();
                     }
-                })
-                .show();
+                });
+        KuroDialogs581.safeShowBuilder155(builder, activity);
     }
 """
     text = patch_once(
@@ -1938,21 +1958,43 @@ PLAYER_ENDED_154_JS = """'use strict';
 (()=>{
  if(window.__kuroEnded553)return;
  window.__kuroEnded553=true;
- let sent154=false,lastCheck154=0;
- function checkVideo154(v){
-  if(sent154||!(v instanceof HTMLVideoElement))return;
-  if(!Number.isFinite(v.duration)||v.duration<180)return;
-  if(v.ended||v.currentTime>=v.duration*0.85){
-   sent154=true;
-   try{window.KuroFinished553?.postMessage('ended')}catch(_){}
+ let sent85=false,sentEnd=false,lastCheck154=0;
+ const maxTimeMap=new WeakMap();
+ function trackMax(v){
+  const prev=maxTimeMap.get(v)||0;
+  if(Number.isFinite(v.currentTime)&&v.currentTime>prev){
+   maxTimeMap.set(v,v.currentTime);
+   return v.currentTime;
+  }
+  return prev;
+ }
+ function checkVideo154(v,fromEndedEvent){
+  if(!(v instanceof HTMLVideoElement))return;
+  const dur=v.duration;
+  if(!Number.isFinite(dur)||dur<45)return;
+  const cur=Number.isFinite(v.currentTime)?v.currentTime:0;
+  const peak=Math.max(cur,trackMax(v));
+  if(!sent85&&(cur>=dur*0.85||peak>=dur*0.85)){
+   sent85=true;
+   try{window.KuroFinished553?.postMessage('progress85')}catch(_){}
+  }
+  if(!sentEnd){
+   const genuinelyEnded=(fromEndedEvent||v.ended)&&(cur>=dur*0.80||peak>=dur*0.85);
+   const atTailEnd=!v.seeking&&v.paused&&dur>=45&&cur>=dur-1.0&&peak>=dur*0.92;
+   if(genuinelyEnded||atTailEnd){
+    sentEnd=true;
+    try{window.KuroFinished553?.postMessage('ended')}catch(_){}
+   }
   }
  }
- document.addEventListener('ended',e=>checkVideo154(e.target),true);
+ document.addEventListener('ended',e=>checkVideo154(e.target,true),true);
+ document.addEventListener('pause',e=>checkVideo154(e.target,false),true);
  document.addEventListener('timeupdate',e=>{
+  if(e.target instanceof HTMLVideoElement)trackMax(e.target);
   const now=Date.now();
-  if(now-lastCheck154<2000)return;
+  if(now-lastCheck154<1500)return;
   lastCheck154=now;
-  checkVideo154(e.target);
+  checkVideo154(e.target,false);
  },true);
 })();
 """
@@ -3337,25 +3379,85 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
     )
     oa_path.write_text(oa_text, encoding="utf-8")
 
-    # 3. KuroDialogs581: wrap themed dialog context with 500 DPI
+    # 3. KuroDialogs581: preserve Activity window token in themed() while keeping 500 DPI + safeShow155 guards
     dg_path = root / "src/app/lovelycrxshx/kuro/KuroDialogs581.java"
     dg_text = dg_path.read_text(encoding="utf-8")
-    if "KuroDisplay155.wrapContext(context)" not in dg_text:
-        if "new ContextThemeWrapper(context, KuroTheme12.dialogTheme())" in dg_text:
-            dg_text = dg_text.replace(
-                "new ContextThemeWrapper(context, KuroTheme12.dialogTheme())",
-                "new ContextThemeWrapper(KuroDisplay155.wrapContext(context), KuroTheme12.dialogTheme())",
-                1,
-            )
-        elif "new ContextThemeWrapper(context, R.style.KuroDialogTheme)" in dg_text:
-            dg_text = dg_text.replace(
-                "new ContextThemeWrapper(context, R.style.KuroDialogTheme)",
-                "new ContextThemeWrapper(KuroDisplay155.wrapContext(context), KuroTheme12.dialogTheme())",
-                1,
-            )
+    dialog_helpers_155 = """    static Activity findActivity155(Context c) {
+        Context cur = c;
+        for (int i = 0; i < 12 && cur != null; i++) {
+            if (cur instanceof Activity) return (Activity) cur;
+            if (cur instanceof android.content.ContextWrapper) cur = ((android.content.ContextWrapper) cur).getBaseContext();
+            else break;
+        }
+        return null;
+    }
+
+    static boolean canShow155(Context c) {
+        Activity a = findActivity155(c);
+        return a != null && !a.isFinishing() && !a.isDestroyed();
+    }
+
+    static boolean safeShow155(Dialog d, Context c) {
+        if (d == null || !canShow155(c)) return false;
+        try {
+            d.show();
+            return true;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    static android.app.AlertDialog safeShowBuilder155(android.app.AlertDialog.Builder b, Context c) {
+        if (b == null || !canShow155(c)) return null;
+        try {
+            android.app.AlertDialog d = b.create();
+            d.show();
+            return d;
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    /** Context for stock alert dialogs: keeps Activity IBinder token intact while enforcing 500 DPI. */
+    public static Context themed(Context context) {
+        KuroDisplay155.enforce500Dpi(context);
+        return new ContextThemeWrapper(context, KuroTheme12.dialogTheme());
+    }"""
+    if "static boolean safeShow155(Dialog d, Context c)" not in dg_text:
+        for old_themed in (
+            """    /** Context for the stock alert dialogs we have not rebuilt yet: no more grey panels. */
+    public static Context themed(Context context) {
+        return new ContextThemeWrapper(KuroDisplay155.wrapContext(context), KuroTheme12.dialogTheme());
+    }""",
+            """    /** Context for the stock alert dialogs we have not rebuilt yet: no more grey panels. */
+    public static Context themed(Context context) {
+        return new ContextThemeWrapper(context, KuroTheme12.dialogTheme());
+    }""",
+            """    /** Context for the stock alert dialogs we have not rebuilt yet: no more grey panels. */
+    public static Context themed(Context context) {
+        return new ContextThemeWrapper(context, R.style.KuroDialogTheme);
+    }""",
+        ):
+            if old_themed in dg_text:
+                dg_text = dg_text.replace(old_themed, dialog_helpers_155, 1)
+                break
         else:
-            raise SystemExit("ui_1.5.4.py: missing ContextThemeWrapper anchor in KuroDialogs581.java")
-        dg_path.write_text(dg_text, encoding="utf-8")
+            raise SystemExit("ui_1.5.4.py: missing themed(Context) anchor in KuroDialogs581.java")
+    dg_text = patch_once(
+        dg_text,
+        "try { dialog.dismiss(); } catch (RuntimeException ignored) {}",
+        "                    button.setOnClickListener(v -> {\n                        dialog.dismiss();",
+        "                    button.setOnClickListener(v -> {\n                        try { dialog.dismiss(); } catch (RuntimeException ignored) {}",
+        "KuroDialogs581 safe button dismiss",
+    )
+    dg_text = patch_once(
+        dg_text,
+        "safeShow155(dialog, activity);\n            return dialog;",
+        "            dialog.show();\n            return dialog;",
+        "            safeShow155(dialog, activity);\n            return dialog;",
+        "KuroDialogs581 Builder.show safeShow155",
+    )
+    dg_path.write_text(dg_text, encoding="utf-8")
 
     # 4. Keep system default responsive viewport in assets/index.html + allow 500DPI DPR in video-effects537.js
     ix_path = root / "assets/index.html"
@@ -3381,6 +3483,615 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
     )
     ve_path.write_text(ve_text, encoding="utf-8")
 
+
+def patch_stability_and_autonext_155(root: pathlib.Path) -> None:
+    """Fix remaining Android crash vectors, offline DownloadManager thread affinity,
+    batch download ID compatibility, and end-to-end Auto-Play Next across all players."""
+
+    # 1. KuroOffline561: main-looper DownloadManager init + validDownloadId155 + batch checkpoint/ID fix + themed/safe dialogs
+    ko_path = root / "src/app/lovelycrxshx/kuro/KuroOffline561.java"
+    ko_text = ko_path.read_text(encoding="utf-8")
+    old_mgr = """    static synchronized DownloadManager manager(Context c){
+        if(manager!=null)return manager;
+        Context app=c.getApplicationContext();
+        DatabaseProvider db=new StandaloneDatabaseProvider(app);
+        cache=new SimpleCache(new File(app.getFilesDir(),"kuro-offline561"),new NoOpCacheEvictor(),db);
+        androidx.media3.datasource.okhttp.OkHttpDataSource.Factory http=KuroHttp561.factory();
+        manager=new DownloadManager(app,db,cache,http,DOWNLOAD_EXECUTOR);
+        manager.setMaxParallelDownloads(1);manager.setMinRetryCount(0);
+        return manager;
+    }"""
+    new_mgr = """    private static volatile DownloadManager volatileManager155;
+    private static DownloadManager createManagerOnMain155(Context app){
+        synchronized(KuroOffline561.class){
+            if(manager!=null)return manager;
+            DatabaseProvider db=new StandaloneDatabaseProvider(app);
+            cache=new SimpleCache(new File(app.getFilesDir(),"kuro-offline561"),new NoOpCacheEvictor(),db);
+            androidx.media3.datasource.okhttp.OkHttpDataSource.Factory http=KuroHttp561.factory();
+            manager=new DownloadManager(app,db,cache,http,DOWNLOAD_EXECUTOR);
+            manager.setMaxParallelDownloads(1);manager.setMinRetryCount(0);
+            volatileManager155=manager;
+            return manager;
+        }
+    }
+    static DownloadManager manager(Context c){
+        DownloadManager fast=volatileManager155;
+        if(fast!=null)return fast;
+        final Context app=c.getApplicationContext();
+        if(android.os.Looper.myLooper()==android.os.Looper.getMainLooper()){
+            return createManagerOnMain155(app);
+        }
+        final DownloadManager[] box=new DownloadManager[1];
+        final RuntimeException[] err=new RuntimeException[1];
+        final java.util.concurrent.CountDownLatch latch=new java.util.concurrent.CountDownLatch(1);
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(()->{
+            try{box[0]=createManagerOnMain155(app);}catch(RuntimeException e){err[0]=e;}finally{latch.countDown();}
+        });
+        try{
+            if(!latch.await(8,java.util.concurrent.TimeUnit.SECONDS))throw new IllegalStateException("DownloadManager main-looper init timed out");
+        }catch(InterruptedException ie){
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("DownloadManager init interrupted",ie);
+        }
+        if(err[0]!=null)throw err[0];
+        if(box[0]==null)throw new IllegalStateException("DownloadManager unavailable");
+        return box[0];
+    }"""
+    ko_text = patch_once(ko_text, "createManagerOnMain155", old_mgr, new_mgr, "KuroOffline561 main-looper DownloadManager")
+
+    # Upgrade confirmBatchDownload154 even when pre-baked in 1.5.5-beta6 source
+    old_baked_batch = """    static void confirmBatchDownload154(Activity activity, String rawJson) {
+        if (activity == null || activity.isFinishing() || activity.isDestroyed() || rawJson == null || rawJson.length() > 250000) return;
+        final List<JSONObject> valid = new ArrayList<>();
+        try {
+            org.json.JSONArray arr = new org.json.JSONArray(rawJson);
+            for (int i = 0; i < arr.length() && valid.size() < 30; i++) {
+                JSONObject row = arr.optJSONObject(i);
+                if (row == null) continue;
+                String addr = row.optString("address", "");
+                if (!KuroPlayback561.allowedHls(addr, "zenkai", "hls")) continue;
+                valid.add(row);
+            }
+        } catch (Exception ignored) {}
+        if (valid.isEmpty()) {
+            Toast.makeText(activity, "No direct HLS streams available for batch offline download on this source.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        String showTitle = limit(valid.get(0).optString("title", "Anime"), 90);
+        String firstEp = limit(valid.get(0).optString("episode", "1"), 16);
+        String lastEp = limit(valid.get(valid.size() - 1).optString("episode", firstEp), 16);
+        String rangeLabel = valid.size() == 1 ? ("Episode " + firstEp) : ("Episodes " + firstEp + " – " + lastEp + " (" + valid.size() + " episodes)");
+        new AlertDialog.Builder(KuroDialogs581.themed(activity))
+                .setTitle("Batch download " + valid.size() + (valid.size() == 1 ? " episode?" : " episodes?"))
+                .setMessage(showTitle + "\\n" + rangeLabel + "\\n\\nQueues verified direct HLS streams into Kuro offline storage. Only store content you have permission to keep.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Queue " + valid.size(), (d, w) -> {
+                    int queued = 0;
+                    for (JSONObject row : valid) {
+                        try {
+                            String addr = row.optString("address", "");
+                            String key = row.optString("key", "");
+                            String t = limit(row.optString("title", "Video"), 120);
+                            String ep = limit(row.optString("episode", ""), 20);
+                            String id = "kuro561:" + Integer.toHexString((addr + "|" + key).hashCode());
+                            JSONObject meta = new JSONObject().put("title", t).put("episode", ep).put("key", KuroPlayback561.validKey(key) ? key : "");
+                            DownloadRequest req = new DownloadRequest.Builder(id, android.net.Uri.parse(addr))
+                                    .setMimeType(MimeTypes.APPLICATION_M3U8)
+                                    .setData(meta.toString().getBytes(StandardCharsets.UTF_8))
+                                    .build();
+                            DownloadService.sendAddDownload(activity, KuroDownloadService561.class, req, false);
+                            queued++;
+                        } catch (Exception ignored) {}
+                    }
+                    if (queued > 0) {
+                        try { DownloadService.sendResumeDownloads(activity, KuroDownloadService561.class, false); } catch (Exception ignored) {}
+                        Toast.makeText(activity, "Queued " + queued + (queued == 1 ? " episode" : " episodes") + " for offline playback.", Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(activity, "Could not start batch download on this device.", Toast.LENGTH_LONG).show();
+                    }
+                })
+                .show();
+    }"""
+    new_baked_batch = """    static boolean validDownloadId155(String id) {
+        return KuroPlayback561.validKey(id) || (id != null && id.matches("kuro561:[0-9a-fA-F]{1,8}"));
+    }
+
+    private static String resolveBatchCheckpointKey155(String rawKey) {
+        if (KuroPlayback561.validKey(rawKey)) return rawKey;
+        if (rawKey != null && rawKey.startsWith("zenkai|")) {
+            int first = rawKey.indexOf('|');
+            int last = rawKey.lastIndexOf('|');
+            if (first > 0 && last > first + 1 && last + 1 < rawKey.length()) {
+                String showUrl = rawKey.substring(first + 1, last);
+                String epNum = rawKey.substring(last + 1);
+                String computed = KuroPlayback561.key("zenkai", showUrl, epNum);
+                if (KuroPlayback561.validKey(computed)) return computed;
+            }
+        }
+        return "";
+    }
+
+    static void confirmBatchDownload154(Activity activity, String rawJson) {
+        if (!KuroDialogs581.canShow155(activity) || rawJson == null || rawJson.length() > 250000) return;
+        final List<JSONObject> valid = new ArrayList<>();
+        try {
+            org.json.JSONArray arr = new org.json.JSONArray(rawJson);
+            for (int i = 0; i < arr.length() && valid.size() < 30; i++) {
+                JSONObject row = arr.optJSONObject(i);
+                if (row == null) continue;
+                String addr = row.optString("address", "");
+                if (!KuroPlayback561.allowedHls(addr, "zenkai", "hls")) continue;
+                valid.add(row);
+            }
+        } catch (Exception ignored) {}
+        if (valid.isEmpty()) {
+            Toast.makeText(activity, "No direct HLS streams available for batch offline download on this source.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        String showTitle = limit(valid.get(0).optString("title", "Anime"), 90);
+        String firstEp = limit(valid.get(0).optString("episode", "1"), 16);
+        String lastEp = limit(valid.get(valid.size() - 1).optString("episode", firstEp), 16);
+        String rangeLabel = valid.size() == 1 ? ("Episode " + firstEp) : ("Episodes " + firstEp + " – " + lastEp + " (" + valid.size() + " episodes)");
+        AlertDialog.Builder builder = new AlertDialog.Builder(KuroDialogs581.themed(activity))
+                .setTitle("Batch download " + valid.size() + (valid.size() == 1 ? " episode?" : " episodes?"))
+                .setMessage(showTitle + "\\n" + rangeLabel + "\\n\\nQueues verified direct HLS streams into Kuro offline storage. Only store content you have permission to keep.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Queue " + valid.size(), (d, w) -> {
+                    int queued = 0;
+                    try { manager(activity); } catch (RuntimeException ignored) {}
+                    for (JSONObject row : valid) {
+                        try {
+                            String addr = row.optString("address", "");
+                            String ckey = resolveBatchCheckpointKey155(row.optString("key", ""));
+                            String t = limit(row.optString("title", "Video"), 120);
+                            String ep = limit(row.optString("episode", ""), 20);
+                            String id = KuroPlayback561.sha(ckey + "\\n" + addr);
+                            JSONObject meta = new JSONObject().put("title", t).put("episode", ep).put("key", ckey);
+                            DownloadRequest req = new DownloadRequest.Builder(id, android.net.Uri.parse(addr))
+                                    .setMimeType(MimeTypes.APPLICATION_M3U8)
+                                    .setData(meta.toString().getBytes(StandardCharsets.UTF_8))
+                                    .build();
+                            DownloadService.sendAddDownload(activity, KuroDownloadService561.class, req, false);
+                            queued++;
+                        } catch (Exception ignored) {}
+                    }
+                    if (queued > 0) {
+                        try { DownloadService.sendResumeDownloads(activity, KuroDownloadService561.class, false); } catch (Exception ignored) {}
+                        Toast.makeText(activity, "Queued " + queued + (queued == 1 ? " episode" : " episodes") + " for offline playback.", Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(activity, "Could not start batch download on this device.", Toast.LENGTH_LONG).show();
+                    }
+                });
+        KuroDialogs581.safeShowBuilder155(builder, activity);
+    }"""
+    if "resolveBatchCheckpointKey155" not in ko_text:
+        ko_text = patch_once(ko_text, "resolveBatchCheckpointKey155", old_baked_batch, new_baked_batch, "KuroOffline561 upgrade confirmBatchDownload154")
+
+    ko_text = patch_once(
+        ko_text,
+        "KuroDialogs581.safeShowBuilder155(new AlertDialog.Builder(KuroDialogs581.themed(activity)).setTitle(\"Download for offline viewing?\")",
+        '        new AlertDialog.Builder(activity).setTitle("Download for offline viewing?")\n'
+        '            .setMessage("Only continue if you own this video or the provider permits offline downloads. Kuro does not bypass DRM or access checks; protected media may not work offline. The private download index may contain the source URL; offline media is not included in Kuro\'s JSON backup. A download may include multiple qualities and use substantial storage or mobile data. The source may refuse downloading or expire.")\n'
+        '            .setNegativeButton("Cancel",null).setPositiveButton("I have permission",(d,w)->{\n'
+        '                try{\n'
+        '                    JSONObject info=new JSONObject();info.put("title",limit(title,160));info.put("episode",limit(episode,20));info.put("key",KuroPlayback561.validKey(key)?key:"");\n'
+        '                    String id=KuroPlayback561.sha((key==null?"":key)+"\\n"+address);\n'
+        '                    DownloadRequest request=new DownloadRequest.Builder(id,android.net.Uri.parse(address)).setMimeType(MimeTypes.APPLICATION_M3U8).setData(info.toString().getBytes(StandardCharsets.UTF_8)).build();\n'
+        '                    manager(activity);DownloadService.sendAddDownload(activity,KuroDownloadService561.class,request,false);DownloadService.sendResumeDownloads(activity,KuroDownloadService561.class,false);\n'
+        '                    Toast.makeText(activity,"Download queued. Open Manage downloads to check its status.",Toast.LENGTH_LONG).show();\n'
+        '                }catch(Exception e){Toast.makeText(activity,"Could not start the download on this device.",Toast.LENGTH_LONG).show();}\n'
+        '            }).show();',
+        '        KuroDialogs581.safeShowBuilder155(new AlertDialog.Builder(KuroDialogs581.themed(activity)).setTitle("Download for offline viewing?")\n'
+        '            .setMessage("Only continue if you own this video or the provider permits offline downloads. Kuro does not bypass DRM or access checks; protected media may not work offline. The private download index may contain the source URL; offline media is not included in Kuro\'s JSON backup. A download may include multiple qualities and use substantial storage or mobile data. The source may refuse downloading or expire.")\n'
+        '            .setNegativeButton("Cancel",null).setPositiveButton("I have permission",(d,w)->{\n'
+        '                try{\n'
+        '                    JSONObject info=new JSONObject();info.put("title",limit(title,160));info.put("episode",limit(episode,20));info.put("key",KuroPlayback561.validKey(key)?key:"");\n'
+        '                    String id=KuroPlayback561.sha((key==null?"":key)+"\\n"+address);\n'
+        '                    DownloadRequest request=new DownloadRequest.Builder(id,android.net.Uri.parse(address)).setMimeType(MimeTypes.APPLICATION_M3U8).setData(info.toString().getBytes(StandardCharsets.UTF_8)).build();\n'
+        '                    manager(activity);DownloadService.sendAddDownload(activity,KuroDownloadService561.class,request,false);DownloadService.sendResumeDownloads(activity,KuroDownloadService561.class,false);\n'
+        '                    Toast.makeText(activity,"Download queued. Open Manage downloads to check its status.",Toast.LENGTH_LONG).show();\n'
+        '                }catch(Exception e){Toast.makeText(activity,"Could not start the download on this device.",Toast.LENGTH_LONG).show();}\n'
+        '            }),activity);',
+        "KuroOffline561 confirmDownload themed + safeShow",
+    )
+    ko_text = patch_once(
+        ko_text,
+        'AlertDialog.Builder b=new AlertDialog.Builder(KuroDialogs581.themed(a)).setTitle("Kuro downloads")',
+        '    private static void showList(Activity a,List<Download> downloads){\n'
+        '        AlertDialog.Builder b=new AlertDialog.Builder(a).setTitle("Kuro downloads").setNegativeButton("Close",null).setNeutralButton("Android downloads",(d,w)->{try{a.startActivity(new Intent(android.app.DownloadManager.ACTION_VIEW_DOWNLOADS));}catch(Exception e){Toast.makeText(a,"Android Downloads is unavailable.",Toast.LENGTH_SHORT).show();}});\n'
+        '        if(downloads.isEmpty())b.setMessage("No Kuro offline downloads yet. A Download button appears for a supported direct stream. Only download content you have permission to store.");\n'
+        '        else{String[] labels=new String[downloads.size()];for(int i=0;i<labels.length;i++){Download x=downloads.get(i);JSONObject info=metadata(x);String title=info.optString("title","Video"),ep=info.optString("episode","");labels[i]=title+(ep.isEmpty()?"":" · Episode "+ep)+"\\n"+state(x);}b.setItems(labels,(d,which)->actions(a,downloads.get(which)));}b.show();\n'
+        '    }',
+        '    private static void showList(Activity a,List<Download> downloads){\n'
+        '        if(!KuroDialogs581.canShow155(a))return;\n'
+        '        AlertDialog.Builder b=new AlertDialog.Builder(KuroDialogs581.themed(a)).setTitle("Kuro downloads").setNegativeButton("Close",null).setNeutralButton("Android downloads",(d,w)->{try{a.startActivity(new Intent(android.app.DownloadManager.ACTION_VIEW_DOWNLOADS));}catch(Exception e){Toast.makeText(a,"Android Downloads is unavailable.",Toast.LENGTH_SHORT).show();}});\n'
+        '        if(downloads.isEmpty())b.setMessage("No Kuro offline downloads yet. A Download button appears for a supported direct stream. Only download content you have permission to store.");\n'
+        '        else{String[] labels=new String[downloads.size()];for(int i=0;i<labels.length;i++){Download x=downloads.get(i);JSONObject info=metadata(x);String title=info.optString("title","Video"),ep=info.optString("episode","");labels[i]=title+(ep.isEmpty()?"":" · Episode "+ep)+"\\n"+state(x);}b.setItems(labels,(d,which)->actions(a,downloads.get(which)));}KuroDialogs581.safeShowBuilder155(b,a);\n'
+        '    }',
+        "KuroOffline561 showList themed + safeShow",
+    )
+    ko_text = patch_once(
+        ko_text,
+        "KuroDialogs581.safeShowBuilder155(new AlertDialog.Builder(KuroDialogs581.themed(a)).setTitle(metadata(download)",
+        '    private static void actions(Activity a,Download download){\n'
+        '        boolean ready=download.state==Download.STATE_COMPLETED,failed=download.state==Download.STATE_FAILED;String[] choices=ready?new String[]{"Play offline","Remove this download"}:failed?new String[]{"Retry this download","Remove this download"}:new String[]{"Remove this download"};\n'
+        '        new AlertDialog.Builder(a).setTitle(metadata(download).optString("title","Download")).setItems(choices,(dialog,which)->{\n'
+        '            if(ready&&which==0){Intent intent=new Intent(a,KuroOfflineActivity561.class);intent.putExtra("id",download.request.id);a.startActivity(intent);return;}\n'
+        '            if(failed&&which==0){new AlertDialog.Builder(a).setTitle("Retry this download?").setMessage("Retry only when the provider permits it. If access or verification is required, stop and check it manually.").setNegativeButton("Cancel",null).setPositiveButton("Retry",(d,w)->{try{DownloadService.sendAddDownload(a,KuroDownloadService561.class,download.request,false);DownloadService.sendResumeDownloads(a,KuroDownloadService561.class,false);Toast.makeText(a,"Download queued again.",Toast.LENGTH_SHORT).show();}catch(RuntimeException e){Toast.makeText(a,"Could not retry this download.",Toast.LENGTH_SHORT).show();}}).show();return;}\n'
+        '            new AlertDialog.Builder(a).setTitle("Remove this download?").setMessage("Only this offline copy is removed. Your lists and history stay.").setNegativeButton("Cancel",null).setPositiveButton("Remove",(d,w)->{try{DownloadService.sendRemoveDownload(a,KuroDownloadService561.class,download.request.id,false);Toast.makeText(a,"Removing download.",Toast.LENGTH_SHORT).show();}catch(RuntimeException e){Toast.makeText(a,"Could not remove download.",Toast.LENGTH_SHORT).show();}}).show();\n'
+        '        }).setNegativeButton("Back",(d,w)->showDownloads(a)).show();\n'
+        '    }',
+        '    private static void actions(Activity a,Download download){\n'
+        '        if(!KuroDialogs581.canShow155(a))return;\n'
+        '        boolean ready=download.state==Download.STATE_COMPLETED,failed=download.state==Download.STATE_FAILED;String[] choices=ready?new String[]{"Play offline","Remove this download"}:failed?new String[]{"Retry this download","Remove this download"}:new String[]{"Remove this download"};\n'
+        '        KuroDialogs581.safeShowBuilder155(new AlertDialog.Builder(KuroDialogs581.themed(a)).setTitle(metadata(download).optString("title","Download")).setItems(choices,(dialog,which)->{\n'
+        '            if(ready&&which==0){Intent intent=new Intent(a,KuroOfflineActivity561.class);intent.putExtra("id",download.request.id);a.startActivity(intent);return;}\n'
+        '            if(failed&&which==0){KuroDialogs581.safeShowBuilder155(new AlertDialog.Builder(KuroDialogs581.themed(a)).setTitle("Retry this download?").setMessage("Retry only when the provider permits it. If access or verification is required, stop and check it manually.").setNegativeButton("Cancel",null).setPositiveButton("Retry",(d,w)->{try{DownloadService.sendAddDownload(a,KuroDownloadService561.class,download.request,false);DownloadService.sendResumeDownloads(a,KuroDownloadService561.class,false);Toast.makeText(a,"Download queued again.",Toast.LENGTH_SHORT).show();}catch(RuntimeException e){Toast.makeText(a,"Could not retry this download.",Toast.LENGTH_SHORT).show();}}),a);return;}\n'
+        '            KuroDialogs581.safeShowBuilder155(new AlertDialog.Builder(KuroDialogs581.themed(a)).setTitle("Remove this download?").setMessage("Only this offline copy is removed. Your lists and history stay.").setNegativeButton("Cancel",null).setPositiveButton("Remove",(d,w)->{try{DownloadService.sendRemoveDownload(a,KuroDownloadService561.class,download.request.id,false);Toast.makeText(a,"Removing download.",Toast.LENGTH_SHORT).show();}catch(RuntimeException e){Toast.makeText(a,"Could not remove download.",Toast.LENGTH_SHORT).show();}}),a);\n'
+        '        }).setNegativeButton("Back",(d,w)->showDownloads(a)),a);\n'
+        '    }',
+        "KuroOffline561 actions themed + safeShow",
+    )
+    ko_path.write_text(ko_text, encoding="utf-8")
+
+    # 2. KuroOfflineActivity561: accept both 64-hex SHA-256 and legacy kuro561:xxxx IDs
+    oa_path = root / "src/app/lovelycrxshx/kuro/KuroOfflineActivity561.java"
+    oa_text = oa_path.read_text(encoding="utf-8")
+    oa_text = patch_once(
+        oa_text,
+        "if(!KuroOffline561.validDownloadId155(id)){unavailable();return;}",
+        "if(!KuroPlayback561.validKey(id)){unavailable();return;}",
+        "if(!KuroOffline561.validDownloadId155(id)){unavailable();return;}",
+        "KuroOfflineActivity561 validDownloadId155",
+    )
+    oa_path.write_text(oa_text, encoding="utf-8")
+
+    # 3. KuroNativePlayer561: theme & guard markersDialog + editMarker573
+    np_path = root / "src/app/lovelycrxshx/kuro/KuroNativePlayer561.java"
+    np_text = np_path.read_text(encoding="utf-8")
+    np_text = patch_once(
+        np_text,
+        'KuroDialogs581.safeShowBuilder155(new AlertDialog.Builder(KuroDialogs581.themed(activity)).setTitle("Edit skip markers")',
+        '        new AlertDialog.Builder(activity).setTitle("Edit skip markers")\n'
+        '            .setItems(new String[]{"Intro", "Outro"},(d,which)->editMarker573(which==1))\n'
+        '            .setNegativeButton("Cancel",null).show();',
+        '        KuroDialogs581.safeShowBuilder155(new AlertDialog.Builder(KuroDialogs581.themed(activity)).setTitle("Edit skip markers")\n'
+        '            .setItems(new String[]{"Intro", "Outro"},(d,which)->editMarker573(which==1))\n'
+        '            .setNegativeButton("Cancel",null),activity);',
+        "KuroNativePlayer561 markersDialog themed + safeShow",
+    )
+    np_text = patch_once(
+        np_text,
+        'AlertDialog dialog=new AlertDialog.Builder(KuroDialogs581.themed(activity)).setTitle(kind+" marker")',
+        'AlertDialog dialog=new AlertDialog.Builder(activity).setTitle(kind+" marker")',
+        'AlertDialog dialog=new AlertDialog.Builder(KuroDialogs581.themed(activity)).setTitle(kind+" marker")',
+        "KuroNativePlayer561 editMarker573 themed",
+    )
+    np_text = patch_once(
+        np_text,
+        'KuroDialogs581.safeShow155(dialog,activity);\n    }',
+        'within the episode and 30 minutes.");}}));dialog.show();\n    }',
+        'within the episode and 30 minutes.");}}));KuroDialogs581.safeShow155(dialog,activity);\n    }',
+        "KuroNativePlayer561 editMarker573 safeShow155",
+    )
+    np_path.write_text(np_text, encoding="utf-8")
+
+    # 4. PlayerOptionsDialog & KuroUpdateDialog582: lifecycle & BadTokenException guards
+    po_path = root / "src/app/lovelycrxshx/kuro/PlayerOptionsDialog.java"
+    po_text = po_path.read_text(encoding="utf-8")
+    po_text = patch_once(
+        po_text,
+        "public void show(){if(!KuroDialogs581.canShow155(activity))return;",
+        " public void show(){",
+        " public void show(){if(!KuroDialogs581.canShow155(activity))return;",
+        "PlayerOptionsDialog.show canShow155",
+    )
+    po_text = patch_once(
+        po_text,
+        "if(!KuroDialogs581.safeShow155(dialog,activity))return;",
+        "if(changed)notifyChanged();});dialog.show();\n  Window window=dialog.getWindow();",
+        "if(changed)notifyChanged();});if(!KuroDialogs581.safeShow155(dialog,activity))return;\n  Window window=dialog.getWindow();",
+        "PlayerOptionsDialog.show safeShow155",
+    )
+    po_text = patch_once(
+        po_text,
+        "if(dialog!=null)try{dialog.dismiss();}catch(RuntimeException ignored){}}",
+        "if(changed)notifyChanged();if(dialog!=null)dialog.dismiss();}",
+        "if(changed)notifyChanged();if(dialog!=null)try{dialog.dismiss();}catch(RuntimeException ignored){}}",
+        "PlayerOptionsDialog.dismiss safe",
+    )
+    po_path.write_text(po_text, encoding="utf-8")
+
+    ud_path = root / "src/app/lovelycrxshx/kuro/KuroUpdateDialog582.java"
+    ud_text = ud_path.read_text(encoding="utf-8")
+    old_ud_open = """    public static void open(Activity activity, Host host) {
+        if (activity == null || activity.isFinishing()) return;
+        if (current != null && current.dialog.isShowing()) {
+            current.refresh();
+            return;
+        }
+        KuroUpdateDialog582 screen = new KuroUpdateDialog582(activity, host);
+        current = screen;
+        try {
+            screen.dialog.show();
+        } catch (RuntimeException e) {
+            current = null;
+            return;
+        }
+        screen.refresh();
+        screen.schedule();
+    }"""
+    new_ud_open = """    public static void open(Activity activity, Host host) {
+        if (!KuroDialogs581.canShow155(activity)) return;
+        if (current != null && current.dialog != null && current.dialog.isShowing()) {
+            if (current.activity == activity && KuroDialogs581.canShow155(current.activity)) {
+                current.refresh();
+                return;
+            }
+            try { current.dialog.dismiss(); } catch (RuntimeException ignored) {}
+            current = null;
+        }
+        KuroUpdateDialog582 screen = new KuroUpdateDialog582(activity, host);
+        current = screen;
+        if (!KuroDialogs581.safeShow155(screen.dialog, activity)) {
+            current = null;
+            return;
+        }
+        screen.refresh();
+        screen.schedule();
+    }"""
+    ud_text = patch_once(ud_text, "current.activity == activity && KuroDialogs581.canShow155", old_ud_open, new_ud_open, "KuroUpdateDialog582.open stale Activity guard")
+    ud_path.write_text(ud_text, encoding="utf-8")
+
+    # 5. NewsSync divide-by-zero fix & KuroPresenceNotification564 null NotificationManager guard
+    ns_path = root / "src/app/lovelycrxshx/kuro/NewsSync.java"
+    ns_text = ns_path.read_text(encoding="utf-8")
+    ns_text = patch_once(
+        ns_text,
+        "BitmapFactory.Options options=new BitmapFactory.Options();options.inSampleSize=1;",
+        "BitmapFactory.Options options=new BitmapFactory.Options();while(bounds.outWidth/options.inSampleSize>1024",
+        "BitmapFactory.Options options=new BitmapFactory.Options();options.inSampleSize=1;while(bounds.outWidth/options.inSampleSize>1024",
+        "NewsSync.articleArtwork inSampleSize=1 divide-by-zero fix",
+    )
+    ns_path.write_text(ns_text, encoding="utf-8")
+
+    pn_path = root / "src/app/lovelycrxshx/kuro/KuroPresenceNotification564.java"
+    pn_text = pn_path.read_text(encoding="utf-8")
+    pn_text = patch_once(
+        pn_text,
+        "if(manager!=null)manager.createNotificationChannel(",
+        '  manager.createNotificationChannel(new NotificationChannel(CHANNEL,"Kuro playback and presence",NotificationManager.IMPORTANCE_LOW));',
+        '  if(manager!=null)manager.createNotificationChannel(new NotificationChannel(CHANNEL,"Kuro playback and presence",NotificationManager.IMPORTANCE_LOW));',
+        "KuroPresenceNotification564 null manager guard",
+    )
+    pn_path.write_text(pn_text, encoding="utf-8")
+
+    # 6. MainActivity: Auto-Play Next end-to-end reliability + default true + dialog safety
+    ma_path = root / "src/app/lovelycrxshx/kuro/MainActivity.java"
+    ma_text = ma_path.read_text(encoding="utf-8")
+
+    old_autonext_block = (
+        ' private void cancelAutoNext573(){\n'
+        '  if(autoNextTick573!=null)main.removeCallbacks(autoNextTick573);autoNextTick573=null;\n'
+        '  AlertDialog d=autoNextDialog573;autoNextDialog573=null;if(d!=null&&d.isShowing())d.dismiss();\n'
+        ' }\n'
+        ' private void offerAutoNext573(String session,int rawNext154){\n'
+        '  final int next=nextPlayableEpisode154(watchInfo561,rawNext154);\n'
+        '  if(next<0||!activityResumed||isInPictureInPictureMode()||playerLayer==null||ui==null||!session.equals(watchSession)||!getPreferences(MODE_PRIVATE).getBoolean("auto_next",false))return;\n'
+        '  cancelAutoNext573();final long end=android.os.SystemClock.elapsedRealtime()+10000;\n'
+        '  final Runnable advance=()->{if(!session.equals(watchSession)||!activityResumed||isInPictureInPictureMode()||playerLayer==null||ui==null||!getPreferences(MODE_PRIVATE).getBoolean("auto_next",false)){cancelAutoNext573();return;}cancelAutoNext573();closePlayer();if(ui!=null)ui.evaluateJavascript("window.kuroChooseEpisode&&window.kuroChooseEpisode("+next+")",null);};\n'
+        '  AlertDialog d=new AlertDialog.Builder(KuroDialogs581.themed(this)).setTitle("Next episode")\n'
+        '   .setMessage("Playing the next episode in 10 seconds.")\n'
+        '   .setNegativeButton("Cancel",(dialog,which)->cancelAutoNext573())\n'
+        '   .setPositiveButton("Play now",(dialog,which)->advance.run()).create();\n'
+        '  autoNextDialog573=d;d.setOnCancelListener(dialog->cancelAutoNext573());d.setOnDismissListener(dialog->{if(autoNextDialog573==d){if(autoNextTick573!=null)main.removeCallbacks(autoNextTick573);autoNextTick573=null;autoNextDialog573=null;}});\n'
+        '  d.show();autoNextTick573=new Runnable(){@Override public void run(){\n'
+        '   if(autoNextDialog573!=d||!session.equals(watchSession)||!activityResumed||isInPictureInPictureMode()||!getPreferences(MODE_PRIVATE).getBoolean("auto_next",false)){cancelAutoNext573();return;}\n'
+        '   long remaining=end-android.os.SystemClock.elapsedRealtime();if(remaining<=0){advance.run();return;}d.setMessage("Playing the next episode in "+((remaining+999)/1000)+" seconds.");main.postDelayed(this,250);\n'
+        '  }};main.post(autoNextTick573);\n'
+        ' }'
+    )
+    new_autonext_block = (
+        ' private boolean isAutoNextEnabled155(){return getPreferences(MODE_PRIVATE).getBoolean("auto_next",true);}\n'
+        ' private void triggerAutoNext155(String session,int rawNext154){if(session==null||session.isEmpty())return;if(autoNextDialog573!=null&&autoNextDialog573.isShowing())return;offerAutoNext573(session,rawNext154);}\n'
+        ' private void cancelAutoNext573(){\n'
+        '  if(autoNextTick573!=null)main.removeCallbacks(autoNextTick573);autoNextTick573=null;\n'
+        '  AlertDialog d=autoNextDialog573;autoNextDialog573=null;if(d!=null)try{if(d.isShowing())d.dismiss();}catch(RuntimeException ignored){}\n'
+        ' }\n'
+        ' private void offerAutoNext573(String session,int rawNext154){\n'
+        '  final int next=nextPlayableEpisode154(watchInfo561,rawNext154);\n'
+        '  if(next<0||!KuroDialogs581.canShow155(this)||!activityResumed||isInPictureInPictureMode()||playerLayer==null||ui==null||!session.equals(watchSession)||!isAutoNextEnabled155())return;\n'
+        '  cancelAutoNext573();final long end=android.os.SystemClock.elapsedRealtime()+10000;\n'
+        '  String nextEpLabel="";try{JSONArray epsArr=watchInfo561!=null?watchInfo561.optJSONArray("episodes"):null;JSONObject nextObj=epsArr!=null?epsArr.optJSONObject(next):null;if(nextObj!=null)nextEpLabel=nextObj.optString("number","").trim();}catch(Exception ignored){}\n'
+        '  final String titleText=nextEpLabel.isEmpty()?"Next episode":("Next episode · Ep "+nextEpLabel);\n'
+        '  final Runnable advance=()->{if(!session.equals(watchSession)||!activityResumed||isInPictureInPictureMode()||playerLayer==null||ui==null||!isAutoNextEnabled155()){cancelAutoNext573();return;}cancelAutoNext573();closePlayer();if(ui!=null)ui.evaluateJavascript("window.kuroChooseEpisode&&window.kuroChooseEpisode("+next+")",null);};\n'
+        '  AlertDialog d=new AlertDialog.Builder(KuroDialogs581.themed(this)).setTitle(titleText)\n'
+        '   .setMessage("Playing the next episode in 10 seconds.")\n'
+        '   .setNegativeButton("Cancel",(dialog,which)->cancelAutoNext573())\n'
+        '   .setPositiveButton("Play now",(dialog,which)->advance.run()).create();\n'
+        '  autoNextDialog573=d;d.setOnCancelListener(dialog->cancelAutoNext573());d.setOnDismissListener(dialog->{if(autoNextDialog573==d){if(autoNextTick573!=null)main.removeCallbacks(autoNextTick573);autoNextTick573=null;autoNextDialog573=null;}});\n'
+        '  if(!KuroDialogs581.safeShow155(d,this)){autoNextDialog573=null;return;}\n'
+        '  autoNextTick573=new Runnable(){@Override public void run(){\n'
+        '   if(autoNextDialog573!=d||!session.equals(watchSession)||!activityResumed||isInPictureInPictureMode()||!isAutoNextEnabled155()){cancelAutoNext573();return;}\n'
+        '   long remaining=end-android.os.SystemClock.elapsedRealtime();if(remaining<=0){advance.run();return;}try{d.setMessage("Playing the next episode in "+((remaining+999)/1000)+" seconds.");}catch(RuntimeException ignored){}main.postDelayed(this,250);\n'
+        '  }};main.post(autoNextTick573);\n'
+        ' }'
+    )
+    ma_text = patch_once(ma_text, "isAutoNextEnabled155()", old_autonext_block, new_autonext_block, "MainActivity safe & default-on offerAutoNext573")
+
+    # Watch UI pill + PlaybackPanel sync default auto_next=true and cancelAutoNext573 on toggle off
+    ma_text = patch_once(
+        ma_text,
+        "styleAutoNextPill155.accept(isAutoNextEnabled155());",
+        'styleAutoNextPill155.accept(getPreferences(MODE_PRIVATE).getBoolean("auto_next",false));',
+        "styleAutoNextPill155.accept(isAutoNextEnabled155());",
+        "MainActivity styleAutoNextPill155 default true",
+    )
+    ma_text = patch_once(
+        ma_text,
+        '@Override public void autoNextChanged(boolean on){getPreferences(MODE_PRIVATE).edit().putBoolean("auto_next",on).apply();if(!on)cancelAutoNext573();styleAutoNextPill155.accept(on);if(!syncingAutoNext155[0])Toast.makeText(MainActivity.this,on?"Auto-Next ON":"Auto-Next OFF",Toast.LENGTH_SHORT).show();}',
+        '@Override public void autoNextChanged(boolean on){getPreferences(MODE_PRIVATE).edit().putBoolean("auto_next",on).apply();styleAutoNextPill155.accept(on);if(!syncingAutoNext155[0])Toast.makeText(MainActivity.this,on?"Auto-Next ON":"Auto-Next OFF",Toast.LENGTH_SHORT).show();}',
+        '@Override public void autoNextChanged(boolean on){getPreferences(MODE_PRIVATE).edit().putBoolean("auto_next",on).apply();if(!on)cancelAutoNext573();styleAutoNextPill155.accept(on);if(!syncingAutoNext155[0])Toast.makeText(MainActivity.this,on?"Auto-Next ON":"Auto-Next OFF",Toast.LENGTH_SHORT).show();}',
+        "MainActivity pbListener155 autoNextChanged cancel on off",
+    )
+    ma_text = patch_once(
+        ma_text,
+        'getPreferences(MODE_PRIVATE).getBoolean("autoplay",true),isAutoNextEnabled155(),getPreferences(MODE_PRIVATE).getBoolean("auto_skip",false),pbListener155)};',
+        'getPreferences(MODE_PRIVATE).getBoolean("autoplay",true),getPreferences(MODE_PRIVATE).getBoolean("auto_next",false),getPreferences(MODE_PRIVATE).getBoolean("auto_skip",false),pbListener155)};',
+        'getPreferences(MODE_PRIVATE).getBoolean("autoplay",true),isAutoNextEnabled155(),getPreferences(MODE_PRIVATE).getBoolean("auto_skip",false),pbListener155)};',
+        "MainActivity PlaybackPanel init isAutoNextEnabled155",
+    )
+    ma_text = patch_once(
+        ma_text,
+        'autoNextPill155.setOnClickListener(v->{boolean nxt=!isAutoNextEnabled155();getPreferences(MODE_PRIVATE).edit().putBoolean("auto_next",nxt).apply();if(!nxt)cancelAutoNext573();',
+        'autoNextPill155.setOnClickListener(v->{boolean nxt=!getPreferences(MODE_PRIVATE).getBoolean("auto_next",false);getPreferences(MODE_PRIVATE).edit().putBoolean("auto_next",nxt).apply();',
+        'autoNextPill155.setOnClickListener(v->{boolean nxt=!isAutoNextEnabled155();getPreferences(MODE_PRIVATE).edit().putBoolean("auto_next",nxt).apply();if(!nxt)cancelAutoNext573();',
+        "MainActivity autoNextPill155 default true + cancel on off",
+    )
+
+    # Lower duration thresholds & fire Auto-Next from Native, Embedded Web iframes, and stream-player.html
+    ma_text = patch_once(
+        ma_text,
+        'nativeEnded561=()->{if(verification[0]||nativePlayer561==null)return;updatePipActions571();long duration=nativePlayer561.duration(),position=nativePlayer561.position();if(duration<30000||position<duration*.85)return;if(!completionReported[0]&&ui!=null){completionReported[0]=true;ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(session)+","+JSONObject.quote(info.optString("episode",""))+")",null);}if(isAutoNextEnabled155()&&current+1<eps.length())offerAutoNext573(session,current+1);};',
+        'nativeEnded561=()->{if(verification[0]||nativePlayer561==null)return;updatePipActions571();long duration=nativePlayer561.duration(),position=nativePlayer561.position();if(duration<180000||position<duration*.85)return;if(!completionReported[0]&&ui!=null){completionReported[0]=true;ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(session)+","+JSONObject.quote(info.optString("episode",""))+")",null);}if(getPreferences(MODE_PRIVATE).getBoolean("auto_next",false)&&current+1<eps.length())offerAutoNext573(session,current+1);};',
+        'nativeEnded561=()->{if(verification[0]||nativePlayer561==null)return;updatePipActions571();long duration=nativePlayer561.duration(),position=nativePlayer561.position();if(duration<30000||position<duration*.85)return;if(!completionReported[0]&&ui!=null){completionReported[0]=true;ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(session)+","+JSONObject.quote(info.optString("episode",""))+")",null);}if(isAutoNextEnabled155()&&current+1<eps.length())offerAutoNext573(session,current+1);};',
+        "MainActivity nativeEnded561 30s threshold + isAutoNextEnabled155",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "m.ended&&Number.isFinite(m.duration)&&m.duration>=45",
+        'final WebView watchedPlayer=player;final boolean[] advanced={false};final Runnable[] completionCheck={null};completionCheck[0]=()->{if(player!=watchedPlayer||playerLayer==null||advanced[0])return;if(nativePlayer561!=null||!getPreferences(MODE_PRIVATE).getBoolean("auto_next",false)||current+1>=eps.length()){main.postDelayed(completionCheck[0],2000);return;}watchedPlayer.evaluateJavascript("(function(){try{var v=document.querySelectorAll(\'video\');if(v.length!==1)return false;var m=v[0];return !!(m.ended&&Number.isFinite(m.duration)&&m.duration>=180&&m.currentTime>=m.duration*0.98)}catch(e){return false}})()",result->{if(player!=watchedPlayer||playerLayer==null||advanced[0])return;if("true".equals(result)&&getPreferences(MODE_PRIVATE).getBoolean("auto_next",false)){advanced[0]=true;if(!completionReported[0]&&ui!=null){completionReported[0]=true;ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(session)+","+JSONObject.quote(info.optString("episode",""))+")",null);}offerAutoNext573(session,current+1);}else main.postDelayed(completionCheck[0],2000);});};main.postDelayed(completionCheck[0],2000);',
+        'final WebView watchedPlayer=player;final boolean[] advanced={false};final Runnable[] completionCheck={null};completionCheck[0]=()->{if(player!=watchedPlayer||playerLayer==null||advanced[0])return;if(nativePlayer561!=null||!isAutoNextEnabled155()||current+1>=eps.length()){main.postDelayed(completionCheck[0],2000);return;}watchedPlayer.evaluateJavascript("(function(){try{var v=document.querySelectorAll(\'video\');if(v.length!==1)return false;var m=v[0];return !!(m.ended&&Number.isFinite(m.duration)&&m.duration>=45&&(m.currentTime>=m.duration*0.80||m.currentTime===0))}catch(e){return false}})()",result->{if(player!=watchedPlayer||playerLayer==null||advanced[0])return;if("true".equals(result)&&isAutoNextEnabled155()){advanced[0]=true;if(!completionReported[0]&&ui!=null&&info.optString("episode","").matches("[1-9][0-9]{0,3}")){completionReported[0]=true;ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(session)+","+JSONObject.quote(info.optString("episode",""))+")",null);}offerAutoNext573(session,current+1);}else main.postDelayed(completionCheck[0],2000);});};main.postDelayed(completionCheck[0],2000);',
+        "MainActivity completionCheck 45s threshold + isAutoNextEnabled155",
+    )
+    ma_text = patch_once(
+        ma_text,
+        'setupCompletionFrames(player,session,current+1,info.optString("episode",""),verification,completionReported);',
+        'setupCompletionFrames(player,session,info.optString("episode",""),verification,completionReported);',
+        'setupCompletionFrames(player,session,current+1,info.optString("episode",""),verification,completionReported);',
+        "MainActivity setupCompletionFrames pass nextRawIdx",
+    )
+    old_completion_frames = (
+        ' private void setupCompletionFrames(WebView view,String session,String number,boolean[] verification,boolean[] sent){\n'
+        '  completionFrameMode=false;completionStartMode=false;\n'
+        '  if(!number.matches("[1-9][0-9]{0,3}"))return;\n'
+        '  try{\n'
+        '   if(!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER))return;\n'
+        '   WebViewCompat.addWebMessageListener(view,"KuroFinished553",Collections.singleton("*"),(sender,message,origin,isMainFrame,reply)->{\n'
+        '    /* k154 iframe+85pct completion */\n'
+        '    if(sender!=player||!activityResumed||sent[0]||verification[0]||message.getType()!=WebMessageCompat.TYPE_STRING||!"ended".equals(message.getData())||origin==null||!"https".equals(origin.getScheme())||!playerHost(origin.getHost())||!session.equals(watchSession))return;\n'
+        '    if(ui==null)return;sent[0]=true;ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(session)+","+JSONObject.quote(number)+")",null);\n'
+        '   });\n'
+        '   completionFrameMode=true;\n'
+        '   if(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)){WebViewCompat.addDocumentStartJavaScript(view,assetText("player-ended553.js"),Collections.singleton("*"));completionStartMode=true;}\n'
+        '  }catch(IOException|RuntimeException|LinkageError ignored){completionStartMode=false;}\n'
+        ' }'
+    )
+    new_completion_frames = (
+        ' private void setupCompletionFrames(WebView view,String session,int nextRawIdx155,String number,boolean[] verification,boolean[] sent){\n'
+        '  completionFrameMode=false;completionStartMode=false;\n'
+        '  final boolean canMarkWatched155=number!=null&&number.matches("[1-9][0-9]{0,3}");\n'
+        '  try{\n'
+        '   if(!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER))return;\n'
+        '   WebViewCompat.addWebMessageListener(view,"KuroFinished553",Collections.singleton("*"),(sender,message,origin,isMainFrame,reply)->{\n'
+        '    /* k154 iframe+85pct completion */ /* k155 Auto-Next */\n'
+        '    if(sender!=player||!activityResumed||verification[0]||message.getType()!=WebMessageCompat.TYPE_STRING||origin==null||!"https".equals(origin.getScheme())||!session.equals(watchSession))return;\n'
+        '    String host=origin.getHost();if(host==null||adBlocker().blocked("https",host,"/",false,false))return;\n'
+        '    String msg=message.getData();\n'
+        '    if(("progress85".equals(msg)||"ended".equals(msg))&&!sent[0]&&canMarkWatched155&&ui!=null){\n'
+        '     sent[0]=true;\n'
+        '     ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(session)+","+JSONObject.quote(number)+")",null);\n'
+        '    }\n'
+        '    if("ended".equals(msg))main.post(()->triggerAutoNext155(session,nextRawIdx155));\n'
+        '   });\n'
+        '   completionFrameMode=true;\n'
+        '   if(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)){WebViewCompat.addDocumentStartJavaScript(view,assetText("player-ended553.js"),Collections.singleton("*"));completionStartMode=true;}\n'
+        '  }catch(IOException|RuntimeException|LinkageError ignored){completionStartMode=false;}\n'
+        ' }'
+    )
+    ma_text = patch_once(ma_text, "triggerAutoNext155(session,nextRawIdx155)", old_completion_frames, new_completion_frames, "MainActivity setupCompletionFrames Auto-Next + nested CDN origins")
+
+    old_progress561_end = (
+        '/* k154 stream-player 85pct */ if(duration>=180000&&position>=duration*.85&&watchInfo561!=null&&!watchSession.isEmpty()&&ui!=null){String ep154=watchInfo561.optString("episode","");if(ep154.matches("[1-9][0-9]{0,3}"))ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(watchSession)+","+JSONObject.quote(ep154)+")",null);}if(v.optBoolean("ended",false)&&duration>=5000&&position>=duration*.98)KuroPlayback561.completed(MainActivity.this,resumeKey561);else KuroPlayback561.save(MainActivity.this,resumeKey561,position,duration);'
+    )
+    new_progress561_end = (
+        '/* k154 stream-player 85pct */ boolean spEnded155=v.optBoolean("ended",false);if(((spEnded155&&duration>=30000)||(duration>=45000&&position>=duration*.85))&&watchInfo561!=null&&!watchSession.isEmpty()&&ui!=null){String ep154=watchInfo561.optString("episode","");if(ep154.matches("[1-9][0-9]{0,3}"))ui.evaluateJavascript("window.kuroEpisodeEnded553&&window.kuroEpisodeEnded553("+JSONObject.quote(watchSession)+","+JSONObject.quote(ep154)+")",null);}if(spEnded155&&duration>=5000){KuroPlayback561.completed(MainActivity.this,resumeKey561);if(duration>=30000&&watchInfo561!=null&&!watchSession.isEmpty()){final String sSnap=watchSession;final int nxtSnap=watchInfo561.optInt("current",-1)+1;main.post(()->triggerAutoNext155(sSnap,nxtSnap));}}else KuroPlayback561.save(MainActivity.this,resumeKey561,position,duration);'
+    )
+    ma_text = patch_once(ma_text, "triggerAutoNext155(sSnap,nxtSnap)", old_progress561_end, new_progress561_end, "MainActivity setupProgress561 stream-player Auto-Next")
+
+    # Sync session SUB/DUB preference when user chooses a server on the Watch Screen
+    ma_text = patch_once(
+        ma_text,
+        "window.__kuroSessionAudio155=",
+        'if(index<2){selectedLang155[0]=index;serverPage154[0]=posSlot154[pos]/5;}syncServers154[0].run();}}',
+        'if(index<2){selectedLang155[0]=index;serverPage154[0]=posSlot154[pos]/5;if(ui!=null)ui.evaluateJavascript("window.__kuroSessionAudio155="+(index==1?"\\"dub\\"":"\\"sub\\"")+";",null);}syncServers154[0].run();}}',
+        "MainActivity server pill sync __kuroSessionAudio155",
+    )
+
+    # Discord notification "Next" command uses nextPlayableEpisode154
+    ma_text = patch_once(
+        ma_text,
+        'int next=nextPlayableEpisode154(watchInfo561,idx+1);if(next>=0){closePlayer();ui.evaluateJavascript("window.kuroChooseEpisode&&window.kuroChooseEpisode("+next+")",null);}',
+        'if("next".equals(action)){JSONArray eps=watchInfo561.optJSONArray("episodes");int idx=watchInfo561.optInt("current",-1);if(eps!=null&&idx>=0&&idx+1<eps.length()&&ui!=null){int next=idx+1;closePlayer();ui.evaluateJavascript("window.kuroChooseEpisode&&window.kuroChooseEpisode("+next+")",null);}return;}',
+        'if("next".equals(action)){JSONArray eps=watchInfo561.optJSONArray("episodes");int idx=watchInfo561.optInt("current",-1);if(eps!=null&&idx>=0&&ui!=null){int next=nextPlayableEpisode154(watchInfo561,idx+1);if(next>=0){closePlayer();ui.evaluateJavascript("window.kuroChooseEpisode&&window.kuroChooseEpisode("+next+")",null);}}return;}',
+        "MainActivity discordNotificationCommand564 nextPlayableEpisode154",
+    )
+
+    # Guard remaining raw dialog.show() calls in MainActivity
+    ma_text = patch_once(
+        ma_text,
+        "if(KuroDialogs581.safeShow155(dialog,this))check.loadUrl(MIRURO_ORIGIN+\"/\");else{try{check.destroy();}catch(RuntimeException ignored){}}",
+        'dialog.show();check.loadUrl(MIRURO_ORIGIN+"/");',
+        'if(KuroDialogs581.safeShow155(dialog,this))check.loadUrl(MIRURO_ORIGIN+"/");else{try{check.destroy();}catch(RuntimeException ignored){}}',
+        "MainActivity Miruro verification dialog safeShow155",
+    )
+    ma_text = patch_once(
+        ma_text,
+        'if(KuroDialogs581.safeShow155(dialog573,this)&&dialog573.getWindow()!=null)',
+        'dialog573.show();if(dialog573.getWindow()!=null)',
+        'if(KuroDialogs581.safeShow155(dialog573,this)&&dialog573.getWindow()!=null)',
+        "MainActivity diagnostics573 safeShow155",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "KuroDialogs581.safeShow155(dialog,this);\n }",
+        'Toast.makeText(this,"Marker saved for this episode.",Toast.LENGTH_SHORT).show();}catch(Exception e){end.setError("Enter an end after the start, within 30 minutes.");}}));dialog.show();\n }',
+        'Toast.makeText(this,"Marker saved for this episode.",Toast.LENGTH_SHORT).show();}catch(Exception e){end.setError("Enter an end after the start, within 30 minutes.");}}));KuroDialogs581.safeShow155(dialog,this);\n }',
+        "MainActivity editWebMarker574 safeShow155",
+    )
+    ma_path.write_text(ma_text, encoding="utf-8")
+
+    # 7. Assets: failover531.js (__kuroSessionAudio155 + Episode 0/.5 support) & stream-player.js (reliable ended event)
+    fo_path = root / "assets/failover531.js"
+    fo_text = fo_path.read_text(encoding="utf-8")
+    old_pref_srv = """function preferredServer(list){
+ let global=window.kuroSettings560?.snapshot?.()||{},audio=global.audio||'dub';"""
+    new_pref_srv = """function preferredServer(list){
+ let global=window.kuroSettings560?.snapshot?.()||{};
+ let sessAudio=(typeof window.__kuroSessionAudio155==='string'&&(window.__kuroSessionAudio155==='sub'||window.__kuroSessionAudio155==='dub'))?window.__kuroSessionAudio155:'';
+ let audio=sessAudio||global.audio||'dub';"""
+    fo_text = patch_once(fo_text, "__kuroSessionAudio155", old_pref_srv, new_pref_srv, "failover531.js preferredServer session audio")
+    fo_text = patch_once(
+        fo_text,
+        "validOpenEpisode155",
+        "async function openEpisode(ep){\n if(!selected||!validEpisodeNumber(ep.number))return;",
+        "function validOpenEpisode155(x){return /^\\d+(?:\\.\\d+)?$/.test(String(x))&&Number(x)>=0&&Number(x)<=5000;}\nasync function openEpisode(ep){\n if(!selected||!ep||!validOpenEpisode155(ep.number))return;",
+        "failover531.js openEpisode allow Episode 0 and .5",
+    )
+    fo_path.write_text(fo_text, encoding="utf-8")
+
+    sp_path = root / "assets/stream-player.js"
+    sp_text = sp_path.read_text(encoding="utf-8")
+    sp_text = patch_once(
+        sp_text,
+        "if((!resumeApplied&&!ended)||!Number.isSafeInteger(attempt)",
+        "function progress(force,ended){if(!resumeApplied||!Number.isSafeInteger(attempt)",
+        "function progress(force,ended){if((!resumeApplied&&!ended)||!Number.isSafeInteger(attempt)",
+        "stream-player.js always report ended even if loadedmetadata was skipped",
+    )
+    sp_path.write_text(sp_text, encoding="utf-8")
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         raise SystemExit("usage: ui_1.5.4.py <kuro-source-dir>")
@@ -3397,6 +4108,7 @@ def main() -> None:
     patch_accounts_and_sync_154(root)
     patch_watch_ui_154(root)
     patch_display_2k_500dpi_155(root)
+    patch_stability_and_autonext_155(root)
     import importlib.util as _ilu
     _tn_spec = _ilu.spec_from_file_location("theme_native_1_2", pathlib.Path(__file__).with_name("theme_native_1.2.py"))
     assert _tn_spec is not None and _tn_spec.loader is not None

@@ -195,9 +195,10 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Kuro 1.2 - the native half of the accent theme.
@@ -224,19 +225,19 @@ public final class KuroTheme12 {
 
     private static final int[] DIALOG_THEMES = {%(dialog_themes)s};
 
-    private static final List<Runnable> LISTENERS = new ArrayList<>();
-    private static int accent = VIOLET;
-    private static boolean amoled;
-    private static Map<Integer, Integer> map = table(VIOLET);
-    private static Bitmap logoSrcRef;
+    private static final List<Runnable> LISTENERS = new CopyOnWriteArrayList<>();
+    private static volatile int accent = VIOLET;
+    private static volatile boolean amoled;
+    private static volatile Map<Integer, Integer> map = table(VIOLET);
+    private static volatile Bitmap logoSrcRef;
     private static final Bitmap[] LOGO_CACHE = new Bitmap[ACCENTS.length];
-    private static boolean loaded;
+    private static volatile boolean loaded;
 
     private KuroTheme12() {
     }
 
     private static Map<Integer, Integer> table(int index) {
-        Map<Integer, Integer> out = new HashMap<>(TABLE.length * 2);
+        Map<Integer, Integer> out = new ConcurrentHashMap<>(TABLE.length * 2);
         for (int[] row : TABLE) {
             out.put(row[0], row[index + 1]);
         }
