@@ -8,7 +8,7 @@ on:
       drive_file_id:
         description: "Google Drive File ID of Kuro-1.5.5-iOS-Source.zip"
         required: false
-        default: "1nLZVZUQTOA8NPkXieZNe-yGIN72YfSoS"
+        default: "1lLY-3MjZQmEKxY879vX9zuZf21OYzchh"
 
 permissions:
   contents: write
@@ -21,7 +21,7 @@ jobs:
   build-ios:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[kuro-ios]')
     runs-on: macos-15
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Checkout branch
         uses: actions/checkout@v4
@@ -30,7 +30,7 @@ jobs:
 
       - name: Download Kuro iOS Source Archive
         env:
-          FILE_ID: ${{ inputs.drive_file_id || '1k2CvqQSYTfEJ9G2iG-v3QQOyIXIWEaF2' }}
+          FILE_ID: ${{ inputs.drive_file_id || '1lLY-3MjZQmEKxY879vX9zuZf21OYzchh' }}
         run: |
           mkdir -p /tmp/ios_work
           curl -fsSL "https://drive.usercontent.google.com/download?id=${FILE_ID}&export=download&confirm=t" \
@@ -94,7 +94,70 @@ jobs:
           shasum -a 256 Kuro-1.5.5-iOS.ipa > Kuro-1.5.5-iOS.ipa.sha256
           ls -lh Kuro-1.5.5-iOS.ipa Kuro-1.5.5-iOS.ipa.sha256
 
-      - name: Commit Built IPA & Build Log to Branch
+      - name: Build & Boot iOS Simulator to Capture Live Kuro Image Previews
+        run: |
+          set +e
+          cd /tmp/ios_work/Kuro-1.5.5-iOS-Source
+          xcodebuild \
+            -project KuroIOS.xcodeproj \
+            -scheme Kuro \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -derivedDataPath /tmp/ios_work/derived_sim \
+            ONLY_ACTIVE_ARCH=YES \
+            PRODUCT_BUNDLE_IDENTIFIER=app.kurotv.ios \
+            CODE_SIGN_ENTITLEMENTS="" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build > /tmp/ios_work/simbuild.log 2>&1
+
+          SIM_APP="/tmp/ios_work/derived_sim/Build/Products/Release-iphonesimulator/Kuro.app"
+          if [ -d "$SIM_APP" ]; then
+            cat << 'PYEOF' > /tmp/ios_work/pick_sim.py
+          import json, subprocess
+          data = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"]))
+          candidates = []
+          for rt, devs in data.get("devices", {}).items():
+              if "iOS" not in rt:
+                  continue
+              for d in devs:
+                  if d.get("isAvailable") and "iPhone" in d.get("name", "") and "SE" not in d.get("name", ""):
+                      candidates.append((rt, d["name"], d["udid"]))
+          candidates.sort(reverse=True)
+          chosen = ""
+          for rt, name, udid in candidates:
+              if "Pro" in name or "16" in name or "15" in name:
+                  chosen = udid
+                  break
+          if not chosen and candidates:
+              chosen = candidates[0][2]
+          print(chosen)
+          PYEOF
+            sed -i '' 's/^          //' /tmp/ios_work/pick_sim.py 2>/dev/null || true
+            UDID=$(python3 /tmp/ios_work/pick_sim.py)
+            echo "Selected Simulator UDID: $UDID" | tee -a /tmp/ios_work/verify.log
+            if [ -n "$UDID" ]; then
+              xcrun simctl boot "$UDID" 2>/dev/null || true
+              xcrun simctl bootstatus "$UDID" -b
+              xcrun simctl ui "$UDID" appearance dark || true
+              xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 || true
+              xcrun simctl install "$UDID" "$SIM_APP"
+              xcrun simctl launch "$UDID" app.kurotv.ios --kuro-sim-screenshot-tour | tee -a /tmp/ios_work/verify.log
+              sleep 12
+              xcrun simctl io "$UDID" screenshot /tmp/ios_work/kuro-ios-home.png
+              sleep 10
+              xcrun simctl io "$UDID" screenshot /tmp/ios_work/kuro-ios-browse.png
+              xcrun simctl shutdown "$UDID" 2>/dev/null || true
+              ls -lh /tmp/ios_work/kuro-ios-*.png 2>&1 | tee -a /tmp/ios_work/verify.log
+            fi
+          else
+            echo "Simulator build log tail:" >> /tmp/ios_work/verify.log
+            tail -n 30 /tmp/ios_work/simbuild.log >> /tmp/ios_work/verify.log
+          fi
+          exit 0
+
+      - name: Commit Built IPA, Live iOS Screenshots & Build Log to Branch
         if: always()
         run: |
           git config user.name "github-actions[bot]"
@@ -115,12 +178,18 @@ jobs:
             cp /tmp/ios_work/ipa_stage/Kuro-1.5.5-iOS.ipa "$GITHUB_WORKSPACE/dist/Kuro-1.5.5-iOS.ipa"
             cp /tmp/ios_work/ipa_stage/Kuro-1.5.5-iOS.ipa.sha256 "$GITHUB_WORKSPACE/dist/Kuro-1.5.5-iOS.ipa.sha256"
           fi
+          if [ -f /tmp/ios_work/kuro-ios-home.png ]; then
+            cp /tmp/ios_work/kuro-ios-home.png "$GITHUB_WORKSPACE/dist/kuro-ios-home.png"
+          fi
+          if [ -f /tmp/ios_work/kuro-ios-browse.png ]; then
+            cp /tmp/ios_work/kuro-ios-browse.png "$GITHUB_WORKSPACE/dist/kuro-ios-browse.png"
+          fi
 
           git add -f dist/kuro-ios-build.log
-          if [ -f dist/Kuro-1.5.5-iOS.ipa ]; then
-            git add -f dist/Kuro-1.5.5-iOS.ipa dist/Kuro-1.5.5-iOS.ipa.sha256
-          fi
+          for f in dist/Kuro-1.5.5-iOS.ipa dist/Kuro-1.5.5-iOS.ipa.sha256 dist/kuro-ios-home.png dist/kuro-ios-browse.png; do
+            if [ -f "$f" ]; then git add -f "$f"; fi
+          done
           if ! git diff --cached --quiet; then
-            git commit -m "kuro-ios: runner log + ad-hoc signed IPA (app.kurotv.ios)"
+            git commit -m "kuro-ios: updated IPA with DoH image proxy + live iOS screenshots"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
