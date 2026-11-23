@@ -1,13 +1,6 @@
-/tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroBridge.swift:264:44: error: cannot find ')' to match opening '(' in string interpolation
-/tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroBridge.swift:264:114: error: unterminated string literal
-/tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroAccountsAndTrackers.swift:512:49: error: value of type 'KuroCatalogEngine' has no member 'graphQL'
-/tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroAccountsAndTrackers.swift:544:49: error: value of type 'KuroCatalogEngine' has no member 'graphQL'
-/tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroAccountsAndTrackers.swift:547:58: error: 'nil' requires a contextual type
-/tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroAccountsAndTrackers.swift:579:57: error: value of type 'KuroCatalogEngine' has no member 'graphQL'
-/tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroAccountsAndTrackers.swift:604:52: error: value of type 'KuroCatalogEngine' has no member 'graphQL'
-/tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroAccountsAndTrackers.swift:661:53: error: value of type 'KuroCatalogEngine' has no member 'graphQL'
-/tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroAccountsAndTrackers.swift:729:49: error: value of type 'KuroCatalogEngine' has no member 'graphQL'
-/tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroNews.swift:174:60: error: value of type 'KuroCatalogEngine' has no member 'graphQL'
+/tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroAccountsAndTrackers.swift:512:96: error: extra argument 'bearerToken' in call
+/tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroAccountsAndTrackers.swift:608:29: error: extra argument 'bearerToken' in call
+/tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroAccountsAndTrackers.swift:661:112: error: extra argument 'bearerToken' in call
 /tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroWatchViewController.swift:390:20: warning: 'contentEdgeInsets' was deprecated in iOS 15.0: This property is ignored when using UIButtonConfiguration
 /tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroWatchViewController.swift:539:22: warning: 'contentEdgeInsets' was deprecated in iOS 15.0: This property is ignored when using UIButtonConfiguration
 /tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroWatchViewController.swift:549:19: warning: 'contentEdgeInsets' was deprecated in iOS 15.0: This property is ignored when using UIButtonConfiguration
@@ -18,8 +11,8 @@
 /tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroWatchViewController.swift:660:21: warning: 'contentEdgeInsets' was deprecated in iOS 15.0: This property is ignored when using UIButtonConfiguration
 ** BUILD FAILED **
 --- TAIL ---
-                if let res = try? KuroCatalogEngine.shared.graphQL(query: q, variables: ["s": clean]),
-                                  ~~~~~~~~~~~~~~~~~~~~~~~~ ^~~~~~~
+            let data = try KuroCatalogEngine.shared.graphQL(query: q, variables: ["userId": uid], bearerToken: token)
+                                                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~
 /tmp/ios_work/Kuro-1.5.5-iOS-Source/Kuro/Sources/KuroWatchViewController.swift:390:20: warning: 'contentEdgeInsets' was deprecated in iOS 15.0: This property is ignored when using UIButtonConfiguration
         skipButton.contentEdgeInsets = UIEdgeInsets(top: 8, left: 14, bottom: 8, right: 14)
                    ^
