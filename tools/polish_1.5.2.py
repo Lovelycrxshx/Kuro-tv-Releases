@@ -20,13 +20,10 @@ IC_STAT_KURO_XML = """<?xml version="1.0" encoding="utf-8"?>
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- Monochrome status-bar glyph: Kuro K + four-point sparkle on transparent canvas -->
+    <!-- Monochrome status-bar glyph: Kuro K monogram on transparent canvas -->
     <path
         android:fillColor="#FFFFFFFF"
         android:pathData="M5,4h2.8v6.9L14.2,4h3.4l-6.6,7.1L18,20h-3.5l-5.3,-6.9L7.8,14.6V20H5V4z"/>
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M18.5,2.5L19.4,4.9L21.8,5.8L19.4,6.7L18.5,9.1L17.6,6.7L15.2,5.8L17.6,4.9Z"/>
 </vector>
 """
 

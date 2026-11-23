@@ -2888,7 +2888,44 @@
     window.kuroBack = wrappedBack;
   }
 
+  var noSelectionInstalled155 = false;
+
+  function isEditableField155(node) {
+    if (!node || node.nodeType !== 1) return false;
+    var tag = node.tagName ? node.tagName.toUpperCase() : '';
+    if (tag === 'TEXTAREA') return true;
+    if (tag !== 'INPUT') return false;
+    var type = (node.getAttribute('type') || 'text').toLowerCase();
+    return type === 'text' || type === 'search' || type === 'url' || type === 'email' || type === 'password' || type === 'number' || type === 'tel';
+  }
+
+  function installNoBrowserSelection155() {
+    if (noSelectionInstalled155) return;
+    noSelectionInstalled155 = true;
+    document.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+    }, true);
+    document.addEventListener('selectstart', function (e) {
+      if (!isEditableField155(e.target)) {
+        e.preventDefault();
+      }
+    }, true);
+    document.addEventListener('dragstart', function (e) {
+      e.preventDefault();
+    }, true);
+    document.addEventListener('selectionchange', function () {
+      if (isEditableField155(document.activeElement)) return;
+      try {
+        var sel = window.getSelection && window.getSelection();
+        if (sel && sel.rangeCount > 0) sel.removeAllRanges();
+      } catch (_) {}
+    });
+  }
+
+  installNoBrowserSelection155();
+
   function init154() {
+    installNoBrowserSelection155();
     syncDesktopSite154();
     syncDisplay155();
     pruneHiddenControls154();

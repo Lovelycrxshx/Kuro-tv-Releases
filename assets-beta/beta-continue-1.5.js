@@ -94,7 +94,7 @@
   var mins = minutesIn(item, ep);
   var art = item.img
    ? '<img src="' + K.esc(item.img) + '" alt="" loading="lazy" decoding="async">'
-   : '<span class="km-continue-fallback-15" aria-hidden="true">\u2726</span>';
+   : '<span class="km-continue-fallback-15" aria-hidden="true">K</span>';
   return '<button type="button" class="km-continue-card-15" data-continue-15="' + index + '"' +
    ' aria-label="Continue ' + K.esc(item.title || 'this title') + ' episode ' + K.esc(String(ep.number || '')) + '">' +
    '<span class="km-continue-art-15">' + art +

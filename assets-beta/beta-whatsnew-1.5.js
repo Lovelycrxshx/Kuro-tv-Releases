@@ -1,11 +1,11 @@
-/* Kuro 1.5.5-beta8 — one-time "What's new" card, shown once after the splash on
-   first launch of 1.5.5-beta8 and never again. Self-contained, dismissible by
+/* Kuro 1.5.5-beta9 — one-time "What's new" card, shown once after the splash on
+   first launch of 1.5.5-beta9 and never again. Self-contained, dismissible by
    button, backdrop tap, or Escape / Android back. */
 (function () {
   'use strict';
 
-  var STAMP = '1.5.5-beta8';
-  var KEY = 'kuro-beta-whatsnew-seen-1.5.5-beta8';
+  var STAMP = '1.5.5-beta9';
+  var KEY = 'kuro-beta-whatsnew-seen-1.5.5-beta9';
 
   try {
     if (localStorage.getItem(KEY) === STAMP) {
@@ -14,10 +14,9 @@
   } catch (_) { return; }
 
   var ITEMS = [
-    ['App-Themed Up Next Card', 'Replaced the stock Android alert popup with a sleek Kuro-themed Up Next card featuring episode artwork, title & episode count, smooth live accent countdown bar, tap-to-hold pause, and themed Play Now / Cancel controls across all 20 accents and Pure Black OLED.'],
-    ['Controllable App DPI & UI Size', 'Full control over App DPI (System Default or 280\u2013640 DPI) and App UI Size (75%\u2013135%), plus Up Next card size and countdown duration (5s\u201315s) right in Settings and Watch Tools.'],
-    ['Instant Preview & Fast Density Apply', 'Preview the themed Up Next card directly from Settings or Watch Tools, and apply new App DPI & UI Size across native and WebView surfaces without replaying the launch intro.'],
-    ['Auto-Play Next & Offline Stability', 'Reliable end-to-end Auto-Play Next across embedded web servers, HLS, and native playback with SUB/DUB carry-over, safe dialog tokens, and main-looper DownloadManager protection.']
+    ['Clean Iconography App-Wide', 'Removed 4-point sparkle badges across the Watch screen, Browse navigation dock, Home & Simulcasts banners, Account profile, and status-bar vectors in favor of clean Kuro geometry.'],
+    ['Native App Touch Behavior', 'Disabled browser-style hold-to-select text highlights, teardrop selection handles, and floating Copy / Select All / Web Search context popups across Settings, Home, Browse, and Watch surfaces.'],
+    ['App-Themed Up Next & Controllable DPI', 'Includes the Kuro-themed Up Next countdown card plus user-controllable App DPI (280\u2013640 DPI) and App UI Size (75%\u2013135%) across all 20 accents and Pure Black OLED.']
   ];
 
   function mark() {
@@ -39,12 +38,12 @@
 
     var tag = document.createElement('div');
     tag.className = 'kb-wn-tag';
-    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA8';
+    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA9';
 
     var h = document.createElement('h2');
     h.id = 'kb-wn-title';
     h.className = 'kb-wn-title';
-    h.textContent = 'What\u2019s new in 1.5.5-beta8';
+    h.textContent = 'What\u2019s new in 1.5.5-beta9';
 
     var list = document.createElement('ul');
     list.className = 'kb-wn-list';

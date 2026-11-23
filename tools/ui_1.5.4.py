@@ -2593,7 +2593,7 @@ def patch_watch_ui_154(root: pathlib.Path) -> None:
         '  JSONObject curEpObj155=eps.optJSONObject(current);String curEpNum155=info.optString("episode",curEpObj155!=null?curEpObj155.optString("number","?"):"?");String curEpName155=info.optString("episodeName",curEpObj155!=null?curEpObj155.optString("name",""):"");if(curEpName155!=null){curEpName155=curEpName155.trim();if(curEpName155.equalsIgnoreCase("Episode "+curEpNum155))curEpName155="";}\n'
         '  TextView curEpCenter155=text("Episode "+curEpNum155+(curEpName155==null||curEpName155.isEmpty()?"":"  •  "+curEpName155),12,Color.WHITE);curEpCenter155.setTypeface(null,android.graphics.Typeface.BOLD);curEpCenter155.setGravity(Gravity.CENTER);curEpCenter155.setSingleLine(true);curEpCenter155.setEllipsize(android.text.TextUtils.TruncateAt.END);curEpCenter155.setPadding(dp(8),0,dp(8),0);epStrip155.addView(curEpCenter155,new LinearLayout.LayoutParams(0,-2,1));\n'
         '  TextView nextEpBtn155=text("Next ›",12,canNext?KuroTheme12.col(0xffeae2f2):KuroTheme12.col(0xff6b5b7a));nextEpBtn155.setTypeface(null,android.graphics.Typeface.BOLD);nextEpBtn155.setGravity(Gravity.CENTER);nextEpBtn155.setMinHeight(dp(36));nextEpBtn155.setPadding(dp(11),0,dp(11),0);nextEpBtn155.setBackground(watchShape154(canNext?KuroTheme12.col(0xff21152b):KuroTheme12.col(0xff160e1e),canNext?KuroTheme12.col(0xff443253):KuroTheme12.col(0xff2b1e36),9));nextEpBtn155.setEnabled(canNext);nextEpBtn155.setOnClickListener(v->{if(canNext)chooseEpisode581(nextPlayable155);});epStrip155.addView(nextEpBtn155,new LinearLayout.LayoutParams(-2,dp(36)));\n'
-        '  TextView autoNextPill155=text("✦ Auto-Next",11,Color.WHITE);autoNextPill155.setTypeface(null,android.graphics.Typeface.BOLD);autoNextPill155.setGravity(Gravity.CENTER);autoNextPill155.setMinHeight(dp(36));autoNextPill155.setPadding(dp(11),0,dp(11),0);autoNextPill155.setTag("watch-autonext-pill-155");autoNextQuickPill155[0]=autoNextPill155;styleAutoNextPill155.accept(getPreferences(MODE_PRIVATE).getBoolean("auto_next",false));LinearLayout.LayoutParams anLp155=new LinearLayout.LayoutParams(-2,dp(36));anLp155.setMargins(dp(6),0,0,0);epStrip155.addView(autoNextPill155,anLp155);\n'
+        '  TextView autoNextPill155=text("Auto-Next",11,Color.WHITE);autoNextPill155.setTypeface(null,android.graphics.Typeface.BOLD);autoNextPill155.setGravity(Gravity.CENTER);autoNextPill155.setMinHeight(dp(36));autoNextPill155.setPadding(dp(11),0,dp(11),0);autoNextPill155.setTag("watch-autonext-pill-155");autoNextQuickPill155[0]=autoNextPill155;styleAutoNextPill155.accept(getPreferences(MODE_PRIVATE).getBoolean("auto_next",false));LinearLayout.LayoutParams anLp155=new LinearLayout.LayoutParams(-2,dp(36));anLp155.setMargins(dp(6),0,0,0);epStrip155.addView(autoNextPill155,anLp155);\n'
         '  final LinearLayout directHost155=new LinearLayout(this);directHost155.setOrientation(LinearLayout.VERTICAL);\n'
         '  content.addView(epStrip155,new LinearLayout.LayoutParams(-1,-2));addGap(content,10);content.addView(directHost155,new LinearLayout.LayoutParams(-1,-2));addDirectTools561(directHost155);\n'
         '  final LinearLayout toolsDrawer155=new LinearLayout(this);toolsDrawer155.setOrientation(LinearLayout.VERTICAL);toolsDrawer155.setVisibility(View.GONE);toolsDrawer155.setPadding(0,dp(10),0,0);\n'
@@ -5148,6 +5148,176 @@ def patch_stability_and_autonext_155(root: pathlib.Path) -> None:
     sp_path.write_text(sp_text, encoding="utf-8")
 
 
+def patch_clean_icons_and_no_selection_155(root: pathlib.Path) -> None:
+    """1.5.5-beta9: Remove all 4-point sparkle glyphs app-wide and suppress browser WebView text selection & ActionMode."""
+    sparkle_4 = "\u2726"   # 4-point black star
+    sparkle_4o = "\u2727"  # 4-point white star
+    star_6 = "\u2736"      # 6-point star
+    star_16 = "\u273a"     # 16-point asterisk
+    star_8 = "\u2738"      # 8-point rectilinear star
+
+    # 1. MainActivity.java: block ActionMode on root ViewGroup + disableWebSelection155 on all WebViews + strip pill sparkle
+    ma_path = root / "src/app/lovelycrxshx/kuro/MainActivity.java"
+    ma_text = ma_path.read_text(encoding="utf-8")
+    if f'"{sparkle_4} Auto-Next"' in ma_text:
+        ma_text = ma_text.replace(f'"{sparkle_4} Auto-Next"', '"Auto-Next"')
+
+    ma_text = patch_once(
+        ma_text,
+        "private static void disableWebSelection155(WebView w)",
+        "@Override public void onTrimMemory(int level){",
+        "private static void disableWebSelection155(WebView w){if(w==null)return;w.setLongClickable(false);w.setHapticFeedbackEnabled(false);w.setOnLongClickListener(v->true);}\n"
+        " @Override public void onActionModeStarted(android.view.ActionMode mode){super.onActionModeStarted(mode);if(mode!=null)try{mode.getMenu().clear();mode.finish();}catch(RuntimeException ignored){}}\n"
+        " @Override public void onTrimMemory(int level){",
+        "MainActivity disableWebSelection155 + onActionModeStarted",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "startActionModeForChild(View v,android.view.ActionMode.Callback cb)",
+        "root=new FrameLayout(this);setContentView(root);",
+        "root=new FrameLayout(this){@Override public android.view.ActionMode startActionModeForChild(View v,android.view.ActionMode.Callback cb){return null;}@Override public android.view.ActionMode startActionModeForChild(View v,android.view.ActionMode.Callback cb,int t){return null;}};setContentView(root);",
+        "MainActivity root suppress startActionModeForChild",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "ui=new WebView(this);KuroDisplay155.enforce500Dpi(this);disableWebSelection155(ui);",
+        "ui=new WebView(this);KuroDisplay155.enforce500Dpi(this);",
+        "ui=new WebView(this);KuroDisplay155.enforce500Dpi(this);disableWebSelection155(ui);",
+        "MainActivity disableWebSelection155(ui)",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "WebView check=new WebView(this);KuroDisplay155.enforce500Dpi(this);disableWebSelection155(check);",
+        "WebView check=new WebView(this);KuroDisplay155.enforce500Dpi(this);",
+        "WebView check=new WebView(this);KuroDisplay155.enforce500Dpi(this);disableWebSelection155(check);",
+        "MainActivity disableWebSelection155(check)",
+    )
+    ma_text = patch_once(
+        ma_text,
+        "player=new WebView(this);KuroDisplay155.enforce500Dpi(this);disableWebSelection155(player);",
+        "player=new WebView(this);KuroDisplay155.enforce500Dpi(this);",
+        "player=new WebView(this);KuroDisplay155.enforce500Dpi(this);disableWebSelection155(player);",
+        "MainActivity disableWebSelection155(player)",
+    )
+    ma_path.write_text(ma_text, encoding="utf-8")
+
+    # 2. KuroOfflineActivity561.java: suppress ActionMode
+    oa_path = root / "src/app/lovelycrxshx/kuro/KuroOfflineActivity561.java"
+    oa_text = oa_path.read_text(encoding="utf-8")
+    oa_text = patch_once(
+        oa_text,
+        "onActionModeStarted(android.view.ActionMode mode)",
+        "@Override protected void attachBaseContext(android.content.Context newBase){",
+        "@Override public void onActionModeStarted(android.view.ActionMode mode){super.onActionModeStarted(mode);if(mode!=null)try{mode.getMenu().clear();mode.finish();}catch(RuntimeException ignored){}}\n"
+        "    @Override protected void attachBaseContext(android.content.Context newBase){",
+        "KuroOfflineActivity561 onActionModeStarted",
+    )
+    oa_path.write_text(oa_text, encoding="utf-8")
+
+    # 3. PlaybackPanel.java: remove 4-point sparkle mark from Playback controls header
+    pp_path = root / "src/app/lovelycrxshx/kuro/PlaybackPanel.java"
+    pp_text = pp_path.read_text(encoding="utf-8")
+    old_pp_mark = (
+        f'  TextView mark=label("{sparkle_4}",14,KuroTheme12.col(0xffd7a6ff),true);'
+        'mark.setTextSize(TypedValue.COMPLEX_UNIT_DIP,14);mark.setGravity(Gravity.CENTER);'
+        'mark.setBackground(solid(KuroTheme12.col(0xff3d2452),0,11));'
+        'mark.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);'
+        'header.addView(mark,new LayoutParams(dp(22),dp(22)));space(header,7);\n'
+    )
+    old_pp_mark_raw = (
+        f'  TextView mark=label("{sparkle_4}",14,0xffd7a6ff,true);'
+        'mark.setTextSize(TypedValue.COMPLEX_UNIT_DIP,14);mark.setGravity(Gravity.CENTER);'
+        'mark.setBackground(solid(0xff3d2452,0,11));'
+        'mark.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);'
+        'header.addView(mark,new LayoutParams(dp(22),dp(22)));space(header,7);\n'
+    )
+    if old_pp_mark in pp_text:
+        pp_text = pp_text.replace(old_pp_mark, "", 1)
+    elif old_pp_mark_raw in pp_text:
+        pp_text = pp_text.replace(old_pp_mark_raw, "", 1)
+    pp_path.write_text(pp_text, encoding="utf-8")
+
+    # 4. res/drawable/ic_news.xml & res/drawable/ic_stat_kuro.xml: strip 4-point sparkle subpaths
+    ic_news_path = root / "res/drawable/ic_news.xml"
+    if ic_news_path.exists():
+        ic_news = ic_news_path.read_text(encoding="utf-8")
+        ic_news = ic_news.replace(
+            "M20.5,1.5l0.8,1.8 1.7,0.8 -1.7,0.8 -0.8,1.8 -0.8,-1.8 -1.7,-0.8 1.7,-0.8z",
+            "",
+        )
+        ic_news_path.write_text(ic_news, encoding="utf-8")
+
+    ic_stat_path = root / "res/drawable/ic_stat_kuro.xml"
+    if ic_stat_path.exists():
+        ic_stat_path.write_text(
+            '<?xml version="1.0" encoding="utf-8"?>\n'
+            '<vector xmlns:android="http://schemas.android.com/apk/res/android"\n'
+            '    android:width="24dp"\n'
+            '    android:height="24dp"\n'
+            '    android:viewportWidth="24"\n'
+            '    android:viewportHeight="24">\n'
+            '    <!-- Monochrome status-bar glyph: Kuro K monogram on transparent canvas -->\n'
+            '    <path\n'
+            '        android:fillColor="#FFFFFFFF"\n'
+            '        android:pathData="M5,4h2.8v6.9L14.2,4h3.4l-6.6,7.1L18,20h-3.5l-5.3,-6.9L7.8,14.6V20H5V4z"/>\n'
+            '</vector>\n',
+            encoding="utf-8",
+        )
+
+    # 5. assets/stream-player.html: disable text selection & callout inside HLS WebView player
+    sph_path = root / "assets/stream-player.html"
+    if sph_path.exists():
+        sph_text = sph_path.read_text(encoding="utf-8")
+        if "-webkit-user-select:none" not in sph_text:
+            sph_text = sph_text.replace(
+                "html,body{margin:0;background:#000;width:100%;height:100%;overflow:hidden}",
+                "html,body,*{margin:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}html,body{background:#000;width:100%;height:100%;overflow:hidden}",
+                1,
+            )
+            sph_path.write_text(sph_text, encoding="utf-8")
+
+    # 6. Strip/replace all 4-point sparkle & star-flare glyphs across unpacked base WebView JS
+    app_js_path = root / "assets/app.js"
+    if app_js_path.exists():
+        aj = app_js_path.read_text(encoding="utf-8")
+        aj = aj.replace(f'{{id:"action",name:"Action",icon:"{sparkle_4}"', '{id:"action",name:"Action",icon:"\u25b6"')
+        aj = aj.replace(f'{{id:"fantasy",name:"Fantasy",icon:"{sparkle_4o}"', '{id:"fantasy",name:"Fantasy",icon:"\u25c7"')
+        aj = aj.replace(f'{{id:"isekai",name:"Isekai",icon:"{star_16}"', '{id:"isekai",name:"Isekai",icon:"\u25ce"')
+        aj = aj.replace(f'{{id:"magic",name:"Magic",icon:"{star_6}"', '{id:"magic",name:"Magic",icon:"\u25c8"')
+        aj = aj.replace(f'{{id:"seinen",name:"Seinen",icon:"{star_6}"', '{id:"seinen",name:"Seinen",icon:"\u25a3"')
+        aj = aj.replace(f'{{id:"award-winning",name:"Award Winning",icon:"{star_8}"', '{id:"award-winning",name:"Award Winning",icon:"\u2605"')
+        aj = aj.replace(f'<div class="overline">{sparkle_4} ${{escapeHTML(heroTag581(x))}}</div>', '<div class="overline">${escapeHTML(heroTag581(x))}</div>')
+        aj = aj.replace(f"${{id==='source'?'{sparkle_4}':id==='az'?'A':'Z'}}", "${id==='source'?'\u2261':id==='az'?'A':'Z'}")
+        aj = aj.replace(f'<span class="discover-mark" aria-hidden="true">{sparkle_4}</span>', '')
+        aj = aj.replace(f"tabButton('all','All anime','{sparkle_4}')", "tabButton('all','All anime','\u25a6')")
+        aj = aj.replace(f'<div class="news-heading-icon" aria-hidden="true">{sparkle_4}</div>', '')
+        aj = aj.replace(sparkle_4, "K").replace(sparkle_4o, "")
+        app_js_path.write_text(aj, encoding="utf-8")
+
+    uni_js_path = root / "assets/unified533.js"
+    if uni_js_path.exists():
+        uj = uni_js_path.read_text(encoding="utf-8")
+        uj = uj.replace(f'<span class="discover-mark" aria-hidden="true">{sparkle_4}</span>', '')
+        uj = uj.replace(f'<div class="unified-banner"><span aria-hidden="true">{sparkle_4}</span>', '<div class="unified-banner">')
+        uj = uj.replace(f"tabButton('all','All anime','{sparkle_4}')", "tabButton('all','All anime','\u25a6')")
+        uj = uj.replace(sparkle_4, "K").replace(sparkle_4o, "")
+        uni_js_path.write_text(uj, encoding="utf-8")
+
+    sim_js_path = root / "assets/simulcasts532.js"
+    if sim_js_path.exists():
+        sj = sim_js_path.read_text(encoding="utf-8")
+        sj = sj.replace(sparkle_4, "K").replace(sparkle_4o, "")
+        sim_js_path.write_text(sj, encoding="utf-8")
+
+    acc_js_path = root / "assets/accounts542.js"
+    if acc_js_path.exists():
+        ac = acc_js_path.read_text(encoding="utf-8")
+        ac = ac.replace(f'<small>{sparkle_4o} &nbsp;Local profile</small>', '<small>Local profile</small>')
+        ac = ac.replace(f'<div class="profile-streak571">{sparkle_4} ${{streakDays}}-day streak</div>', '<div class="profile-streak571">${streakDays}-day streak</div>')
+        ac = ac.replace(sparkle_4, "K").replace(sparkle_4o, "")
+        acc_js_path.write_text(ac, encoding="utf-8")
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         raise SystemExit("usage: ui_1.5.4.py <kuro-source-dir>")
@@ -5165,6 +5335,7 @@ def main() -> None:
     patch_watch_ui_154(root)
     patch_display_2k_500dpi_155(root)
     patch_stability_and_autonext_155(root)
+    patch_clean_icons_and_no_selection_155(root)
     import importlib.util as _ilu
     _tn_spec = _ilu.spec_from_file_location("theme_native_1_2", pathlib.Path(__file__).with_name("theme_native_1.2.py"))
     assert _tn_spec is not None and _tn_spec.loader is not None
