@@ -3976,7 +3976,7 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
             window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             WindowManager.LayoutParams attr = window.getAttributes();
             attr.dimAmount = 0.62f;
-            DisplayMetrics dm = activity.getResources().getDisplayMetrics();
+            android.util.DisplayMetrics dm = activity.getResources().getDisplayMetrics();
             int maxW = sdp155(activity, 396, sc);
             attr.width = Math.max(sdp155(activity, 260, 1f), Math.min(maxW, Math.round(dm.widthPixels * 0.90f)));
             attr.height = WindowManager.LayoutParams.WRAP_CONTENT;
@@ -4367,7 +4367,7 @@ def patch_display_2k_500dpi_155(root: pathlib.Path) -> None:
             window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             WindowManager.LayoutParams attr = window.getAttributes();
             attr.dimAmount = 0.72f;
-            DisplayMetrics dm = activity.getResources().getDisplayMetrics();
+            android.util.DisplayMetrics dm = activity.getResources().getDisplayMetrics();
             attr.width = Math.min(sdp155(activity, 430, 1f), Math.round(dm.widthPixels * 0.92f));
             attr.height = WindowManager.LayoutParams.WRAP_CONTENT;
             window.setAttributes(attr);
