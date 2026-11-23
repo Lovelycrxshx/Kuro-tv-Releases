@@ -30,7 +30,7 @@ jobs:
 
       - name: Download Kuro iOS Source Archive
         env:
-          FILE_ID: ${{ inputs.drive_file_id || '1lLY-3MjZQmEKxY879vX9zuZf21OYzchh' }}
+          FILE_ID: ${{ inputs.drive_file_id || '1Iy1HszzD6AlUk9Y7QHwKqPdYHNIkUVDs' }}
         run: |
           mkdir -p /tmp/ios_work
           curl -fsSL --retry 4 --retry-delay 2 --retry-all-errors \
