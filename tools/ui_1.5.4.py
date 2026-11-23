@@ -5326,6 +5326,63 @@ def patch_clean_icons_and_no_selection_155(root: pathlib.Path) -> None:
             idx_path.write_text(ix.replace(old_dock_svg, new_dock_svg, 1), encoding="utf-8")
 
 
+def patch_profile_art_studio_155(root: pathlib.Path) -> None:
+    # 1. MainActivity.java: expose pickProfileImage155(kind) & allow custom data:image/ avatars in profileArt581
+    ma_path = root / "src/app/lovelycrxshx/kuro/MainActivity.java"
+    ma_text = ma_path.read_text(encoding="utf-8")
+    ma_text = patch_once(
+        ma_text,
+        "pickProfileImage155(String kind)",
+        ' @JavascriptInterface public void profileArt581(String id){String v=id==null?"":id;if(!v.isEmpty()&&!v.matches("art-[0-9]{2}"))return;main.post(()->{if(v.equals(profileArt581))return;profileArt581=v;getSharedPreferences("kuro-native-581",MODE_PRIVATE).edit().putString("profile-art",v).apply();if(watchHeader instanceof WatchHeader)((WatchHeader)watchHeader).setProfile(profileSignedIn560,profileAvatar560,profileArt581);});}',
+        ' @JavascriptInterface public void pickProfileImage155(String kind){if("avatar".equals(kind)||"banner".equals(kind))main.post(()->pickAccountImage(kind));}\n'
+        ' @JavascriptInterface public void profileArt581(String id){String v=id==null?"":id;boolean okData=v.startsWith("data:image/")&&v.length()<=650000;if(!v.isEmpty()&&!v.matches("art-[0-9]{2}")&&!okData)return;main.post(()->{if(v.equals(profileArt581))return;profileArt581=v;getSharedPreferences("kuro-native-581",MODE_PRIVATE).edit().putString("profile-art",v).apply();if(watchHeader instanceof WatchHeader)((WatchHeader)watchHeader).setProfile(profileSignedIn560,profileAvatar560,profileArt581);});}',
+        "MainActivity pickProfileImage155 & custom avatar bridge",
+    )
+    ma_path.write_text(ma_text, encoding="utf-8")
+
+    # 2. WatchHeader.java: render built-in art-XX AND custom data:image/ avatars (even in local profile mode)
+    wh_path = root / "src/app/lovelycrxshx/kuro/WatchHeader.java"
+    wh_text = wh_path.read_text(encoding="utf-8")
+    wh_text = patch_once(
+        wh_text,
+        "boolean showChip155=signedIn||art;",
+        ' public void setProfile(boolean signedIn,String mono,String artId){\n'
+        '  if(accountTarget==null)return;accountTarget.setContentDescription(signedIn?"Open profile menu":"Log in");accountWord.setVisibility(signedIn?View.GONE:View.VISIBLE);\n'
+        '  boolean art=signedIn&&showArt(artId);\n'
+        '  accountMono.setVisibility(signedIn&&!art?View.VISIBLE:View.GONE);\n'
+        '  accountMono.setText(mono==null||mono.trim().isEmpty()?"K":mono.trim().toUpperCase(java.util.Locale.ROOT));\n'
+        ' }\n'
+        ' private boolean showArt(String artId){\n'
+        '  if(accountArt==null)return false;\n'
+        '  if(artId==null||!artId.matches("art-[0-9]{2}")){accountArt.setImageDrawable(null);accountArt.setVisibility(View.GONE);return false;}',
+        ' public void setProfile(boolean signedIn,String mono,String artId){\n'
+        '  if(accountTarget==null)return;\n'
+        '  boolean art=showArt(artId);\n'
+        '  boolean showChip155=signedIn||art;\n'
+        '  accountTarget.setContentDescription(showChip155?"Open profile menu":"Log in");\n'
+        '  accountWord.setVisibility(showChip155?View.GONE:View.VISIBLE);\n'
+        '  accountMono.setVisibility(signedIn&&!art?View.VISIBLE:View.GONE);\n'
+        '  accountMono.setText(mono==null||mono.trim().isEmpty()?"K":mono.trim().toUpperCase(java.util.Locale.ROOT));\n'
+        ' }\n'
+        ' private boolean showArt(String artId){\n'
+        '  if(accountArt==null)return false;\n'
+        '  if(artId!=null&&artId.startsWith("data:image/")&&artId.length()<=650000){\n'
+        '   int comma=artId.indexOf(\',\');\n'
+        '   if(comma>0){\n'
+        '    try{\n'
+        '     byte[] raw=android.util.Base64.decode(artId.substring(comma+1),android.util.Base64.DEFAULT);\n'
+        '     Bitmap b=BitmapFactory.decodeByteArray(raw,0,raw.length);\n'
+        '     if(b!=null){accountArt.setImageBitmap(b);accountArt.setVisibility(View.VISIBLE);return true;}\n'
+        '    }catch(Exception ignored){}\n'
+        '   }\n'
+        '   accountArt.setImageDrawable(null);accountArt.setVisibility(View.GONE);return false;\n'
+        '  }\n'
+        '  if(artId==null||!artId.matches("art-[0-9]{2}")){accountArt.setImageDrawable(null);accountArt.setVisibility(View.GONE);return false;}',
+        "WatchHeader custom & local profile art support",
+    )
+    wh_path.write_text(wh_text, encoding="utf-8")
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         raise SystemExit("usage: ui_1.5.4.py <kuro-source-dir>")
@@ -5344,6 +5401,7 @@ def main() -> None:
     patch_display_2k_500dpi_155(root)
     patch_stability_and_autonext_155(root)
     patch_clean_icons_and_no_selection_155(root)
+    patch_profile_art_studio_155(root)
     import importlib.util as _ilu
     _tn_spec = _ilu.spec_from_file_location("theme_native_1_2", pathlib.Path(__file__).with_name("theme_native_1.2.py"))
     assert _tn_spec is not None and _tn_spec.loader is not None

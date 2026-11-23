@@ -1,11 +1,11 @@
-/* Kuro 1.5.5-beta9 — one-time "What's new" card, shown once after the splash on
-   first launch of 1.5.5-beta9 and never again. Self-contained, dismissible by
+/* Kuro 1.5.5-beta10 — one-time "What's new" card, shown once after the splash on
+   first launch of 1.5.5-beta10 and never again. Self-contained, dismissible by
    button, backdrop tap, or Escape / Android back. */
 (function () {
   'use strict';
 
-  var STAMP = '1.5.5-beta9';
-  var KEY = 'kuro-beta-whatsnew-seen-1.5.5-beta9';
+  var STAMP = '1.5.5-beta10';
+  var KEY = 'kuro-beta-whatsnew-seen-1.5.5-beta10';
 
   try {
     if (localStorage.getItem(KEY) === STAMP) {
@@ -14,9 +14,9 @@
   } catch (_) { return; }
 
   var ITEMS = [
-    ['Clean Iconography App-Wide', 'Removed 4-point sparkle badges across the Watch screen, Browse navigation dock, Home & Simulcasts banners, Account profile, and status-bar vectors in favor of clean Kuro geometry.'],
-    ['Native App Touch Behavior', 'Disabled browser-style hold-to-select text highlights, teardrop selection handles, and floating Copy / Select All / Web Search context popups across Settings, Home, Browse, and Watch surfaces.'],
-    ['App-Themed Up Next & Controllable DPI', 'Includes the Kuro-themed Up Next countdown card plus user-controllable App DPI (280\u2013640 DPI) and App UI Size (75%\u2013135%) across all 20 accents and Pure Black OLED.']
+    ['Profile Art Studio & Live Image Preview', 'Redesigned Profile art with a live 16:9 banner + avatar stage, Split / Paired Sets / Avatars / Banners tabs, instant character search, themed action buttons, and custom gallery uploads.'],
+    ['Full PFP & Banner Image Rendering', 'Fixed strict-CSP banner and avatar rendering using native <img> elements across the Account hero, top header chip, profile drawer, and Watch screen header.'],
+    ['Clean Iconography & Native Touch', 'Includes zero 4-point sparkle badges, disabled browser-style hold-to-select popups, Kuro-themed Up Next card, and controllable App DPI & UI Size.']
   ];
 
   function mark() {
@@ -38,12 +38,12 @@
 
     var tag = document.createElement('div');
     tag.className = 'kb-wn-tag';
-    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA9';
+    tag.textContent = 'KURO.TV  \u00b7  1.5.5-BETA10';
 
     var h = document.createElement('h2');
     h.id = 'kb-wn-title';
     h.className = 'kb-wn-title';
-    h.textContent = 'What\u2019s new in 1.5.5-beta9';
+    h.textContent = 'What\u2019s new in 1.5.5-beta10';
 
     var list = document.createElement('ul');
     list.className = 'kb-wn-list';
