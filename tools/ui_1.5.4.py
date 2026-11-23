@@ -5317,6 +5317,14 @@ def patch_clean_icons_and_no_selection_155(root: pathlib.Path) -> None:
         ac = ac.replace(sparkle_4, "K").replace(sparkle_4o, "")
         acc_js_path.write_text(ac, encoding="utf-8")
 
+    idx_path = root / "assets/index.html"
+    if idx_path.exists():
+        ix = idx_path.read_text(encoding="utf-8")
+        old_dock_svg = '<path d="M14 3.7 17 10.6l6.9 3.2-6.9 3.1-3 7.1-3-7.1-6.9-3.1 6.9-3.2z"/><circle cx="14" cy="13.9" r="1.55" class="dock-gem"/>'
+        new_dock_svg = '<rect x="4.8" y="4.8" width="7.6" height="7.6" rx="2"/><rect x="15.6" y="4.8" width="7.6" height="7.6" rx="2"/><rect x="4.8" y="15.6" width="7.6" height="7.6" rx="2"/><rect x="15.6" y="15.6" width="7.6" height="7.6" rx="2"/>'
+        if old_dock_svg in ix:
+            idx_path.write_text(ix.replace(old_dock_svg, new_dock_svg, 1), encoding="utf-8")
+
 
 def main() -> None:
     if len(sys.argv) != 2:
