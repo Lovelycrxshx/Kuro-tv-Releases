@@ -387,11 +387,10 @@ jobs:
             || { echo "::error::MainActivity missing checkpointsExport152."; exit 1; }
           grep -Fq 'themeAmoled152' "$PKG/MainActivity.java" \
             || { echo "::error::MainActivity missing themeAmoled152."; exit 1; }
-          python3 "$GITHUB_WORKSPACE/out/tools/player_1.5.3.py" "$PROJECT"
-          grep -Fq 'KuroPlayerUi153' "$PKG/KuroPlayerUi153.java" \
-            || { echo "::error::KuroPlayerUi153.java missing after player_1.5.3.py."; exit 1; }
-          grep -Fq 'kuro-oled-hud153' "$PROJECT/assets/player-skin.js" \
-            || { echo "::error::player-skin.js missing 1.5.3 OLED HUD skin."; exit 1; }
+          test ! -f "$PKG/KuroPlayerUi153.java" \
+            || { echo "::error::KuroPlayerUi153.java should not be present."; exit 1; }
+          ! grep -Fq 'kuro-oled-hud153' "$PROJECT/assets/player-skin.js" \
+            || { echo "::error::player-skin.js still contains 1.5.3 HUD skin."; exit 1; }
           python3 "$GITHUB_WORKSPACE/out/tools/ui_1.5.4.py" "$PROJECT"
           python3 - "$PROJECT" <<'VERIFY_THEME_TABLE'
           import glob, re, sys
@@ -681,12 +680,12 @@ jobs:
               assert any(b"dismissEntry15" in d for d in dex_blobs), "dex missing dismissEntry15"
               assert any(b"themeAmoled152" in d for d in dex_blobs), "dex missing themeAmoled152"
               assert any(b"checkpointsExport152" in d for d in dex_blobs), "dex missing checkpointsExport152"
-              assert any(b"KuroPlayerUi153" in d for d in dex_blobs), "dex missing 1.5.3 custom player UI"
-              assert any(b"KuroPlayerAction153" in d for d in dex_blobs), "dex missing KuroPlayerAction153"
+              assert not any(b"KuroPlayerUi153" in d for d in dex_blobs), "dex still contains 1.5.3 custom player UI"
+              assert not any(b"KuroPlayerAction153" in d for d in dex_blobs), "dex still contains KuroPlayerAction153"
               skin_js = z.read("assets/player-skin.js").decode("utf-8")
-              assert "kuro-oled-hud153" in skin_js and "kuro-video-skin" in skin_js, "assets/player-skin.js missing 1.5.3 OLED HUD skin"
+              assert "kuro-oled-hud153" not in skin_js and "kuro-video-skin" in skin_js, "assets/player-skin.js was not restored to classic player"
               sp_html = z.read("assets/stream-player.html").decode("utf-8")
-              assert 'src="player-skin.js"' in sp_html, "assets/stream-player.html missing player-skin.js script link"
+              assert 'src="player-skin.js"' not in sp_html, "assets/stream-player.html was not restored to classic player"
               assert any(b"Update alerts are off" in d for d in dex_blobs), "dex missing Update alerts permission banner"
               assert b"ic_stat_kuro" in z.read("resources.arsc"), "resources.arsc missing ic_stat_kuro"
               assert "assets/beta-polish-1.5.2.js" in z.namelist(), "APK missing assets/beta-polish-1.5.2.js"
