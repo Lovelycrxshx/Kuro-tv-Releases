@@ -1,7 +1,7 @@
 /* Kuro News Logos (1.5.6-beta1) — proper brand logos for news sources.
-   Replaces the generic ✦ news avatar with the correct brand mark based on
+   Replaces the generic sparkle-avatar news avatar with the correct brand mark based on
    the source name: Crunchyroll gets its orange orb logo, Anime Trending
-   gets its gradient trend-arrow wordmark. Other sources fall back to ✦. */
+   gets its gradient trend-arrow wordmark. Other sources fall back to sparkle-avatar. */
 (function () {
   'use strict';
 
