@@ -188,7 +188,8 @@ jobs:
                    beta-extras-1.5.css beta-extras-1.5.js beta-continue-1.5.js \
                    beta-whatsnew-1.5.js beta-downloads-1.5.js \
                    beta-polish-1.5.2.css beta-polish-1.5.2.js \
-                   beta-ui-1.5.4.css beta-ui-1.5.4.js; do
+                   beta-ui-1.5.4.css beta-ui-1.5.4.js \
+                   beta-news-logos-1.5.js beta-ai-art-gen-1.5.js; do
             grep -qF "$f" "$PROJECT/assets/index.html" \
               || { echo "::error::$f is shipped but the page never loads it."; exit 1; }
           done
@@ -235,7 +236,8 @@ jobs:
             || { echo "::error::the richer picker styles are missing."; exit 1; }
           for f in beta-motion-1.5.css beta-motion-1.5.js theme-rich-1.5.css intro/animation.mp4 \
                    beta-extras-1.5.css beta-extras-1.5.js beta-continue-1.5.js \
-                   beta-whatsnew-1.5.js beta-downloads-1.5.js; do
+                   beta-whatsnew-1.5.js beta-downloads-1.5.js \
+                   beta-news-logos-1.5.js beta-ai-art-gen-1.5.js; do
             grep -qF "/$f" "$PKG/KuroWebAssets13.java" \
               || { echo "::error::$f is in assets/ but the WebView would drop it."; exit 1; }
           done

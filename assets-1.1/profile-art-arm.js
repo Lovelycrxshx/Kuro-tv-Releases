@@ -377,6 +377,12 @@
     el.className = 'account-section profile-art581 pa155-studio';
     el.id = 'profile-art581';
     el.innerHTML =
+      '<button type="button" class="pa155-collapse-bar" data-pa-action="toggle-expand" aria-expanded="false" aria-controls="pa155-expand-body">' +
+        '<span class="pa155-collapse-thumb"><img class="pa155-stage-pfp-img" alt="" hidden><span class="pa155-stage-mono" aria-hidden="true">K</span></span>' +
+        '<span class="pa155-collapse-text"><strong>Profile art</strong><small>Tap to expand options</small></span>' +
+        '<span class="pa155-collapse-chevron" aria-hidden="true">\u25be</span>' +
+      '</button>' +
+      '<div class="pa155-expand-body" id="pa155-expand-body" hidden>' +
       '<div class="pa155-header">' +
         '<div>' +
           '<div class="pa155-title-row"><h2>Profile art</h2><span class="pa155-count-pill">40 SETS + CUSTOM</span></div>' +
@@ -423,7 +429,8 @@
         '</div>' +
       '</div>' +
       '<div class="pa155-body"></div>' +
-      '<input type="file" accept="image/*" class="pa155-file-input" data-file-kind="" hidden>';
+      '<input type="file" accept="image/*" class="pa155-file-input" data-file-kind="" hidden>' +
+      '</div>';
     return el;
   }
 
@@ -517,9 +524,10 @@
       stageBadge.classList.toggle('is-paired', st.isPaired);
     }
 
-    var pfpImg = host.querySelector('.pa155-stage-pfp-img');
-    var monoEl = host.querySelector('.pa155-stage-mono');
-    if (pfpImg) {
+    var pfpImgs = host.querySelectorAll('.pa155-stage-pfp-img');
+    var monoEls = host.querySelectorAll('.pa155-stage-mono');
+    for (var pi = 0; pi < pfpImgs.length; pi++) {
+      var pfpImg = pfpImgs[pi];
       if (st.pfpUrl) {
         if (pfpImg.getAttribute('src') !== st.pfpUrl) pfpImg.setAttribute('src', st.pfpUrl);
         pfpImg.hidden = false;
@@ -528,9 +536,9 @@
         pfpImg.hidden = true;
       }
     }
-    if (monoEl) {
-      monoEl.textContent = info.mono;
-      monoEl.hidden = !!st.pfpUrl;
+    for (var mi = 0; mi < monoEls.length; mi++) {
+      monoEls[mi].textContent = info.mono;
+      monoEls[mi].hidden = !!st.pfpUrl;
     }
 
     var userEl = host.querySelector('.pa155-stage-user');
@@ -668,6 +676,20 @@
           uiState.expandBanner = !uiState.expandBanner;
           var bodyB = host.querySelector('.pa155-body');
           if (bodyB) bodyB.innerHTML = renderBodyContent(resolveState());
+          return;
+        }
+        if (act === 'toggle-expand') {
+          var expandBody = host.querySelector('#pa155-expand-body');
+          var bar = target.closest('.pa155-collapse-bar');
+          var chevron = host.querySelector('.pa155-collapse-chevron');
+          var isOpen = expandBody && !expandBody.hidden;
+          if (expandBody) expandBody.hidden = isOpen;
+          if (bar) bar.setAttribute('aria-expanded', String(!isOpen));
+          if (chevron) chevron.textContent = isOpen ? '\u25be' : '\u25b4';
+          if (!isOpen) {
+            var bodyE = host.querySelector('.pa155-body');
+            if (bodyE) bodyE.innerHTML = renderBodyContent(resolveState());
+          }
           return;
         }
         if (act === 'clear-search') {
