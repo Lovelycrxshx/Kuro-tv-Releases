@@ -2788,7 +2788,7 @@ html[data-amoled="1"] .pa155-pair-card:not(.is-on) {
 .kgen-gen-art{width:100%;height:130px;display:grid;place-items:center;color:#fff;font-size:13px;font-weight:700;text-shadow:0 1px 4px #0008}
 .kgen-actions{display:flex;gap:8px}
 .kgen-btn{flex:1;padding:11px;border:1px solid color-mix(in srgb, var(--kuro-accent560, #a65be4) 35%, #1a1020);border-radius:10px;background:#180c20;color:#d8cce8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
-.kgen-btn:hover{border-color:#a65be4}
+.kgen-btn:hover{border-color:var(--kuro-accent560,#a65be4)}
 .kgen-btn-accent{background:linear-gradient(135deg,var(--kuro-accent560,#7c3aed),color-mix(in srgb,var(--kuro-accent560,#7c3aed) 60%,#1a1020));border-color:var(--kuro-accent560,#7c3aed);color:#fff}
 
 /* Kuro 1.5.6-beta1: Theme-aware profile art + PFP fit + spacing fixes */
