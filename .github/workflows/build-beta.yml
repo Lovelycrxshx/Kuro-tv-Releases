@@ -361,8 +361,6 @@ jobs:
             || { echo "::error::KuroPresence564 DOWNLOAD_PAGE_URL missing."; exit 1; }
           grep -Fq 'utf8(s.downloadUrl)' "$PKG/KuroDiscordRpc563.java" \
             || { echo "::error::KuroDiscordRpc563 does not forward s.downloadUrl."; exit 1; }
-          ! grep -Fq "['download','Download button'" "$PROJECT/assets/settings560.js" \
-            || { echo "::error::settings560.js Download button toggle still present (should be removed)."; exit 1; }
 
           chmod +x "$PROJECT/tests/test-discord-native564.sh" \
                    "$PROJECT/tests/test-presence564.sh" \
@@ -455,6 +453,11 @@ jobs:
           set -euo pipefail
           test -f "$PROJECT/src/app/lovelycrxshx/kuro/KuroDialogs581.java" \
             || { echo "::error::KuroDialogs581.java missing from the source zip."; exit 1; }
+          # 1.5.6-beta1: Download button settings toggle removed
+          ! grep -Fq "['download','Download button'" "$PROJECT/assets/settings560.js" \
+            || { echo "::error::settings560.js Download button toggle still present (should be removed)."; exit 1; }
+          ! grep -Fq "action('downloads','Manage downloads'" "$PROJECT/assets/settings560.js" \
+            || { echo "::error::settings560.js Manage downloads action still present (should be removed)."; exit 1; }
           # rev 11 removed the Cast feature outright.
           for gone in KuroCastActivity561 KuroCastOptions561; do
             test ! -f "$PROJECT/src/app/lovelycrxshx/kuro/$gone.java" \
