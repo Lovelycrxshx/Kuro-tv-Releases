@@ -1,0 +1,27 @@
+Kuro.tv 1.5.5-beta7 (versionCode 103)
+======================================
+Channel: Beta (Google Drive `Projects/Kuro` folder `1_lRTGIyahN-fABGstO6t4srd6TkJ0DOb` — `main` and GitHub Release `v1.5.4` untouched)
+Signer : CN=Kuro Anime (SHA-256: 1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e)
+
+Changes in 1.5.5-beta7:
+1. Auto-Play Next Episode Fixed End-to-End:
+   - Split 85% tracker sync (`progress85`) and true playback completion (`ended`) in `player-ended553.js` with `WeakMap` peak-position tracking (`maxTimeMap`) so embedded players that reset `currentTime = 0` on `ended` still report completion cleanly, and lowered minimum episode duration gate from 300s to 45s (`30s` on native progress path) so anime shorts and OVAs advance properly.
+   - Defaulted `auto_next` preference to `true` via `MainActivity.isAutoNextEnabled155()` when unset (matching Settings UI toggle default), wired `triggerAutoNext155` into both `setupCompletionFrames` (`ended`) and `setupProgress561` (`ended && dur >= 30000`), expanded iframe completion handling to all episodes across non-ad HTTPS origins, canceled pending countdowns immediately on toggle-off, and added `validOpenEpisode155` in `failover531.js` so Episode `0` and fractional `.5` specials open cleanly.
+   - Synced in-session SUB/DUB preference (`window.__kuroSessionAudio155`) when switching servers on Watch so Auto-Play Next preserves the active language, updated `stream-player.js` to dispatch `ended` even if `loadedmetadata` was skipped, and aligned `discordNotificationCommand564("next")` with `nextPlayableEpisode154`.
+2. Native Dialog Crash Fix (`WindowManager$BadTokenException`):
+   - Removed `KuroDisplay155.wrapContext(context)` (`createConfigurationContext`) from `KuroDialogs581.themed(Context)` so the Activity `IBinder` window token is preserved while keeping forced 500 DPI via `KuroDisplay155.enforce500Dpi(context)`.
+   - Added `canShow155` / `safeShow155` / `safeShowBuilder155` lifecycle guards across `KuroDialogs581`, `PlayerOptionsDialog`, `KuroUpdateDialog582` (including stale/destroyed Activity dialog replacement), `KuroOffline561` (plus theming all 5 raw `AlertDialog.Builder` instances), `KuroNativePlayer561`, and `MainActivity`.
+3. Offline Download Background-Thread Crash & Batch Download Fixes:
+   - Marshaled `DownloadManager` initialization onto `Looper.getMainLooper()` (`createManagerOnMain155` with `CountDownLatch` timeout) in `KuroOffline561.manager(Context)` to prevent `IllegalStateException: Can't create handler inside thread that has not called Looper.prepare()` when `KuroDownloadService561` or WebView `JavaBridge` threads initialize downloads.
+   - Fixed Batch Offline Download checkpoint key conversion (`zenkai|<url>|<ep>` -> 64-hex `KuroPlayback561.key(...)`), deterministic `id` computation (`KuroPlayback561.sha(ckey + "\n" + addr)`), and legacy `kuro561:[0-9a-fA-F]{1,8}` download ID acceptance in `KuroOffline561` and `KuroOfflineActivity561`.
+4. Concurrency, Artwork & WebView Polish:
+   - Upgraded `KuroTheme12` (`tools/theme_native_1.2.py`) caches and listeners to `ConcurrentHashMap`, `CopyOnWriteArrayList`, and `volatile` fields so background sync/notification threads cannot corrupt `HashMap` state during `col(int)`.
+   - Fixed `progress15` ms-to-minutes conversion and 3-argument `progress15` invocation in `beta-ui-1.5.4.js`, chained Android Back (`window.kuroBack`) across overlays/sheets (`#kb-whatsnew`, `.choice-backdrop567`, `#k154-batch-sheet`, `#tracker-match553`, `.km-sheet-15`), guarded `options.inSampleSize = 1` in `NewsSync.articleArtwork`, and guarded `NotificationManager != null` in `KuroPresenceNotification564`.
+
+Artifacts:
+- Signed APK : Kuro-tv-1.5.5-beta7.apk (53,097,205 bytes)
+  Drive ID   : 1cuMcCxo9ajZ-jD0iMtcUfhcXR8H-WgBD
+  SHA-256    : e74d6f7ddd8710bc986da2a93ecfdf9e14470b1f71fb66725f4bd0441b2541f6
+- Source Zip : Kuro-tv-1.5.5-beta7-Source.zip (16,356,376 bytes)
+  Drive ID   : 1gVTlNCpukpu1Qgz7lxJ-ADGfOGkUKG5M
+  SHA-256    : 4fef85d1ef9533a46caaeb2a84432d8ae39f725f84d4bbaa686056f935f5fa4d

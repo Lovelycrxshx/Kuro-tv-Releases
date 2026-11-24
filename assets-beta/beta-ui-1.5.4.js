@@ -10,8 +10,8 @@
 
   var META_CACHE_KEY = 'kuro-meta154-v1';
   var SKIP_FILLER_KEY = 'kuro-skip-filler-154';
-  var DEFAULT_VIEWPORT = 'width=device-width,initial-scale=1,viewport-fit=cover';
-  var DESKTOP_VIEWPORT = 'width=1180,initial-scale=1,viewport-fit=cover';
+  var MOBILE_VIEWPORT = 'width=device-width,initial-scale=1,viewport-fit=cover';
+  var DESKTOP_VIEWPORT = 'width=1180,viewport-fit=cover';
 
   /* ------------------------------------------------------------------------
      Safe helpers & local storage cache
@@ -69,6 +69,62 @@
     try { if (typeof episodes !== 'undefined' && Array.isArray(episodes)) return episodes; } catch (_) {}
     return Array.isArray(window.episodes) ? window.episodes : [];
   }
+
+  function safeFocus155(el) {
+    if (!el || typeof el.focus !== 'function') return;
+    try {
+      el.focus({ preventScroll: true });
+    } catch (_) {
+      try { el.focus(); } catch (__) {}
+    }
+  }
+
+  /* ------------------------------------------------------------------------
+     Startup Home Top Sanitizer (1.5.5-beta5)
+     Starts Home cleanly at scrollY = 0 on initial cold boot WITHOUT attaching
+     any window 'scroll' listener or timer that could ever fight or block native
+     Android WebView touch/compositor scrolling.
+     ------------------------------------------------------------------------ */
+  (function setupHomeEntryScrollGuard155() {
+    try {
+      if ('scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'manual';
+      }
+    } catch (_) {}
+
+    function clearSavedHomeScroll() {
+      try {
+        var rawCp = localStorage.getItem('kuro-page-checkpoint-v1');
+        if (rawCp && rawCp.length <= 48000) {
+          var cp = JSON.parse(rawCp);
+          if (cp && (cp.view === 'home' || cp.page === 'home') && cp.scroll) {
+            cp.scroll = 0;
+            localStorage.setItem('kuro-page-checkpoint-v1', JSON.stringify(cp));
+          }
+        }
+      } catch (_) {}
+    }
+
+    clearSavedHomeScroll();
+    if (document.documentElement) {
+      document.documentElement.removeAttribute('data-k155-home-top');
+    }
+
+    if ((curView() || 'home') === 'home') {
+      try { window.scrollTo(0, 0); } catch (_) {}
+    }
+
+    if (typeof window.kuroSavePage === 'function' && !window.kuroSavePage.__k155CleanHome) {
+      var origSavePage = window.kuroSavePage;
+      var wrappedSavePage = function () {
+        var out = origSavePage.apply(this, arguments);
+        clearSavedHomeScroll();
+        return out;
+      };
+      wrappedSavePage.__k155CleanHome = true;
+      window.kuroSavePage = wrappedSavePage;
+    }
+  })();
 
   /* ------------------------------------------------------------------------
      Native AniList Catalogue Bridge (reuses app.js pending[] / requestNo)
@@ -238,11 +294,9 @@
     var active = typeof explicitFlag === 'boolean' ? explicitFlag : isDesktopSiteActive();
     document.documentElement.dataset.siteView = active ? 'desktop' : 'mobile';
 
-    // On Android WebView, switching to Desktop site widens the layout viewport to 1180px
-    // so phones, tablets, and Android TV / Fire TV all render the widescreen Left-Rail UI cleanly.
     var vp = document.querySelector('meta[name="viewport"]');
-    if (vp && window.KuroNative) {
-      var target = active ? DESKTOP_VIEWPORT : DEFAULT_VIEWPORT;
+    if (vp) {
+      var target = active ? DESKTOP_VIEWPORT : MOBILE_VIEWPORT;
       if (vp.getAttribute('content') !== target) vp.setAttribute('content', target);
     }
 
@@ -309,7 +363,7 @@
     }
     if (!curEntry) {
       e.preventDefault();
-      items[0].el.focus();
+      safeFocus155(items[0].el);
       return;
     }
 
@@ -408,7 +462,10 @@
     var mins = -1;
     try {
       if (window.KuroNative && typeof window.KuroNative.progress15 === 'function') {
-        mins = Number(window.KuroNative.progress15(String(item.source || ''), String(item.url || ''), num));
+        var rawMs = Number(window.KuroNative.progress15(String(item.source || ''), String(item.url || ''), num));
+        if (Number.isFinite(rawMs) && rawMs >= 30000) {
+          mins = Math.max(1, Math.round(rawMs / 60000));
+        }
       }
     } catch (_) {
       mins = -1;
@@ -759,7 +816,7 @@
     });
 
     var firstBtn = scrim.querySelector('[data-batch-preset]');
-    if (firstBtn) firstBtn.focus();
+    if (firstBtn) safeFocus155(firstBtn);
   }
 
   function enhanceDetailEpisodes154(item, media) {
@@ -1454,14 +1511,14 @@
           var remainText = '18:40 remaining';
           if (window.KuroNative && typeof window.KuroNative.progress15 === 'function') {
             try {
-              var pRaw = window.KuroNative.progress15(String(h.item.title || '') + '::' + epNum);
-              var pObj = pRaw ? JSON.parse(pRaw) : null;
-              if (pObj && Number(pObj.duration) > 60000 && Number(pObj.position) > 0) {
-                var remSec = Math.max(0, Math.round((Number(pObj.duration) - Number(pObj.position)) / 1000));
+              var posMs = Number(window.KuroNative.progress15(String(h.item.source || ''), String(h.item.url || ''), epNum));
+              var estDurMs = 24 * 60 * 1000;
+              if (Number.isFinite(posMs) && posMs > 30000 && posMs < estDurMs) {
+                var remSec = Math.max(0, Math.round((estDurMs - posMs) / 1000));
                 var mins = Math.floor(remSec / 60);
                 var secs = remSec % 60;
                 remainText = mins + ':' + (secs < 10 ? '0' : '') + secs + ' remaining';
-                var ratio = Math.max(10, Math.min(100, Math.round((Number(pObj.position) / Number(pObj.duration)) * 10) * 10));
+                var ratio = Math.max(10, Math.min(100, Math.round((posMs / estDurMs) * 10) * 10));
                 pctStep = ratio;
               }
             } catch (_) {}
@@ -1524,7 +1581,7 @@
       setTimeout(function () {
         var btn = document.querySelector('#account-overlay [data-signin="' + provider + '"]');
         if (btn) {
-          try { btn.focus(); } catch (_) {}
+          safeFocus155(btn);
           btn.click();
         }
       }, 30);
@@ -2078,7 +2135,7 @@
       backdrop.remove();
       if (triggerBtn && triggerBtn.isConnected) {
         triggerBtn.setAttribute('aria-expanded', 'false');
-        triggerBtn.focus();
+        safeFocus155(triggerBtn);
       }
     }
 
@@ -2117,7 +2174,7 @@
       }
     });
     var activeOpt = list.querySelector('[aria-checked="true"]') || closeBtn;
-    if (activeOpt) activeOpt.focus();
+    if (activeOpt) safeFocus155(activeOpt);
   }
 
   function mountPerfSettingsGroup154() {
@@ -2184,12 +2241,16 @@
         '<b aria-hidden="true">\u203a</b>' +
       '</button>';
 
+      var dispInfoPerf = readDisplay155();
+      var dispPerfChip = (dispInfoPerf.dpi <= 0 ? ('System ' + dispInfoPerf.baseDpi) : String(dispInfoPerf.baseDpi)) + ' DPI \u00b7 ' + dispInfoPerf.uiScale + '% Size';
+
       sec.innerHTML =
         '<div class="settings-group-head560">' +
           '<h3>Network &amp; compatibility</h3>' +
           '<p>Built-in carrier DNS unblock, temporary cache cleanup, and TV/low-RAM stability</p>' +
         '</div>' +
         '<div class="k154-perf-summary">' +
+          '<span class="k154-perf-chip is-accent" data-k155-perf-dpi-chip="1">' + esc(dispPerfChip) + '</span>' +
           '<span class="k154-perf-chip is-accent">' + esc(dnsChip) + '</span>' +
           '<span class="k154-perf-chip">' + esc(devLabel) + '</span>' +
           '<span class="k154-perf-chip">' + esc(cacheLabel) + '</span>' +
@@ -2231,6 +2292,434 @@
     }
 
     renderPerfGroup();
+  }
+
+  /* ------------------------------------------------------------------------
+     Display, App DPI, UI Size & Auto-Play Next Settings Card (1.5.5-beta8)
+     ------------------------------------------------------------------------ */
+  function readDisplay155() {
+    var def = {
+      dpi: 500,
+      dpiMode: 'custom',
+      systemDpi: 420,
+      baseDpi: 500,
+      uiScale: 100,
+      effectiveDpi: 500,
+      widthDp: Math.round(window.innerWidth || 360),
+      heightDp: Math.round(window.innerHeight || 780),
+      autoNextEnabled: true,
+      autoNextSec: 8,
+      upNextScale: 100,
+      physicalWidth: 0,
+      physicalHeight: 0
+    };
+    try {
+      if (window.KuroNative && typeof window.KuroNative.displayInfo155 === 'function') {
+        var parsed = JSON.parse(window.KuroNative.displayInfo155() || '{}');
+        if (parsed && typeof parsed === 'object') {
+          Object.keys(def).forEach(function (k) {
+            if (parsed[k] !== undefined && parsed[k] !== null) def[k] = parsed[k];
+          });
+        }
+      } else {
+        var rawLocal = JSON.parse(localStorage.getItem('kuro-display-155-web') || '{}');
+        if (rawLocal && typeof rawLocal === 'object') {
+          Object.keys(def).forEach(function (k) {
+            if (rawLocal[k] !== undefined && rawLocal[k] !== null) def[k] = rawLocal[k];
+          });
+        }
+      }
+    } catch (_) {}
+    def.dpi = Number(def.dpi) || 0;
+    if (def.dpi > 0) def.dpi = Math.max(280, Math.min(640, Math.round(def.dpi)));
+    def.systemDpi = Math.max(160, Math.min(800, Number(def.systemDpi) || 420));
+    def.baseDpi = def.dpi <= 0 ? def.systemDpi : def.dpi;
+    def.uiScale = Math.max(75, Math.min(135, Math.round(Number(def.uiScale) || 100)));
+    def.effectiveDpi = Math.max(220, Math.min(760, Math.round(def.baseDpi * (def.uiScale / 100))));
+    def.autoNextSec = Math.max(3, Math.min(20, Math.round(Number(def.autoNextSec) || 8)));
+    def.upNextScale = Math.max(80, Math.min(125, Math.round(Number(def.upNextScale) || 100)));
+    def.autoNextEnabled = def.autoNextEnabled !== false;
+    return def;
+  }
+
+  function applyHtmlSizeAttr155(uiScale) {
+    var html = document.documentElement;
+    if (!html) return;
+    var sc = Number(uiScale) || 100;
+    if (sc <= 92) html.setAttribute('data-k155-size', 'compact');
+    else if (sc >= 110) html.setAttribute('data-k155-size', 'spacious');
+    else html.setAttribute('data-k155-size', 'default');
+  }
+
+  function syncDisplay155(rawFromNative) {
+    var info = rawFromNative && typeof rawFromNative === 'object' ? rawFromNative : readDisplay155();
+    applyHtmlSizeAttr155(info.uiScale);
+    var perfChip = document.querySelector('[data-k155-perf-dpi-chip]');
+    if (perfChip) {
+      perfChip.textContent = (info.dpi <= 0 ? ('System ' + info.baseDpi) : String(info.baseDpi)) + ' DPI \u00b7 ' + info.uiScale + '% Size';
+    }
+  }
+  window.kuroSyncDisplay155 = syncDisplay155;
+
+  function mountDisplaySettingsGroup155() {
+    var overlay = document.getElementById('settings-overlay560');
+    if (!overlay) return;
+    var body = document.getElementById('settings-body560') || overlay.querySelector('.settings-body560');
+    if (!body) return;
+    if (document.getElementById('k155-display-group')) return;
+
+    var groups = body.querySelectorAll('.settings-group560');
+    if (!groups || !groups.length) return;
+
+    var sec = document.createElement('section');
+    sec.className = 'settings-group560';
+    sec.id = 'k155-display-group';
+    sec.setAttribute('data-search560', 'display app dpi density ui size scale zoom compact large auto play next episode countdown up next card preview');
+    if (groups[0] && groups[0].nextSibling) {
+      body.insertBefore(sec, groups[0].nextSibling);
+    } else {
+      body.appendChild(sec);
+    }
+
+    var saved = readDisplay155();
+    var draft = {
+      dpi: saved.dpi,
+      systemDpi: saved.systemDpi,
+      uiScale: saved.uiScale,
+      autoNextEnabled: saved.autoNextEnabled,
+      autoNextSec: saved.autoNextSec,
+      upNextScale: saved.upNextScale,
+      physicalWidth: saved.physicalWidth,
+      physicalHeight: saved.physicalHeight
+    };
+
+    function persistDraftLive(recreateNow) {
+      try {
+        localStorage.setItem('kuro-display-155-web', JSON.stringify(draft));
+      } catch (_) {}
+      applyHtmlSizeAttr155(draft.uiScale);
+      if (window.KuroNative && typeof window.KuroNative.setAutoNextEnabled155 === 'function') {
+        try { window.KuroNative.setAutoNextEnabled155(!!draft.autoNextEnabled); } catch (_) {}
+      }
+      if (window.KuroNative && typeof window.KuroNative.saveDisplay155 === 'function') {
+        try {
+          if (recreateNow) {
+            try {
+              localStorage.setItem('kuro-skip-intro-once-155', String(Date.now()));
+              localStorage.setItem('kuro-reopen-display-155', String(Date.now()));
+              if (typeof window.kuroSavePage === 'function') window.kuroSavePage();
+            } catch (_) {}
+          }
+          window.KuroNative.saveDisplay155(
+            Number(draft.dpi) || 0,
+            Number(draft.uiScale) || 100,
+            Number(draft.autoNextSec) || 8,
+            Number(draft.upNextScale) || 100,
+            !!recreateNow
+          );
+        } catch (_) {}
+      }
+      if (!recreateNow) {
+        syncDisplay155(readDisplay155());
+      }
+    }
+
+    function isDensityDirty() {
+      return draft.dpi !== saved.dpi || draft.uiScale !== saved.uiScale;
+    }
+
+    function renderCard() {
+      var baseDpi = draft.dpi <= 0 ? draft.systemDpi : draft.dpi;
+      var effDpi = Math.max(220, Math.min(760, Math.round(baseDpi * (draft.uiScale / 100))));
+      var pw = Number(draft.physicalWidth) || Math.round((window.innerWidth || 360) * (window.devicePixelRatio || 3));
+      var estWidthDp = Math.max(260, Math.round(pw / (effDpi / 160)));
+      var dpiLabel = draft.dpi <= 0 ? ('System (' + draft.systemDpi + ' DPI)') : (draft.dpi + ' DPI');
+      var dirty = isDensityDirty();
+
+      var dpiPresets = [
+        { val: 0, label: 'System (' + draft.systemDpi + ')' },
+        { val: 360, label: '360' },
+        { val: 400, label: '400' },
+        { val: 440, label: '440' },
+        { val: 480, label: '480' },
+        { val: 500, label: '500' },
+        { val: 540, label: '540' },
+        { val: 600, label: '600' }
+      ];
+      var sizePresets = [80, 90, 95, 100, 105, 110, 120];
+      var secPresets = [5, 8, 10, 15];
+      var cardPresets = [
+        { val: 85, label: 'Compact' },
+        { val: 100, label: 'Default' },
+        { val: 115, label: 'Large' }
+      ];
+
+      var dpiChipsHtml = dpiPresets.map(function (p) {
+        var active = draft.dpi === p.val;
+        return '<button type="button" class="k155-chip' + (active ? ' is-active' : '') + '" data-k155-dpi="' + p.val + '">' + esc(p.label) + '</button>';
+      }).join('');
+
+      var sizeChipsHtml = sizePresets.map(function (s) {
+        var active = draft.uiScale === s;
+        return '<button type="button" class="k155-chip' + (active ? ' is-active' : '') + '" data-k155-scale="' + s + '">' + s + '%</button>';
+      }).join('');
+
+      var secChipsHtml = secPresets.map(function (s) {
+        var active = draft.autoNextSec === s;
+        return '<button type="button" class="k155-chip' + (active ? ' is-active' : '') + '" data-k155-sec="' + s + '">' + s + 's</button>';
+      }).join('');
+
+      var cardChipsHtml = cardPresets.map(function (c) {
+        var active = Math.abs(draft.upNextScale - c.val) <= 4;
+        return '<button type="button" class="k155-chip' + (active ? ' is-active' : '') + '" data-k155-card="' + c.val + '">' + esc(c.label) + '</button>';
+      }).join('');
+
+      sec.innerHTML =
+        '<div class="settings-group-head560">' +
+          '<h3>Display, App DPI &amp; Auto-Play</h3>' +
+          '<p>Controllable App DPI, global UI size, and themed Up Next episode card</p>' +
+        '</div>' +
+        '<div class="k155-disp-card">' +
+          '<div class="k155-disp-status">' +
+            '<span class="k154-perf-chip is-accent">' + esc(dpiLabel) + '</span>' +
+            '<span class="k154-perf-chip is-accent">UI Size ' + draft.uiScale + '%</span>' +
+            '<span class="k154-perf-chip">Effective ' + effDpi + ' DPI \u00b7 ~' + estWidthDp + ' dp</span>' +
+            '<span class="k154-perf-chip">Up Next ' + (draft.autoNextEnabled ? (draft.autoNextSec + 's') : 'Off') + '</span>' +
+          '</div>' +
+
+          '<div class="k155-disp-section">' +
+            '<div class="k155-disp-head">' +
+              '<span class="k155-disp-title">App DPI Density</span>' +
+              '<span class="k155-disp-val" data-k155-dpi-readout>' + esc(dpiLabel) + '</span>' +
+            '</div>' +
+            '<div class="k155-disp-sub">Lower DPI fits more posters and controls on screen; higher DPI makes native &amp; Web UI larger and bolder.</div>' +
+            '<div class="k155-disp-slider-row">' +
+              '<button type="button" class="k155-step-btn" data-k155-dpi-step="-10" aria-label="Decrease App DPI">\u2212</button>' +
+              '<input type="range" class="k155-range" min="280" max="640" step="10" value="' + baseDpi + '" data-k155-dpi-slider aria-label="App DPI slider">' +
+              '<button type="button" class="k155-step-btn" data-k155-dpi-step="10" aria-label="Increase App DPI">+</button>' +
+            '</div>' +
+            '<div class="k155-chip-row">' + dpiChipsHtml + '</div>' +
+          '</div>' +
+
+          '<div class="k155-disp-section">' +
+            '<div class="k155-disp-head">' +
+              '<span class="k155-disp-title">App UI Size</span>' +
+              '<span class="k155-disp-val" data-k155-scale-readout>' + draft.uiScale + '% (' + effDpi + ' eff DPI)</span>' +
+            '</div>' +
+            '<div class="k155-disp-sub">Scales typography, cards, player controls, and dialogs proportionally across the entire app.</div>' +
+            '<div class="k155-disp-slider-row">' +
+              '<button type="button" class="k155-step-btn" data-k155-scale-step="-5" aria-label="Decrease UI Size">\u2212</button>' +
+              '<input type="range" class="k155-range" min="75" max="135" step="5" value="' + draft.uiScale + '" data-k155-scale-slider aria-label="App UI Size slider">' +
+              '<button type="button" class="k155-step-btn" data-k155-scale-step="5" aria-label="Increase UI Size">+</button>' +
+            '</div>' +
+            '<div class="k155-chip-row">' + sizeChipsHtml + '</div>' +
+          '</div>' +
+
+          '<div class="k155-disp-section">' +
+            '<div class="k155-autonext-row">' +
+              '<div>' +
+                '<div class="k155-disp-title">Themed Auto-Play Next Episode</div>' +
+                '<div class="k155-disp-sub">Kuro accent &amp; OLED Up Next card with poster, countdown bar &amp; tap-to-hold</div>' +
+              '</div>' +
+              '<button type="button" class="k155-toggle-btn' + (draft.autoNextEnabled ? ' is-on' : '') + '" data-k155-autonext-toggle>' + (draft.autoNextEnabled ? 'ON' : 'OFF') + '</button>' +
+            '</div>' +
+            '<div class="k155-disp-head">' +
+              '<span class="k155-disp-sub">Countdown duration</span>' +
+              '<span class="k155-disp-val">' + draft.autoNextSec + ' seconds</span>' +
+            '</div>' +
+            '<div class="k155-chip-row">' + secChipsHtml + '</div>' +
+            '<div class="k155-disp-head">' +
+              '<span class="k155-disp-sub">Up Next card size</span>' +
+              '<span class="k155-disp-val">' + draft.upNextScale + '%</span>' +
+            '</div>' +
+            '<div class="k155-chip-row">' + cardChipsHtml + '</div>' +
+          '</div>' +
+
+          '<div class="k155-disp-hint' + (dirty ? ' is-dirty' : '') + '">' +
+            (dirty
+              ? 'Tap \u201cApply Display Density\u201d below to reload full native + WebView viewport at ' + effDpi + ' effective DPI.'
+              : 'Active display density: ' + esc(dpiLabel) + ' \u00b7 ' + draft.uiScale + '% UI Size (' + effDpi + ' effective DPI).') +
+          '</div>' +
+
+          '<div class="k155-disp-actions">' +
+            '<button type="button" class="k155-btn-primary" data-k155-apply>\u2713 Apply Display Density</button>' +
+            '<button type="button" class="k155-btn-secondary" data-k155-preview>\u25b6 Preview Up Next UI</button>' +
+            '<button type="button" class="k155-btn-secondary" data-k155-reset>Reset Default</button>' +
+          '</div>' +
+        '</div>';
+
+      var dpiSlider = sec.querySelector('[data-k155-dpi-slider]');
+      if (dpiSlider) {
+        dpiSlider.oninput = function () {
+          draft.dpi = Math.max(280, Math.min(640, Math.round(Number(dpiSlider.value) / 10) * 10));
+          var rd = sec.querySelector('[data-k155-dpi-readout]');
+          if (rd) rd.textContent = draft.dpi + ' DPI';
+        };
+        dpiSlider.onchange = function () {
+          draft.dpi = Math.max(280, Math.min(640, Math.round(Number(dpiSlider.value) / 10) * 10));
+          persistDraftLive(false);
+          renderCard();
+        };
+      }
+
+      sec.querySelectorAll('[data-k155-dpi-step]').forEach(function (btn) {
+        btn.onclick = function () {
+          var delta = Number(btn.getAttribute('data-k155-dpi-step')) || 0;
+          var cur = draft.dpi <= 0 ? draft.systemDpi : draft.dpi;
+          draft.dpi = Math.max(280, Math.min(640, Math.round((cur + delta) / 10) * 10));
+          persistDraftLive(false);
+          renderCard();
+        };
+      });
+
+      sec.querySelectorAll('[data-k155-dpi]').forEach(function (btn) {
+        btn.onclick = function () {
+          draft.dpi = Number(btn.getAttribute('data-k155-dpi')) || 0;
+          persistDraftLive(false);
+          renderCard();
+        };
+      });
+
+      var scaleSlider = sec.querySelector('[data-k155-scale-slider]');
+      if (scaleSlider) {
+        scaleSlider.oninput = function () {
+          draft.uiScale = Math.max(75, Math.min(135, Math.round(Number(scaleSlider.value) / 5) * 5));
+          var eff = Math.max(220, Math.min(760, Math.round((draft.dpi <= 0 ? draft.systemDpi : draft.dpi) * (draft.uiScale / 100))));
+          var rd = sec.querySelector('[data-k155-scale-readout]');
+          if (rd) rd.textContent = draft.uiScale + '% (' + eff + ' eff DPI)';
+        };
+        scaleSlider.onchange = function () {
+          draft.uiScale = Math.max(75, Math.min(135, Math.round(Number(scaleSlider.value) / 5) * 5));
+          persistDraftLive(false);
+          renderCard();
+        };
+      }
+
+      sec.querySelectorAll('[data-k155-scale-step]').forEach(function (btn) {
+        btn.onclick = function () {
+          var delta = Number(btn.getAttribute('data-k155-scale-step')) || 0;
+          draft.uiScale = Math.max(75, Math.min(135, Math.round((draft.uiScale + delta) / 5) * 5));
+          persistDraftLive(false);
+          renderCard();
+        };
+      });
+
+      sec.querySelectorAll('[data-k155-scale]').forEach(function (btn) {
+        btn.onclick = function () {
+          draft.uiScale = Math.max(75, Math.min(135, Number(btn.getAttribute('data-k155-scale')) || 100));
+          persistDraftLive(false);
+          renderCard();
+        };
+      });
+
+      var toggleBtn = sec.querySelector('[data-k155-autonext-toggle]');
+      if (toggleBtn) {
+        toggleBtn.onclick = function () {
+          draft.autoNextEnabled = !draft.autoNextEnabled;
+          persistDraftLive(false);
+          renderCard();
+          toast('Auto-Play Next ' + (draft.autoNextEnabled ? 'enabled' : 'disabled') + '.');
+        };
+      }
+
+      sec.querySelectorAll('[data-k155-sec]').forEach(function (btn) {
+        btn.onclick = function () {
+          draft.autoNextSec = Number(btn.getAttribute('data-k155-sec')) || 8;
+          persistDraftLive(false);
+          renderCard();
+          toast('Up Next countdown set to ' + draft.autoNextSec + 's.');
+        };
+      });
+
+      sec.querySelectorAll('[data-k155-card]').forEach(function (btn) {
+        btn.onclick = function () {
+          draft.upNextScale = Number(btn.getAttribute('data-k155-card')) || 100;
+          persistDraftLive(false);
+          renderCard();
+          toast('Up Next card size set to ' + draft.upNextScale + '%.');
+        };
+      });
+
+      var previewBtn = sec.querySelector('[data-k155-preview]');
+      if (previewBtn) {
+        previewBtn.onclick = function () {
+          persistDraftLive(false);
+          if (window.KuroNative && typeof window.KuroNative.previewAutoNext155 === 'function') {
+            try { window.KuroNative.previewAutoNext155(); } catch (_) {}
+          } else {
+            toast('Up Next preview opens on Android devices.');
+          }
+        };
+      }
+
+      var applyBtn = sec.querySelector('[data-k155-apply]');
+      if (applyBtn) {
+        applyBtn.onclick = function () {
+          saved.dpi = draft.dpi;
+          saved.uiScale = draft.uiScale;
+          saved.autoNextEnabled = draft.autoNextEnabled;
+          saved.autoNextSec = draft.autoNextSec;
+          saved.upNextScale = draft.upNextScale;
+          if (window.KuroNative && typeof window.KuroNative.saveDisplay155 === 'function') {
+            persistDraftLive(true);
+          } else {
+            persistDraftLive(false);
+            renderCard();
+            toast('Display & UI Size saved.');
+          }
+        };
+      }
+
+      var resetBtn = sec.querySelector('[data-k155-reset]');
+      if (resetBtn) {
+        resetBtn.onclick = function () {
+          draft.dpi = 500;
+          draft.uiScale = 100;
+          draft.autoNextEnabled = true;
+          draft.autoNextSec = 8;
+          draft.upNextScale = 100;
+          if (window.KuroNative && typeof window.KuroNative.saveDisplay155 === 'function') {
+            persistDraftLive(true);
+          } else {
+            persistDraftLive(false);
+            renderCard();
+            toast('Reset to 500 DPI \u00b7 100% UI Size.');
+          }
+        };
+      }
+    }
+
+    renderCard();
+  }
+
+  function maybeReopenDisplaySettings155() {
+    var reopenTs = 0;
+    try {
+      reopenTs = Number(localStorage.getItem('kuro-reopen-display-155') || '0');
+      if (reopenTs > 0) localStorage.removeItem('kuro-reopen-display-155');
+    } catch (_) {}
+    if (!reopenTs || Date.now() - reopenTs > 15000) return;
+    var tries = 0;
+    var t = setInterval(function () {
+      tries++;
+      if (window.kuroSettings560 && typeof window.kuroSettings560.open === 'function') {
+        clearInterval(t);
+        try { window.kuroSettings560.open(); } catch (_) {}
+        setTimeout(function () {
+          mountDisplaySettingsGroup155();
+          mountPerfSettingsGroup154();
+          var grp = document.getElementById('k155-display-group');
+          if (grp && typeof grp.scrollIntoView === 'function') {
+            try { grp.scrollIntoView({ block: 'start' }); } catch (_) {}
+          }
+          var inf = readDisplay155();
+          var lbl = inf.dpi <= 0 ? ('System ' + inf.baseDpi + ' DPI') : (inf.baseDpi + ' DPI');
+          toast('Applied \u00b7 ' + lbl + ' \u00b7 ' + inf.uiScale + '% UI Size');
+        }, 90);
+      } else if (tries > 25) {
+        clearInterval(t);
+      }
+    }, 80);
   }
 
   function isInternalNode154(n) {
@@ -2277,6 +2766,7 @@
           enhanceBrowseCommandBar154();
         }
         if (document.getElementById('settings-overlay560')) {
+          mountDisplaySettingsGroup155();
           mountPerfSettingsGroup154();
         }
         if (document.querySelector('#main > .profile-page547')) {
@@ -2362,20 +2852,97 @@
     nextSource(title, false);
   };
 
+  function hookOverlayBack155() {
+    if (typeof window.kuroBack !== 'function' || window.kuroBack.__k155Back) return;
+    var origBack = window.kuroBack;
+    var wrappedBack = function () {
+      var wn = document.getElementById('kb-whatsnew');
+      if (wn) {
+        var wnBtn = wn.querySelector('.kb-wn-ok');
+        if (wnBtn) wnBtn.click(); else wn.remove();
+        return true;
+      }
+      var choice = document.querySelector('.choice-backdrop567');
+      if (choice) {
+        var cBtn = choice.querySelector('.choice-close567');
+        if (cBtn) cBtn.click(); else choice.remove();
+        return;
+      }
+      var batch = document.getElementById('k154-batch-sheet');
+      if (batch) {
+        batch.remove();
+        return;
+      }
+      var tm = document.getElementById('tracker-match553');
+      if (tm) {
+        tm.remove();
+        return;
+      }
+      if (window.km15 && typeof window.km15.isSheetOpen === 'function' && window.km15.isSheetOpen()) {
+        window.km15.closeSheet();
+        return;
+      }
+      return origBack.apply(this, arguments);
+    };
+    wrappedBack.__k155Back = true;
+    window.kuroBack = wrappedBack;
+  }
+
+  var noSelectionInstalled155 = false;
+
+  function isEditableField155(node) {
+    if (!node || node.nodeType !== 1) return false;
+    var tag = node.tagName ? node.tagName.toUpperCase() : '';
+    if (tag === 'TEXTAREA') return true;
+    if (tag !== 'INPUT') return false;
+    var type = (node.getAttribute('type') || 'text').toLowerCase();
+    return type === 'text' || type === 'search' || type === 'url' || type === 'email' || type === 'password' || type === 'number' || type === 'tel';
+  }
+
+  function installNoBrowserSelection155() {
+    if (noSelectionInstalled155) return;
+    noSelectionInstalled155 = true;
+    document.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+    }, true);
+    document.addEventListener('selectstart', function (e) {
+      if (!isEditableField155(e.target)) {
+        e.preventDefault();
+      }
+    }, true);
+    document.addEventListener('dragstart', function (e) {
+      e.preventDefault();
+    }, true);
+    document.addEventListener('selectionchange', function () {
+      if (isEditableField155(document.activeElement)) return;
+      try {
+        var sel = window.getSelection && window.getSelection();
+        if (sel && sel.rangeCount > 0) sel.removeAllRanges();
+      } catch (_) {}
+    });
+  }
+
+  installNoBrowserSelection155();
+
   function init154() {
+    installNoBrowserSelection155();
     syncDesktopSite154();
+    syncDisplay155();
     pruneHiddenControls154();
     hookDetailView154();
     hookBrowseFilters154();
     hookAccountTrackerHub154();
+    hookOverlayBack155();
     startObserver154();
     if (document.getElementById('settings-overlay560')) {
+      mountDisplaySettingsGroup155();
       mountPerfSettingsGroup154();
     }
     if (document.querySelector('#main > .profile-page547')) {
       renderAccountHub154(false);
     }
     decorateRenderedPosters154();
+    maybeReopenDisplaySettings155();
   }
 
   if (document.readyState === 'loading') {

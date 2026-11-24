@@ -1,21 +1,22 @@
-/* Kuro 1.5.4 — one-time "What's new" card, shown once after the splash on
-   first launch of 1.5.4 and never again. Self-contained, dismissible by
+/* Kuro 1.5.5 — one-time "What's new" card, shown once after the splash on
+   first launch of 1.5.5 and never again. Self-contained, dismissible by
    button, backdrop tap, or Escape / Android back. */
 (function () {
   'use strict';
 
-  var STAMP = '1.5.4';
-  var KEY = 'kuro-beta-whatsnew-seen-1.5.4';
+  var STAMP = '1.5.5';
+  var KEY = 'kuro-beta-whatsnew-seen-1.5.5';
 
-  try { if (localStorage.getItem(KEY) === STAMP) return; } catch (_) { return; }
+  try {
+    if (localStorage.getItem(KEY) === STAMP) {
+      return;
+    }
+  } catch (_) { return; }
 
   var ITEMS = [
-    ['Signature Violet Theme & Faster Loading', 'Default app colour restored to Signature Violet across all screens, dialogs & player controls, plus built-in Encrypted DNS (1.1.1.1 / 8.8.8.8) to unblock carrier-restricted sources without a VPN, faster 8-lane catalog loading, backup video codec support, low-RAM crash protection, and Android TV / Fire TV / foldable support.'],
-    ['Cinematic Title Detail v2', 'Full-bleed banner header with ★ score, studio & runtime pills, interactive Franchise & Watch-Order strip, Canon / Filler / Recap badges, Skip Filler switch (also skips fillers on Auto-Next), 16:9 episode rows, and ⬇ Batch Offline Download.'],
-    ['Desktop-Site Left-Rail & DPAD UI', 'Turn on Settings → Site view → Desktop (or launch on Android TV / Fire TV) to unlock the frosted-OLED left navigation rail, widescreen hero & multi-column shelves, glowing accent DPAD focus halo, and remote spatial navigation.'],
-    ['Smart Multi-Filter Browse & Voice Search', 'Combinable OLED filter pills on Browse (Dub Available, ★ 8.0+, Airing/Completed, Genre, Format, Year), native Android Voice Search mic pill, and compact SUB | DUB poster pills.'],
-    ['Streamlined YouTube-Style Watch Page', 'Compact 5-servers-per-page layout with an "Other servers" page switcher, 3-row scrollable YouTube-style episode playlist card, YouTube Desktop left-to-right horizontal recommended anime shelf right below Anime details, and clean header without the redundant episodes slider.'],
-    ['Trackers, Discord Hub & 40 Anime/Manga Profile Sets', 'Upgraded Account tab with 40 real anime & manga face avatars and matching 16:9 banners, live AniList & MyAnimeList sync cards, Two-Way Auto-Sync switches, and an interactive Discord Rich Presence preview.']
+    ['Profile Art Studio & Live Image Preview', 'Redesigned Profile art with a live 16:9 banner + avatar stage, Split / Paired Sets / Avatars / Banners tabs, instant character search, themed action buttons, and custom gallery uploads.'],
+    ['Full PFP & Banner Image Rendering', 'Fixed strict-CSP banner and avatar rendering using native <img> elements across the Account hero, top header chip, profile drawer, and Watch screen header.'],
+    ['Clean Iconography & Native Touch', 'Includes zero 4-point sparkle badges, disabled browser-style hold-to-select popups, Kuro-themed Up Next card, and controllable App DPI & UI Size.']
   ];
 
   function mark() {
@@ -23,7 +24,7 @@
   }
 
   function show() {
-    if (document.getElementById('kb-whatsnew')) return;
+    if (document.getElementById('kb-whatsnew') || document.getElementById('settings-overlay560')) return;
 
     var scrim = document.createElement('div');
     scrim.id = 'kb-whatsnew';
@@ -37,12 +38,12 @@
 
     var tag = document.createElement('div');
     tag.className = 'kb-wn-tag';
-    tag.textContent = 'KURO.TV  \u00b7  1.5.4';
+    tag.textContent = 'KURO.TV  \u00b7  1.5.5';
 
     var h = document.createElement('h2');
     h.id = 'kb-wn-title';
     h.className = 'kb-wn-title';
-    h.textContent = 'What\u2019s new in 1.5.4';
+    h.textContent = 'What\u2019s new in 1.5.5';
 
     var list = document.createElement('ul');
     list.className = 'kb-wn-list';
@@ -82,7 +83,9 @@
     card.appendChild(btn);
     scrim.appendChild(card);
     document.body.appendChild(scrim);
-    setTimeout(function () { try { btn.focus(); } catch (_) {} }, 60);
+    setTimeout(function () {
+      try { btn.focus({ preventScroll: true }); } catch (_) { try { btn.focus(); } catch (__) {} }
+    }, 60);
   }
 
   function waitForIntro() {

@@ -5,7 +5,7 @@ name: publish Kuro release
 # this runner with the pinned CN=Kuro Anime release key), and this job only publishes
 # when the SHA-256 matches the exact build that was signed.
 #
-# Trigger: manual dispatch, or a commit whose message contains "[release 1.5.4]".
+# Trigger: manual dispatch, or a commit whose message contains "[release 1.5.5]".
 
 on:
   push:
@@ -13,13 +13,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version (e.g. 1.5.4)"
+        description: "Release version (e.g. 1.5.5)"
         required: false
-        default: "1.5.4"
+        default: "1.5.5"
       version_code:
-        description: "Android versionCode (e.g. 96)"
+        description: "Android versionCode (e.g. 107)"
         required: false
-        default: "96"
+        default: "107"
 
 permissions:
   contents: write
@@ -29,18 +29,18 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  VERSION: ${{ inputs.version || '1.5.4' }}
-  VERSION_CODE: ${{ inputs.version_code || '96' }}
-  TAG: v${{ inputs.version || '1.5.4' }}
-  APK_NAME: Kuro-tv-${{ inputs.version || '1.5.4' }}
-  APK_SHA256: "b2776b36b9d43897b73c6185a01d13704b7b313b44b3c9a5e4d16051f81b2ace"
+  VERSION: ${{ inputs.version || '1.5.5' }}
+  VERSION_CODE: ${{ inputs.version_code || '107' }}
+  TAG: v${{ inputs.version || '1.5.5' }}
+  APK_NAME: Kuro-tv-${{ inputs.version || '1.5.5' }}
+  APK_SHA256: "8288de70f10fdc76b17d2b1388936b462e34c69eba5a99a891e0f365b22c08f3"
   SIGNER_SHA256: "1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e"
-  UNSIGNED_SHA256: "23b9bbbf198654e39a993dacd2c84d847071f8399ee96641a4e61f5202901dae"
-  SOURCE_ID: 1tvE3FJdC_PIxGBN_fLlmqJMmRzjy65sO
+  UNSIGNED_SHA256: "8106c62bfd20c112f328666e160c632c4d108efe8a81dc6a6020a491ffdaacc8"
+  SOURCE_ID: 1VhFkffCy51XoLiW_Tw4jUqhbZP9vpV8R
 
 jobs:
   release:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release 1.5.4]')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release 1.5.5]')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -108,7 +108,7 @@ jobs:
               wn = z.read("assets/beta-whatsnew-1.5.js").decode("utf-8")
               assert f"var STAMP = '{version}';" in wn, f"beta-whatsnew-1.5.js stamp is not {version}"
               skin = z.read("assets/player-skin.js").decode("utf-8")
-              assert "kuro-oled-hud153" in skin, "assets/player-skin.js is missing OLED segmented player skin"
+              assert "kuro-video-skin" in skin and "kuro-oled-hud153" not in skin, "assets/player-skin.js is not the classic player skin"
               sjs = z.read("assets/settings560.js").decode("utf-8")
               assert "Contact developer & notice for bugs and error" in sjs, "assets/settings560.js missing updated developer section title"
               assert not any(b"825998094067615616" in d for d in dex), "dex still contains typo Discord user ID"
@@ -118,8 +118,6 @@ jobs:
                   "Update alerts are off",
                   f"releases/download/v{version}/Kuro-tv-{version}.apk",
                   "https://discord.com/users/825998094067695616",
-                  "KuroPlayerUi153",
-                  "KuroPlayerAction153",
                   "KuroFastNet154",
                   "other-servers-154",
                   "ep-playlist-scroll-154",
@@ -162,7 +160,6 @@ jobs:
           python3 tools/update_button_1.5.py "$PROJECT"
           python3 tools/offline_beta_1.5.py "$PROJECT"
           python3 tools/polish_1.5.2.py "$PROJECT"
-          python3 tools/player_1.5.3.py "$PROJECT"
           python3 tools/ui_1.5.4.py "$PROJECT"
           cp -f design/native-src/tests/native-panel/src/test/java/app/lovelycrxshx/kuro/KuroUpdater572Test.java \
             "$PROJECT/tests/native-panel/src/test/java/app/lovelycrxshx/kuro/KuroUpdater572Test.java"
@@ -185,14 +182,12 @@ jobs:
               assert ic and b'viewportWidth="24"' in z.read(ic[0]), "Source.zip missing ic_stat_kuro.xml"
               ud = [n for n in names if n.endswith("KuroUpdateDialog582.java")]
               assert ud and b"notifBanner152" in z.read(ud[0]), "Source.zip missing notifBanner152"
-              pu = [n for n in names if n.endswith("KuroPlayerUi153.java")]
-              assert pu and b"buildAutoNextDialog" in z.read(pu[0]), "Source.zip missing KuroPlayerUi153.java"
               fn = [n for n in names if n.endswith("KuroFastNet154.java")]
               assert fn and b"KuroFastNet154" in z.read(fn[0]), "Source.zip missing KuroFastNet154.java"
               ui = [n for n in names if n.endswith("assets/beta-ui-1.5.4.js")]
               assert ui and b"kuroOpenRecommended154" in z.read(ui[0]), "Source.zip missing assets/beta-ui-1.5.4.js"
               ps = [n for n in names if n.endswith("assets/player-skin.js")]
-              assert ps and b"kuro-oled-hud153" in z.read(ps[0]), "Source.zip missing assets/player-skin.js"
+              assert ps and b"kuro-video-skin" in z.read(ps[0]) and b"kuro-oled-hud153" not in z.read(ps[0]), "Source.zip player-skin.js is not the classic player"
           PY
           printf '%s  %s\n' "$(sha256sum "dist/$APK_NAME-Source.zip" | cut -d' ' -f1)" "$APK_NAME-Source.zip" \
             > "dist/$APK_NAME-Source.zip.sha256"

@@ -71,7 +71,7 @@ window.km15 = (function () {
   el.classList.remove('km-sheet-on-15');
   setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 180);
   if (lastFocus && lastFocus.isConnected && typeof lastFocus.focus === 'function') {
-   try { lastFocus.focus(); } catch (e) {}
+   try { lastFocus.focus({ preventScroll: true }); } catch (e) { try { lastFocus.focus(); } catch (_) {} }
   }
   lastFocus = null;
  }
@@ -114,7 +114,7 @@ window.km15 = (function () {
   });
 
   var first = el.querySelector('.km-sheet-row-15') || el.querySelector('.km-sheet-close-15');
-  if (first) { try { first.focus(); } catch (e) {} }
+  if (first) { try { first.focus({ preventScroll: true }); } catch (e) { try { first.focus(); } catch (_) {} } }
   return el;
  }
 
@@ -179,6 +179,15 @@ window.km15 = (function () {
     if (!isIgnoredMutation15(records)) schedule();
    }).observe(document.body, { childList: true, subtree: true });
   }
+  if (typeof window.kuroBack === 'function' && !window.kuroBack.__km15SheetBack) {
+   var prevBack = window.kuroBack;
+   var wrappedBack = function () {
+    if (openSheet) { closeSheet(); return; }
+    return prevBack.apply(this, arguments);
+   };
+   wrappedBack.__km15SheetBack = true;
+   window.kuroBack = wrappedBack;
+  }
   schedule();
  }
 
@@ -187,7 +196,7 @@ window.km15 = (function () {
 
  return {
   esc: esc, norm: norm, lsGet: lsGet, lsSet: lsSet,
-  sheet: sheet, closeSheet: closeSheet, toast: toast,
+  sheet: sheet, closeSheet: closeSheet, isSheetOpen: function () { return !!openSheet; }, toast: toast,
   observe: observe, schedule: schedule,
   nativeHas: nativeHas, nativeCall: nativeCall
  };

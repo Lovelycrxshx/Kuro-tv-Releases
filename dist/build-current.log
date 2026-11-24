@@ -1,8 +1,8 @@
 === env ===
-PROJECT=src
+PROJECT=src/Kuro-tv-1.5.5-beta6-Source
 ANDROID_HOME=/usr/local/lib/android/sdk
 KURO_DISCORD_SDK_AAR=/home/runner/work/_temp/sdk/discord_social_sdk/lib/release/discord_partner_sdk.aar
-/home/runner/work/Kuro-tv-Releases/Kuro-tv-Releases/src
+/home/runner/work/Kuro-tv-Releases/Kuro-tv-Releases/src/Kuro-tv-1.5.5-beta6-Source
 === native bridge ===
 Built Kuro RPC bridge for arm64-v8a
 Built Kuro RPC bridge for armeabi-v7a
@@ -37,9 +37,9 @@ Daemon will be stopped at the end of the build
 > Task :parseReleaseLocalResources
 
 > Task :processReleaseMainManifest
-package="app.lovelycrxshx.kuro" found in source AndroidManifest.xml: /home/runner/work/Kuro-tv-Releases/Kuro-tv-Releases/src/AndroidManifest.xml.
+package="app.lovelycrxshx.kuro" found in source AndroidManifest.xml: /home/runner/work/Kuro-tv-Releases/Kuro-tv-Releases/src/Kuro-tv-1.5.5-beta6-Source/AndroidManifest.xml.
 Setting the namespace via the package attribute in the source AndroidManifest.xml is no longer supported, and the value is ignored.
-Recommendation: remove package="app.lovelycrxshx.kuro" from the source AndroidManifest.xml: /home/runner/work/Kuro-tv-Releases/Kuro-tv-Releases/src/AndroidManifest.xml.
+Recommendation: remove package="app.lovelycrxshx.kuro" from the source AndroidManifest.xml: /home/runner/work/Kuro-tv-Releases/Kuro-tv-Releases/src/Kuro-tv-1.5.5-beta6-Source/AndroidManifest.xml.
 
 > Task :processReleaseManifest
 > Task :extractProguardFiles
@@ -60,8 +60,8 @@ Note: Some input files use or override a deprecated API.
 Note: Recompile with -Xlint:deprecation for details.
 
 > Task :generateReleaseLintVitalReportModel
-> Task :dexBuilderRelease
 > Task :lintVitalAnalyzeRelease
+> Task :dexBuilderRelease
 > Task :lintVitalReportRelease
 > Task :lintVitalRelease
 > Task :mergeReleaseStartupProfile
@@ -71,63 +71,63 @@ Note: Recompile with -Xlint:deprecation for details.
 > Task :generateReleaseAssets UP-TO-DATE
 > Task :mergeReleaseAssets
 > Task :compressReleaseAssets
-> Task :desugarReleaseFileDependencies
 > Task :extractReleaseVersionControlInfo
-> Task :mergeReleaseGlobalSynthetics
 > Task :processReleaseJavaRes NO-SOURCE
-> Task :mergeExtDexRelease
 > Task :mergeReleaseJavaResource
-> Task :mergeDexRelease
 > Task :optimizeReleaseResources
 > Task :collectReleaseDependencies
 > Task :sdkReleaseDependencyData
 > Task :writeReleaseAppMetadata
 > Task :writeReleaseSigningConfigVersions
+> Task :desugarReleaseFileDependencies
+> Task :mergeReleaseGlobalSynthetics
+> Task :mergeExtDexRelease
+> Task :mergeDexRelease
 > Task :compileReleaseArtProfile
 > Task :packageRelease
 > Task :createReleaseApkListingFileRedirect
 > Task :assembleRelease
 
-BUILD SUCCESSFUL in 1m 35s
+BUILD SUCCESSFUL in 1m 52s
 45 actionable tasks: 45 executed
 === outputs ===
 build/outputs:
 total 12
-drwxr-xr-x 3 runner runner 4096 Nov 21 22:29 apk
-drwxr-xr-x 2 runner runner 4096 Nov 21 22:28 logs
-drwxr-xr-x 3 runner runner 4096 Nov 21 22:29 sdk-dependencies
+drwxr-xr-x 3 runner runner 4096 Nov 24 08:39 apk
+drwxr-xr-x 2 runner runner 4096 Nov 24 08:38 logs
+drwxr-xr-x 3 runner runner 4096 Nov 24 08:39 sdk-dependencies
 
 build/outputs/apk:
 total 4
-drwxr-xr-x 3 runner runner 4096 Nov 21 22:29 release
+drwxr-xr-x 3 runner runner 4096 Nov 24 08:39 release
 
 build/outputs/apk/release:
-total 51848
--rw-r--r-- 1 runner runner 53083369 Nov 21 22:29 Kuro-tv-release-unsigned.apk
-drwxr-xr-x 4 runner runner     4096 Nov 21 22:29 baselineProfiles
--rw-r--r-- 1 runner runner      751 Nov 21 22:29 output-metadata.json
+total 51888
+-rw-r--r-- 1 runner runner 53124913 Nov 24 08:39 Kuro-tv-release-unsigned.apk
+drwxr-xr-x 4 runner runner     4096 Nov 24 08:39 baselineProfiles
+-rw-r--r-- 1 runner runner      752 Nov 24 08:39 output-metadata.json
 
 build/outputs/apk/release/baselineProfiles:
 total 8
-drwxr-xr-x 2 runner runner 4096 Nov 21 22:29 0
-drwxr-xr-x 2 runner runner 4096 Nov 21 22:29 1
+drwxr-xr-x 2 runner runner 4096 Nov 24 08:39 0
+drwxr-xr-x 2 runner runner 4096 Nov 24 08:39 1
 
 build/outputs/apk/release/baselineProfiles/0:
 total 4
--rw-r--r-- 1 runner runner 3816 Nov 21 22:29 Kuro-tv-release-unsigned.dm
+-rw-r--r-- 1 runner runner 3408 Nov 24 08:39 Kuro-tv-release-unsigned.dm
 
 build/outputs/apk/release/baselineProfiles/1:
 total 4
--rw-r--r-- 1 runner runner 3750 Nov 21 22:29 Kuro-tv-release-unsigned.dm
+-rw-r--r-- 1 runner runner 3343 Nov 24 08:39 Kuro-tv-release-unsigned.dm
 
 build/outputs/logs:
-total 64
--rw-r--r-- 1 runner runner 63619 Nov 21 22:28 manifest-merger-release-report.txt
+total 68
+-rw-r--r-- 1 runner runner 67885 Nov 24 08:38 manifest-merger-release-report.txt
 
 build/outputs/sdk-dependencies:
 total 4
-drwxr-xr-x 2 runner runner 4096 Nov 21 22:29 release
+drwxr-xr-x 2 runner runner 4096 Nov 24 08:39 release
 
 build/outputs/sdk-dependencies/release:
 total 28
--rw-r--r-- 1 runner runner 26121 Nov 21 22:29 sdkDependencies.txt
+-rw-r--r-- 1 runner runner 26121 Nov 24 08:39 sdkDependencies.txt

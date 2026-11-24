@@ -98,10 +98,11 @@ def remap_hex(h, accent):
         new_sat = sat * sat_scale
         new_light = light
     elif sat < NEUTRAL_SAT:
-        # Muted text keeps its lightness and leans only slightly, so greys
-        # stay greys instead of turning sickly.
-        new_hue = _blend(hue, target_hue, 0.35 + 0.5 * sat)
-        new_sat = sat * 0.90 * sat_scale
+        # Muted text and subtle borders take the target hue directly with
+        # restrained saturation, so gold/emerald/teal never drift halfway
+        # around the colour wheel into pink or slate-blue.
+        new_hue = target_hue
+        new_sat = (sat * 0.85 if light <= 0.42 else min(sat * 0.65, 0.13)) * sat_scale
         new_light = light
     else:
         new_hue = target_hue
@@ -134,6 +135,7 @@ def transform(text, accent):
     # Only rewrite short hex when it really is a colour, never inside #id text.
     text = HEX3.sub(sub3, text)
     text = RGBA.sub(subrgb, text)
+    text = text.replace("scroll-behavior: smooth;", "scroll-behavior: auto;")
     return text
 
 

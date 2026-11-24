@@ -330,7 +330,17 @@ function dropPrivateCard() {
 
  function boot() {
   var seen = false;
-  try { seen = sessionStorage.getItem(SEEN) === '1'; } catch (e) {}
+  try {
+   seen = sessionStorage.getItem(SEEN) === '1';
+   var skipOnceTs = Number(localStorage.getItem('kuro-skip-intro-once-155') || '0');
+   if (skipOnceTs > 0) {
+    localStorage.removeItem('kuro-skip-intro-once-155');
+    if (Date.now() - skipOnceTs < 15000) {
+     seen = true;
+     sessionStorage.setItem(SEEN, '1');
+    }
+   }
+  } catch (e) {}
 
   if (!reduced && !seen) {
    try { sessionStorage.setItem(SEEN, '1'); } catch (e) {}
@@ -342,7 +352,10 @@ function dropPrivateCard() {
    setTimeout(fillArt, 1150);
    setTimeout(fillArt, 1800);
 
-   var skip = function () { finish(); };
+   var skip = function (ev) {
+    if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation();
+    finish();
+   };
    introEl.addEventListener('pointerdown', skip);
    introEl.addEventListener('click', skip);
    window.addEventListener('keydown', function (ev) { if (!started && ev.key) finish(); });

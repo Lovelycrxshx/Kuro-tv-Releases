@@ -20,13 +20,10 @@ IC_STAT_KURO_XML = """<?xml version="1.0" encoding="utf-8"?>
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- Monochrome status-bar glyph: Kuro K + four-point sparkle on transparent canvas -->
+    <!-- Monochrome status-bar glyph: Kuro K monogram on transparent canvas -->
     <path
         android:fillColor="#FFFFFFFF"
         android:pathData="M5,4h2.8v6.9L14.2,4h3.4l-6.6,7.1L18,20h-3.5l-5.3,-6.9L7.8,14.6V20H5V4z"/>
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M18.5,2.5L19.4,4.9L21.8,5.8L19.4,6.7L18.5,9.1L17.6,6.7L15.2,5.8L17.6,4.9Z"/>
 </vector>
 """
 
@@ -236,12 +233,13 @@ def patch_main_activity(pkg: Path) -> None:
     src = f.read_text(encoding="utf-8", errors="surrogateescape")
 
     # 1. Permission request code constant
-    src = replace_once(
-        src,
-        "private static final int BACKUP_EXPORT560=5600,BACKUP_IMPORT560=5601,ERROR_PERMISSION560=5602;",
-        "private static final int BACKUP_EXPORT560=5600,BACKUP_IMPORT560=5601,ERROR_PERMISSION560=5602,UPDATE_PERMISSION152=5729;",
-        "MainActivity.UPDATE_PERMISSION152",
-    )
+    if "UPDATE_PERMISSION152=5729" not in src:
+        src = replace_once(
+            src,
+            "private static final int BACKUP_EXPORT560=5600,BACKUP_IMPORT560=5601,ERROR_PERMISSION560=5602;",
+            "private static final int BACKUP_EXPORT560=5600,BACKUP_IMPORT560=5601,ERROR_PERMISSION560=5602,UPDATE_PERMISSION152=5729;",
+            "MainActivity.UPDATE_PERMISSION152",
+        )
 
     # 2. Refresh update dialog when notification permission result arrives
     src = replace_once(
