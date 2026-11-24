@@ -1,11 +1,11 @@
-/* Kuro 1.5.5 — one-time "What's new" card, shown once after the splash on
-   first launch of 1.5.5 and never again. Self-contained, dismissible by
+/* Kuro 1.5.6-beta1 — one-time "What's new" card, shown once after the splash on
+   first launch of 1.5.6-beta1 and never again. Self-contained, dismissible by
    button, backdrop tap, or Escape / Android back. */
 (function () {
   'use strict';
 
-  var STAMP = '1.5.5';
-  var KEY = 'kuro-beta-whatsnew-seen-1.5.5';
+  var STAMP = '1.5.6-beta1';
+  var KEY = 'kuro-beta-whatsnew-seen-1.5.6-beta1';
 
   try {
     if (localStorage.getItem(KEY) === STAMP) {
@@ -38,12 +38,12 @@
 
     var tag = document.createElement('div');
     tag.className = 'kb-wn-tag';
-    tag.textContent = 'KURO.TV  \u00b7  1.5.5';
+    tag.textContent = 'KURO.TV  \u00b7  1.5.6-beta1';
 
     var h = document.createElement('h2');
     h.id = 'kb-wn-title';
     h.className = 'kb-wn-title';
-    h.textContent = 'What\u2019s new in 1.5.5';
+    h.textContent = 'What\u2019s new in 1.5.6-beta1';
 
     var list = document.createElement('ul');
     list.className = 'kb-wn-list';
