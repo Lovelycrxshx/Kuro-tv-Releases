@@ -131,10 +131,6 @@
     var watchHero = document.querySelector('.watch-hero, .player-hero, [class*="watch"] [class*="hero"]');
     if (watchHero) addButton(watchHero, '✨ Generate key visual', 'watch');
 
-    // Home — hero banner area
-    var homeHero = document.querySelector('.home-hero, [class*="home"] [class*="hero"], .hero-banner');
-    if (homeHero) addButton(homeHero, '✨ Generate hero art', 'home');
-
     // Detail page — key visual area
     var detailKv = document.querySelector('.detail-keyvisual, .anime-hero, [class*="detail"] [class*="hero"]');
     if (detailKv) addButton(detailKv, '✨ Generate key visual', 'detail');

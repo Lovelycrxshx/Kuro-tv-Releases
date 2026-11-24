@@ -662,162 +662,6 @@
     });
   }
 
-  /* Batch Offline Download Sheet (Zenkai Direct HLS + Watch Queue fallback) */
-  function findZenkaiOwner(item) {
-    if (!item) return Promise.resolve(null);
-    if (item.source === 'zenkai') return Promise.resolve(item);
-    var vars = Array.isArray(item.unifiedVariants) ? item.unifiedVariants : [];
-    for (var i = 0; i < vars.length; i++) {
-      if (vars[i] && vars[i].source === 'zenkai') return Promise.resolve(vars[i]);
-    }
-    if (typeof window.fetchCatalogPage !== 'function') return Promise.resolve(null);
-    return window.fetchCatalogPage({ source: 'zenkai', mode: 'search', query: item.title }, 1)
-      .then(function (res) {
-        var list = (res && Array.isArray(res.items)) ? res.items : [];
-        var want = normTitle(item.title);
-        for (var j = 0; j < list.length; j++) {
-          if (normTitle(list[j].title) === want) return list[j];
-        }
-        return list.length === 1 ? list[0] : null;
-      })
-      .catch(function () { return null; });
-  }
-
-  function openBatchDownloadSheet154(item) {
-    var old = document.getElementById('k154-batch-sheet');
-    if (old) old.remove();
-    var eps = curEpisodes().filter(function (e) { return !e.missing; });
-    if (!eps.length) {
-      toast('Wait for episodes to finish loading first.');
-      return;
-    }
-
-    var skipFiller = isSkipFillerEnabled();
-    var unwatched = eps.filter(function (e) {
-      if (skipFiller && window.kuroIsEpisodeSkipped154(item, e)) return false;
-      return !(typeof window.watchedHas === 'function' && window.watchedHas(item, e.number));
-    });
-    var basePool = unwatched.length ? unwatched : eps;
-
-    var scrim = document.createElement('div');
-    scrim.id = 'k154-batch-sheet';
-    scrim.className = 'k154-sheet-scrim';
-    scrim.setAttribute('role', 'dialog');
-    scrim.setAttribute('aria-modal', 'true');
-    scrim.setAttribute('aria-labelledby', 'k154-batch-title');
-
-    var presets = [
-      { count: Math.min(3, basePool.length), label: 'Next 3 episodes', desc: 'Quick commute pack' },
-      { count: Math.min(5, basePool.length), label: 'Next 5 episodes', desc: 'Standard offline arc' },
-      { count: Math.min(12, basePool.length), label: 'Next 12 episodes (1 cour)', desc: 'Full season batch' },
-      { count: Math.min(24, basePool.length), label: 'All unwatched (up to 24)', desc: skipFiller ? 'Skips filler & recap episodes automatically' : 'Includes all unwatched episodes' }
-    ].filter(function (p, i, arr) {
-      return p.count > 0 && arr.findIndex(function (x) { return x.count === p.count; }) === i;
-    });
-
-    scrim.innerHTML =
-      '<section class="k154-sheet-card">' +
-        '<div class="k154-sheet-head">' +
-          '<div>' +
-            '<h3 id="k154-batch-title">⬇ Batch Offline Download</h3>' +
-            '<p>' + esc(item.title) + (skipFiller ? ' · Skip Filler ON' : '') + '</p>' +
-          '</div>' +
-          '<button type="button" class="k154-sheet-close" data-batch-close aria-label="Close">×</button>' +
-        '</div>' +
-        '<div class="k154-sheet-grid">' +
-          presets.map(function (p, idx) {
-            var slice = basePool.slice(0, p.count);
-            var range = slice.length === 1
-              ? ('Episode ' + slice[0].number)
-              : ('Ep ' + slice[0].number + ' – ' + slice[slice.length - 1].number + ' (' + slice.length + ')');
-            return '<button type="button" class="k154-sheet-option" data-batch-preset="' + idx + '">' +
-              '<span><strong>' + esc(p.label) + '</strong><small>' + esc(p.desc) + '</small></span>' +
-              '<span>' + esc(range) + ' ›</span>' +
-            '</button>';
-          }).join('') +
-        '</div>' +
-        '<p class="k154-sheet-status" id="k154-batch-status" role="status" aria-live="polite">Resolves verified direct HLS streams; falls back to Watch Queue if a title is embed-only.</p>' +
-      '</section>';
-
-    document.body.appendChild(scrim);
-    function close() { if (scrim.parentNode) scrim.remove(); }
-    scrim.querySelector('[data-batch-close]').onclick = close;
-    scrim.onclick = function (e) { if (e.target === scrim) close(); };
-    scrim.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { e.preventDefault(); close(); }
-    });
-
-    var busy = false;
-    scrim.querySelectorAll('[data-batch-preset]').forEach(function (btn) {
-      btn.onclick = async function () {
-        if (busy) return;
-        busy = true;
-        var p = presets[Number(btn.dataset.batchPreset)];
-        var targetEps = basePool.slice(0, p.count);
-        var statusEl = document.getElementById('k154-batch-status');
-        if (statusEl) statusEl.textContent = 'Resolving direct HLS streams for ' + targetEps.length + ' episode(s)…';
-
-        try {
-          var zOwner = await findZenkaiOwner(item);
-          var zEpMap = new Map();
-          if (zOwner && typeof window.get === 'function' && typeof window.addedDetails === 'function') {
-            try {
-              var rawZ = await window.get(zOwner.url);
-              var detZ = await window.addedDetails(zOwner, rawZ);
-              if (detZ && Array.isArray(detZ.episodes)) {
-                detZ.episodes.forEach(function (ze) { zEpMap.set(String(Number(ze.number)), ze); });
-              }
-            } catch (_) {}
-          }
-
-          var rows = [];
-          if (zOwner && typeof window.zenkaiServers === 'function') {
-            for (var i = 0; i < targetEps.length; i++) {
-              var ep = targetEps[i];
-              var zEp = zEpMap.get(String(Number(ep.number))) || (ep.source === 'zenkai' ? ep : null);
-              if (!zEp) continue;
-              if (statusEl) statusEl.textContent = 'Checking Episode ' + ep.number + ' (' + (i + 1) + '/' + targetEps.length + ')…';
-              try {
-                var sv = await window.zenkaiServers(zOwner, zEp);
-                var hls = Array.isArray(sv) ? sv.find(function (s) { return s && s.type === 'hls' && s.referer === 'zenkai' && s.url; }) : null;
-                if (hls) {
-                  rows.push({
-                    address: hls.url,
-                    key: 'zenkai|' + String(zOwner.url || '').slice(0, 400) + '|' + String(ep.number),
-                    title: String(item.title || 'Anime'),
-                    episode: String(ep.number)
-                  });
-                }
-              } catch (_) {}
-            }
-          }
-
-          if (rows.length > 0 && window.KuroNative && typeof window.KuroNative.batchDownload154 === 'function') {
-            close();
-            window.KuroNative.batchDownload154(JSON.stringify(rows));
-            return;
-          }
-
-          // Graceful fallback: add the selected batch to Kuro's local Watch Queue
-          var queued = 0;
-          if (window.kuroQueue571 && typeof window.kuroQueue571.add === 'function') {
-            for (var q = 0; q < targetEps.length; q++) {
-              try { if (window.kuroQueue571.add(item, targetEps[q])) queued++; } catch (_) {}
-            }
-          }
-          close();
-          toast(queued > 0
-            ? ('Direct HLS unavailable on this source — added ' + queued + ' episode(s) to your Watch Queue.')
-            : 'No direct HLS download stream is available for this source.');
-        } finally {
-          busy = false;
-        }
-      };
-    });
-
-    var firstBtn = scrim.querySelector('[data-batch-preset]');
-    if (firstBtn) safeFocus155(firstBtn);
-  }
 
   function enhanceDetailEpisodes154(item, media) {
     var epsContainer = document.getElementById('eps');
@@ -904,7 +748,6 @@
           '<span class="k154-filler-summary">' + esc(summaryParts.join(' · ')) + '</span>' +
         '</div>' +
         '<div class="k154-ep-toolbar-right">' +
-          '<button type="button" class="k154-batch-dl-btn" id="k154-batch-dl-btn">⬇ Batch Download</button>' +
         '</div>';
 
       var skipBtn = document.getElementById('k154-skip-filler-btn');
@@ -916,9 +759,6 @@
           toast(next ? 'Skip Filler enabled — hiding filler/recap episodes & skipping on Auto-Next.' : 'Skip Filler turned off.');
         };
       }
-      var batchBtn = document.getElementById('k154-batch-dl-btn');
-      if (batchBtn) {
-        batchBtn.onclick = function () { openBatchDownloadSheet154(item); };
       }
     }
 
@@ -2868,10 +2708,6 @@
         if (cBtn) cBtn.click(); else choice.remove();
         return;
       }
-      var batch = document.getElementById('k154-batch-sheet');
-      if (batch) {
-        batch.remove();
-        return;
       }
       var tm = document.getElementById('tracker-match553');
       if (tm) {

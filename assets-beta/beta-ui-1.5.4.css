@@ -2749,26 +2749,26 @@ html[data-amoled="1"] .pa155-pair-card:not(.is-on) {
 .news-avatar[data-logo-applied="1"]{display:grid;place-items:center;background:transparent!important;box-shadow:none!important;border:0!important}
 
 /* Kuro Profile Art Collapsible (1.5.6-beta1) — compact click-to-expand card */
-.pa155-studio .pa155-collapse-bar{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:1px solid #66507855;border-radius:13px;background:linear-gradient(135deg,#211229,#180c20);cursor:pointer;text-align:left;font-family:inherit;color:#e8e0f0;transition:border-color .15s,background .15s}
-.pa155-studio .pa155-collapse-bar:hover{border-color:#a65be488;background:linear-gradient(135deg,#281530,#1c0f24)}
+.pa155-studio .pa155-collapse-bar{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:1px solid color-mix(in srgb, var(--kuro-accent560, #a65be4) 30%, transparent);border-radius:13px;background:linear-gradient(135deg,#211229,#180c20);cursor:pointer;text-align:left;font-family:inherit;color:#e8e0f0;transition:border-color .15s,background .15s}
+.pa155-studio .pa155-collapse-bar:hover{border-color:color-mix(in srgb, var(--kuro-accent560, #a65be4) 55%, transparent);background:linear-gradient(135deg,#281530,#1c0f24)}
 .pa155-studio .pa155-collapse-thumb{position:relative;width:38px;height:38px;flex:none;border-radius:10px;overflow:hidden;background:#100c18;display:grid;place-items:center;border:1px solid #665078}
 .pa155-studio .pa155-collapse-thumb .pa155-stage-mono{font-size:15px;color:#b7a4c7;font-weight:700}
 .pa155-studio .pa155-collapse-thumb .pa155-stage-pfp-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}
 .pa155-studio .pa155-collapse-text{flex:1;min-width:0}
 .pa155-studio .pa155-collapse-text strong{display:block;font-size:13px;font-weight:700;color:#f0e8f5}
 .pa155-studio .pa155-collapse-text small{display:block;font-size:10px;color:#a89ab5;margin-top:2px}
-.pa155-studio .pa155-collapse-chevron{flex:none;font-size:14px;color:#a65be4;transition:transform .2s}
+.pa155-studio .pa155-collapse-chevron{flex:none;font-size:14px;color:var(--kuro-accent560, #a65be4);transition:transform .2s}
 .pa155-studio .pa155-collapse-bar[aria-expanded="true"] .pa155-collapse-chevron{transform:rotate(180deg)}
 .pa155-studio .pa155-expand-body{margin-top:12px}
 .pa155-studio .pa155-expand-body[hidden]{display:none}
 .pa155-studio.profile-art581{margin-top:10px}
 
 /* Kuro AI Art Generation (1.5.6-beta1) — generation surfaces & panel */
-.kgen-entry-btn{display:inline-flex;align-items:center;gap:4px;padding:7px 13px;border:1px solid #a65be466;border-radius:9px;background:linear-gradient(135deg,#3a1d4e,#211229);color:#e8d8f5;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s}
-.kgen-entry-btn:hover{border-color:#a65be4;background:linear-gradient(135deg,#4a2360,#2a1638)}
+.kgen-entry-btn{display:inline-flex;align-items:center;gap:4px;padding:7px 13px;border:1px solid color-mix(in srgb, var(--kuro-accent560, #a65be4) 40%, transparent);border-radius:9px;background:linear-gradient(135deg,#3a1d4e,#211229);color:#e8d8f5;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s}
+.kgen-entry-btn:hover{border-color:var(--kuro-accent560, #a65be4);background:linear-gradient(135deg,#4a2360,#2a1638)}
 .kgen-overlay{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;padding:20px}
 .kgen-backdrop{position:absolute;inset:0;background:rgba(8,5,14,.7);backdrop-filter:blur(3px)}
-.kgen-panel{position:relative;width:100%;max-width:420px;max-height:85vh;overflow-y:auto;background:linear-gradient(160deg,#241432,#1a0e22);border:1px solid #665078;border-radius:18px;padding:20px;box-shadow:0 20px 60px #000a;animation:kgenFade .2s ease}
+.kgen-panel{position:relative;width:100%;max-width:420px;max-height:85vh;overflow-y:auto;background:linear-gradient(160deg,#241432,#1a0e22);border:1px solid color-mix(in srgb, var(--kuro-accent560, #a65be4) 35%, #1a1020);border-radius:18px;padding:20px;box-shadow:0 20px 60px #000a;animation:kgenFade .2s ease}
 @keyframes kgenFade{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
 .kgen-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .kgen-head h3{margin:0;font-size:17px;color:#f0e8f5}
@@ -2776,17 +2776,81 @@ html[data-amoled="1"] .pa155-pair-card:not(.is-on) {
 .kgen-close:hover{color:#f0e8f5}
 .kgen-hint{margin:0 0 16px;font-size:12px;color:#a89ab5;line-height:1.5}
 .kgen-styles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-.kgen-style{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #665078;border-radius:10px;background:#180c20;color:#d8cce8;font-size:13px;cursor:pointer;font-family:inherit;text-align:left}
-.kgen-style.is-active{border-color:#a65be4;background:#2a1638;color:#f0e8f5}
+.kgen-style{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid color-mix(in srgb, var(--kuro-accent560, #a65be4) 35%, #1a1020);border-radius:10px;background:#180c20;color:#d8cce8;font-size:13px;cursor:pointer;font-family:inherit;text-align:left}
+.kgen-style.is-active{border-color:var(--kuro-accent560, #a65be4);background:#2a1638;color:#f0e8f5}
 .kgen-style-dot{width:10px;height:10px;border-radius:50%;flex:none}
 .kgen-theme-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
 .kgen-theme-row label{font-size:12px;color:#a89ab5;font-weight:700}
-.kgen-theme-select{flex:1;padding:8px 10px;border:1px solid #665078;border-radius:8px;background:#180c20;color:#f0e8f5;font-size:13px;font-family:inherit}
+.kgen-theme-select{flex:1;padding:8px 10px;border:1px solid color-mix(in srgb, var(--kuro-accent560, #a65be4) 35%, #1a1020);border-radius:8px;background:#180c20;color:#f0e8f5;font-size:13px;font-family:inherit}
 .kgen-preview{height:180px;border-radius:12px;background:#100c18;border:1px solid #3a2a4e;display:grid;place-items:center;margin-bottom:14px;overflow:hidden}
 .kgen-preview-inner{text-align:center;color:#6a5a7a;font-size:13px}
 .kgen-preview-inner small{display:block;margin-top:8px;font-size:11px}
 .kgen-gen-art{width:100%;height:130px;display:grid;place-items:center;color:#fff;font-size:13px;font-weight:700;text-shadow:0 1px 4px #0008}
 .kgen-actions{display:flex;gap:8px}
-.kgen-btn{flex:1;padding:11px;border:1px solid #665078;border-radius:10px;background:#180c20;color:#d8cce8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.kgen-btn{flex:1;padding:11px;border:1px solid color-mix(in srgb, var(--kuro-accent560, #a65be4) 35%, #1a1020);border-radius:10px;background:#180c20;color:#d8cce8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
 .kgen-btn:hover{border-color:#a65be4}
-.kgen-btn-accent{background:linear-gradient(135deg,#7c3aed,#5b21b6);border-color:#7c3aed;color:#fff}
+.kgen-btn-accent{background:linear-gradient(135deg,var(--kuro-accent560,#7c3aed),color-mix(in srgb,var(--kuro-accent560,#7c3aed) 60%,#1a1020));border-color:var(--kuro-accent560,#7c3aed);color:#fff}
+
+/* Kuro 1.5.6-beta1: Theme-aware profile art + PFP fit + spacing fixes */
+/* Make profile art colors follow the active theme accent */
+.profile-art581, .pa155-studio, .pa155-header, .pa155-title-row h2 {
+  color: var(--ink, #f3eef7);
+}
+.pa155-count-pill, .pa155-stage-badge {
+  color: var(--kuro-accent560, #a65be4) !important;
+  border-color: color-mix(in srgb, var(--kuro-accent560, #a65be4) 40%, transparent) !important;
+  background: color-mix(in srgb, var(--kuro-accent560, #a65be4) 15%, transparent) !important;
+}
+.pa155-stage-avatar {
+  border-color: var(--kuro-accent560, #b478ee) !important;
+}
+.pa155-stage-bar {
+  border-color: color-mix(in srgb, var(--kuro-accent560, #a65be4) 25%, transparent) !important;
+}
+.pa155-btn-accent {
+  background: var(--kuro-accent560, #a65be4) !important;
+  color: #1b1027 !important;
+}
+.pa155-tab.is-active {
+  color: var(--kuro-accent560, #a65be4) !important;
+  border-color: var(--kuro-accent560, #a65be4) !important;
+}
+.pa155-more-btn {
+  color: var(--kuro-accent560, #a65be4) !important;
+}
+.art-tile581.is-on {
+  border-color: var(--kuro-accent560, #a65be4) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kuro-accent560, #a65be4) 35%, transparent) !important;
+}
+.header-mono571.has-art581 {
+  border-color: var(--kuro-accent560, #a65be4) !important;
+}
+/* PFP image: ensure full coverage, no gaps */
+.profile-avatar > img.profile-art-pfp581,
+.profile-mono571 > img.profile-mono-img581,
+.pa155-stage-pfp-img,
+.pa155-collapse-thumb .pa155-stage-pfp-img {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  border-radius: inherit !important;
+  display: block !important;
+  z-index: 2 !important;
+}
+/* Fix extra space above profile art section */
+.profile-art581 {
+  margin-top: 8px !important;
+}
+.pa155-studio.profile-art581 {
+  margin-top: 8px !important;
+}
+.pa155-header {
+  margin-bottom: 0 !important;
+}
+/* art-label581 color follows theme */
+.art-label581, .art-note581 {
+  color: var(--muted, #a999b5) !important;
+}

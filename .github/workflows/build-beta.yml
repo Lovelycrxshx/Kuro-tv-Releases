@@ -394,6 +394,7 @@ jobs:
           ! grep -Fq 'kuro-oled-hud153' "$PROJECT/assets/player-skin.js" \
             || { echo "::error::player-skin.js still contains 1.5.3 HUD skin."; exit 1; }
           python3 "$GITHUB_WORKSPACE/out/tools/ui_1.5.4.py" "$PROJECT"
+          python3 "$GITHUB_WORKSPACE/out/tools/remove_features_1.5.py" "$PROJECT"
           python3 - "$PROJECT" <<'VERIFY_THEME_TABLE'
           import glob, re, sys
           proj = sys.argv[1]
