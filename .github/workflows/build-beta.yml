@@ -361,8 +361,8 @@ jobs:
             || { echo "::error::KuroPresence564 DOWNLOAD_PAGE_URL missing."; exit 1; }
           grep -Fq 'utf8(s.downloadUrl)' "$PKG/KuroDiscordRpc563.java" \
             || { echo "::error::KuroDiscordRpc563 does not forward s.downloadUrl."; exit 1; }
-          grep -Fq "['download','Download button'" "$PROJECT/assets/settings560.js" \
-            || { echo "::error::settings560.js Download button toggle missing."; exit 1; }
+          ! grep -Fq "['download','Download button'" "$PROJECT/assets/settings560.js" \
+            || { echo "::error::settings560.js Download button toggle still present (should be removed)."; exit 1; }
 
           chmod +x "$PROJECT/tests/test-discord-native564.sh" \
                    "$PROJECT/tests/test-presence564.sh" \
@@ -671,7 +671,7 @@ jobs:
                   assert b"https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.6-beta1/Kuro-tv-1.5.6-beta1.apk" in so, f"{abi}: missing direct GitHub APK download URL"
                   assert b"Download\x00" in so, f"{abi}: missing Download label"
               js = z.read("assets/settings560.js").decode("utf-8")
-              assert "['download','Download button'" in js, "settings560.js missing Download button row"
+              assert "'download','Download button'" not in js, "settings560.js Download button row should be removed"
               assert "Contact developer & notice for bugs and error" in js, "settings560.js missing updated developer section title"
               dex_blobs = [z.read(n) for n in z.namelist() if n.startswith("classes") and n.endswith(".dex")]
               assert any(b"https://discord.com/users/825998094067695616" in d for d in dex_blobs), "dex missing verified developer Discord profile URL"

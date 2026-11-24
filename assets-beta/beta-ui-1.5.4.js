@@ -759,7 +759,6 @@
           toast(next ? 'Skip Filler enabled — hiding filler/recap episodes & skipping on Auto-Next.' : 'Skip Filler turned off.');
         };
       }
-      }
     }
 
     // Upgrade Next Unwatched button so it respects Skip Filler when enabled
@@ -2707,7 +2706,6 @@
         var cBtn = choice.querySelector('.choice-close567');
         if (cBtn) cBtn.click(); else choice.remove();
         return;
-      }
       }
       var tm = document.getElementById('tracker-match553');
       if (tm) {
