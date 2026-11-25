@@ -1,1 +1,0 @@
-package android.graphics;import android.content.res.Resources; public class BitmapFactory {public static class Options {public boolean inJustDecodeBounds;public int outWidth=1,outHeight=1,inSampleSize=1;}public static Bitmap decodeResource(Resources r,int id){return new Bitmap();}public static Bitmap decodeByteArray(byte[] d,int off,int len,Options o){return new Bitmap();}}
