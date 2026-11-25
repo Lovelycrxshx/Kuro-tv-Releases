@@ -1,0 +1,1 @@
+package android.app.job;import java.util.*;public class JobScheduler {public int schedules,cancellations;public final Map<Integer,JobInfo> jobs=new HashMap<>();public JobInfo getPendingJob(int id){return jobs.get(id);}public int schedule(JobInfo j){schedules++;jobs.put(j.id,j);return 1;}public void cancel(int id){cancellations++;jobs.remove(id);}}

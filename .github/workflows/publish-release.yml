@@ -1,0 +1,248 @@
+name: publish Kuro release
+
+# Unified release publisher for Kuro 1.x cuts.
+# The signed APK travels back into the branch as dist/Kuro-tv-<version>.apk (signed off
+# this runner with the pinned CN=Kuro Anime release key), and this job only publishes
+# when the SHA-256 matches the exact build that was signed.
+#
+# Trigger: manual dispatch, or a commit whose message contains "[release 1.5.6]".
+
+on:
+  push:
+    branches: [main, 'arena/**']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 1.5.6)"
+        required: false
+        default: "1.5.6"
+      version_code:
+        description: "Android versionCode (e.g. 133)"
+        required: false
+        default: "133"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kuro-publish-release
+  cancel-in-progress: false
+
+env:
+  VERSION: ${{ inputs.version || '1.5.6' }}
+  VERSION_CODE: ${{ inputs.version_code || '133' }}
+  TAG: v${{ inputs.version || '1.5.6' }}
+  APK_NAME: Kuro-tv-${{ inputs.version || '1.5.6' }}
+  APK_SHA256: "FILL_ME_SHA256SUM_OF_Kuro-tv-1.5.6.apk"
+  SIGNER_SHA256: "1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e"
+  UNSIGNED_SHA256: "FILL_ME_SHA256SUM_OF_Kuro-tv-1.5.6-aligned.apk"
+  SOURCE_ID: 14hjVYI5qYBjxH9w2st_5uu7-DYH1uPNH
+
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release 1.5.6]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Refuse to publish with an unset digest
+        run: |
+          set -euo pipefail
+          for v in APK_SHA256 SIGNER_SHA256 UNSIGNED_SHA256; do
+            if ! printf '%s' "${!v}" | grep -qE '^[0-9a-f]{64}$'; then
+              echo "::error::$v is not a real digest ('${!v}')."
+              exit 1
+            fi
+          done
+
+      - name: Gate on the exact build that was signed
+        run: |
+          set -euo pipefail
+          APK="dist/$APK_NAME.apk"
+          [ -f "$APK" ] || { echo "::error::$APK is missing from this branch."; exit 1; }
+          SIZE=$(stat -c%s "$APK")
+          echo "signed APK: $SIZE bytes"
+          [ "$SIZE" -gt 40000000 ] || { echo "::error::$APK is only $SIZE bytes - that is not the build."; exit 1; }
+          ACTUAL=$(sha256sum "$APK" | cut -d' ' -f1)
+          echo "expected: $APK_SHA256"
+          echo "actual  : $ACTUAL"
+          [ "$ACTUAL" = "$APK_SHA256" ] || { echo "::error::checksum mismatch - refusing to publish a different binary"; exit 1; }
+          grep -q "$ACTUAL" "dist/$APK_NAME.apk.sha256" || { echo "::error::the .sha256 file does not match the APK"; exit 1; }
+          UNSIGNED=$(sha256sum "dist/$APK_NAME-aligned.apk" | cut -d' ' -f1)
+          echo "unsigned build: $UNSIGNED"
+          [ "$UNSIGNED" = "$UNSIGNED_SHA256" ] || { echo "::error::the unsigned build in dist is not the one that was signed"; exit 1; }
+
+          java -jar dist/toolchain/apksigner.jar verify \
+            --min-sdk-version 26 --max-sdk-version 35 \
+            --print-certs --verbose "$APK" 2>&1 | tee /tmp/verify.txt
+          grep -qiE "Verified using v2 scheme .*: true" /tmp/verify.txt \
+            || { echo "::error::apksigner did not accept a v2 signature"; exit 1; }
+          tr -d ':' < /tmp/verify.txt | tr 'A-F' 'a-f' | grep -q "$SIGNER_SHA256" \
+            || { echo "::error::the APK is not signed by the pinned Kuro Anime certificate"; exit 1; }
+
+          python3 - "$APK" "$VERSION" <<'PY'
+          import sys, zipfile
+          apk, version = sys.argv[1], sys.argv[2]
+          with zipfile.ZipFile(apk) as z:
+              names = set(z.namelist())
+              dex = [z.read(n) for n in z.namelist() if n.startswith("classes") and n.endswith(".dex")]
+              for f in (
+                  "beta-motion-1.5.css", "beta-motion-1.5.js", "theme-rich-1.5.css",
+                  "beta-extras-1.5.css", "beta-extras-1.5.js", "beta-continue-1.5.js",
+                  "beta-whatsnew-1.5.js", "beta-downloads-1.5.js",
+                  "beta-polish-1.5.2.css", "beta-polish-1.5.2.js",
+                  "beta-ui-1.5.4.css", "beta-ui-1.5.4.js", "intro/animation.mp4",
+              ):
+                  assert f"assets/{f}" in names, f"assets/{f} is missing from the APK"
+                  assert any(f"/{f}".encode() in d for d in dex), f"{f} is packed but the WebView would drop it"
+              assert b"ic_stat_kuro" in z.read("resources.arsc"), "resources.arsc missing ic_stat_kuro"
+              assert b"kuro_tv_banner" in z.read("resources.arsc"), "resources.arsc missing kuro_tv_banner"
+              wn = z.read("assets/beta-whatsnew-1.5.js").decode("utf-8")
+              assert f"var STAMP = '{version}';" in wn, f"beta-whatsnew-1.5.js stamp is not {version}"
+              skin = z.read("assets/player-skin.js").decode("utf-8")
+              assert "kuro-video-skin" in skin and "kuro-oled-hud153" not in skin, "assets/player-skin.js is not the classic player skin"
+              sjs = z.read("assets/settings560.js").decode("utf-8")
+              assert "Contact developer & notice for bugs and error" in sjs, "assets/settings560.js missing updated developer section title"
+              assert not any(b"825998094067615616" in d for d in dex), "dex still contains typo Discord user ID"
+              for tok in (
+                  "themeAmoled152",
+                  "checkpointsExport152",
+                  "Update alerts are off",
+                  f"releases/download/v{version}/Kuro-tv-{version}.apk",
+                  "https://discord.com/users/825998094067695616",
+                  "KuroFastNet154",
+                  "other-servers-154",
+                  "ep-playlist-scroll-154",
+                  "watch-rec-hscroll-154",
+              ):
+                  assert any(tok.encode() in d for d in dex), f"dex is missing {tok}"
+          PY
+          echo "All ${VERSION} artifacts sane; APK matches the signed build."
+
+      - name: Build slim source archive (clean Gradle project tree only)
+        run: |
+          set -euo pipefail
+          URL="https://drive.usercontent.google.com/download?id=${SOURCE_ID}&export=download&confirm=t"
+          code=$(curl -sSL --retry 3 --retry-delay 4 -o "$RUNNER_TEMP/src.zip" -w '%{http_code}' "$URL")
+          bytes=$(stat -c%s "$RUNNER_TEMP/src.zip" 2>/dev/null || echo 0)
+          echo "HTTP $code, $bytes bytes"
+          [ "$code" = "200" ] && [ "$bytes" -gt 1000000 ] \
+            || { echo "::error::source download failed (HTTP $code, $bytes bytes)"; exit 1; }
+          WORK="$RUNNER_TEMP/kuro-src"
+          rm -rf "$WORK" && mkdir -p "$WORK"
+          unzip -q "$RUNNER_TEMP/src.zip" -d "$WORK"
+          PROJECT=$(dirname "$(find "$WORK" -maxdepth 3 -name settings.gradle -print -quit)")
+          [ -n "$PROJECT" ] || { echo "::error::no settings.gradle in the source zip"; exit 1; }
+          rm -f "$PROJECT/assets/profile-art/pfp/art-"*.webp "$PROJECT/assets/profile-art/banner/art-"*.webp
+          ( cd assets-1.1 && find . -type f -print0 ) | while IFS= read -r -d '' f; do
+            mkdir -p "$PROJECT/assets/$(dirname "$f")"
+            cp -f "assets-1.1/$f" "$PROJECT/assets/$f"
+          done
+          ( cd assets-beta && find . -type f -print0 ) | while IFS= read -r -d '' f; do
+            mkdir -p "$PROJECT/assets/$(dirname "$f")"
+            cp -f "assets-beta/$f" "$PROJECT/assets/$f"
+          done
+          sed -i -E "s/versionCode +[0-9]+/versionCode ${VERSION_CODE}/" "$PROJECT/build.gradle"
+          sed -i -E "s/versionName +'[^']*'/versionName '${VERSION}'/" "$PROJECT/build.gradle"
+          grep -nE "versionName|versionCode" "$PROJECT/build.gradle"
+          python3 tools/webview_assets_1.3.py "$PROJECT" assets-1.1 assets-beta
+          python3 tools/theme_native_1.2.py "$PROJECT"
+          python3 tools/discord_link_1.5.py "$PROJECT"
+          python3 tools/discord_rpc_download_1.5.py "$PROJECT"
+          python3 tools/update_button_1.5.py "$PROJECT"
+          python3 tools/offline_beta_1.5.py "$PROJECT"
+          python3 tools/polish_1.5.2.py "$PROJECT"
+          python3 tools/ui_1.5.4.py "$PROJECT"
+          cp -f design/native-src/tests/native-panel/src/test/java/app/lovelycrxshx/kuro/KuroUpdater572Test.java \
+            "$PROJECT/tests/native-panel/src/test/java/app/lovelycrxshx/kuro/KuroUpdater572Test.java"
+
+          rm -f "$GITHUB_WORKSPACE/dist/$APK_NAME-Source.zip"
+          ( cd "$PROJECT" && zip -qr "$GITHUB_WORKSPACE/dist/$APK_NAME-Source.zip" . )
+
+          SRC_SIZE=$(stat -c%s "$GITHUB_WORKSPACE/dist/$APK_NAME-Source.zip")
+          echo "Source.zip size: $SRC_SIZE bytes"
+          if [ "$SRC_SIZE" -lt 1000000 ] || [ "$SRC_SIZE" -gt 50000000 ]; then
+            echo "::error::Source.zip size ($SRC_SIZE bytes) out of expected 1..50 MB range (check PROJECT root)"
+            exit 1
+          fi
+          python3 - "dist/$APK_NAME-Source.zip" <<'PY'
+          import re, sys, zipfile
+          with zipfile.ZipFile(sys.argv[1]) as z:
+              names = z.namelist()
+              assert not any(re.search(r"(^|/)\.git/|dist/.*\.apk", n) for n in names), "Source.zip contains .git or dist APKs"
+              ic = [n for n in names if n.endswith("ic_stat_kuro.xml")]
+              assert ic and b'viewportWidth="24"' in z.read(ic[0]), "Source.zip missing ic_stat_kuro.xml"
+              ud = [n for n in names if n.endswith("KuroUpdateDialog582.java")]
+              assert ud and b"notifBanner152" in z.read(ud[0]), "Source.zip missing notifBanner152"
+              fn = [n for n in names if n.endswith("KuroFastNet154.java")]
+              assert fn and b"KuroFastNet154" in z.read(fn[0]), "Source.zip missing KuroFastNet154.java"
+              ui = [n for n in names if n.endswith("assets/beta-ui-1.5.4.js")]
+              assert ui and b"kuroOpenRecommended154" in z.read(ui[0]), "Source.zip missing assets/beta-ui-1.5.4.js"
+              ps = [n for n in names if n.endswith("assets/player-skin.js")]
+              assert ps and b"kuro-video-skin" in z.read(ps[0]) and b"kuro-oled-hud153" not in z.read(ps[0]), "Source.zip player-skin.js is not the classic player"
+          PY
+          printf '%s  %s\n' "$(sha256sum "dist/$APK_NAME-Source.zip" | cut -d' ' -f1)" "$APK_NAME-Source.zip" \
+            > "dist/$APK_NAME-Source.zip.sha256"
+          ls -lh "dist/$APK_NAME-Source.zip" "dist/$APK_NAME-Source.zip.sha256"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          NOTES_FILE="RELEASE-${VERSION}.md"
+          [ -s "$NOTES_FILE" ] || { echo "::error::$NOTES_FILE missing"; exit 1; }
+          ASSETS=(dist/$APK_NAME.apk dist/$APK_NAME.apk.sha256 dist/$APK_NAME-Source.zip dist/$APK_NAME-Source.zip.sha256)
+          for f in "${ASSETS[@]}"; do [ -s "$f" ] || { echo "::error::$f missing"; exit 1; }; done
+          SIZE=$(stat -c%s "dist/$APK_NAME.apk")
+          sed -e "s/{{APK_SHA256}}/$APK_SHA256/" -e "s/{{APK_BYTES}}/$SIZE/" "$NOTES_FILE" > /tmp/notes.md
+          grep -q '{{' /tmp/notes.md && { echo "::error::release notes still contain placeholders"; exit 1; } || true
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release $TAG exists - uploading assets"
+            if ! OUT=$(gh release upload "$TAG" "${ASSETS[@]}" --clobber 2>&1); then
+              echo "::error::release upload failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
+            fi
+            if ! OUT=$(gh release edit "$TAG" --notes-file /tmp/notes.md --latest 2>&1); then
+              echo "::error::release edit failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
+            fi
+          else
+            if ! OUT=$(gh release create "$TAG" "${ASSETS[@]}" \
+                 --title "Kuro ${VERSION}" --notes-file /tmp/notes.md --latest 2>&1); then
+              echo "::error::release create failed: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-400)"; exit 1
+            fi
+            echo "$OUT"
+          fi
+          gh release view "$TAG" --json tagName,name,assets \
+            --jq '"published \(.tagName) \(.name) | assets: \(.assets|map("\(.name) \(.size)B")|join(", "))"'
+
+      - name: Keep the apksigner output on the branch (failures only)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          [ -s /tmp/verify.txt ] || java -jar dist/toolchain/apksigner.jar verify --print-certs --verbose "dist/$APK_NAME.apk" > /tmp/verify.txt 2>&1
+          cp /tmp/verify.txt dist/apksigner-verify.txt
+          git config user.name "Siva"
+          git config user.email "sivaabhishek4@gmail.com"
+          git add -f dist/apksigner-verify.txt
+          git commit -m "publish: apksigner output from the failed run"
+          git push origin "HEAD:${GITHUB_REF_NAME}" || echo "::warning::could not push the diagnostics"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Release $TAG"
+            echo "- tag: \`$TAG\` (target \`${{ github.ref_name }}\`)"
+            echo "- APK SHA-256 gate: \`$APK_SHA256\`"
+            echo "- notes: \`RELEASE-${VERSION}.md\`"
+          } >> "$GITHUB_STEP_SUMMARY"

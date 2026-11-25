@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only Kuro's own downloaded update files are shareable with Android's installer. -->
+<paths>
+    <files-path name="kuro_updates572" path="updates/" />
+</paths>

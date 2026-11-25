@@ -1,0 +1,216 @@
+/* Kuro 1.5.2:
+ *   1. Pure black (OLED) mode (#000000 floor + #0A0A0E elevated cards) across all
+ *      twenty accents when App theme is Dark.
+ *   2. Layout-matched shimmer loading skeletons on Home shelves and Browse/Home grids.
+ *   3. Settings -> Appearance and startup "Pure black (OLED)" pill switch.
+ */
+
+/* ----------------------------------------------------- Pure black (OLED) --- */
+html[data-amoled="1"]:not([data-theme="light"]) {
+ --bg: #000000;
+ --panel: #0a0a0e;
+ background: #000000 !important;
+}
+
+html[data-amoled="1"]:not([data-theme="light"]) body,
+html[data-amoled="1"]:not([data-theme="light"]) .app {
+ background: #000000 !important;
+}
+
+html[data-amoled="1"]:not([data-theme="light"]) header,
+html[data-amoled="1"]:not([data-theme="light"]) .kuro-dock {
+ background: rgba(0, 0, 0, 0.92) !important;
+ border-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+html[data-amoled="1"]:not([data-theme="light"]) .kuro-layer560 .settings-panel560,
+html[data-amoled="1"]:not([data-theme="light"]) .km-sheet-panel-15,
+html[data-amoled="1"]:not([data-theme="light"]) .sort-sheet {
+ background: #000000 !important;
+ border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html[data-amoled="1"]:not([data-theme="light"]) .settings-header560 {
+ background: rgba(0, 0, 0, 0.94) !important;
+ border-bottom-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+html[data-amoled="1"]:not([data-theme="light"]) .settings-group560,
+html[data-amoled="1"]:not([data-theme="light"]) .settings-search560,
+html[data-amoled="1"]:not([data-theme="light"]) #accent-111,
+html[data-amoled="1"]:not([data-theme="light"]) .km-whatsnew-15,
+html[data-amoled="1"]:not([data-theme="light"]) .km-continue-15,
+html[data-amoled="1"]:not([data-theme="light"]) .unified-banner,
+html[data-amoled="1"]:not([data-theme="light"]) .panel,
+html[data-amoled="1"]:not([data-theme="light"]) .notice,
+html[data-amoled="1"]:not([data-theme="light"]) .anime-extra,
+html[data-amoled="1"]:not([data-theme="light"]) .rail-message,
+html[data-amoled="1"]:not([data-theme="light"]) .chip:not(.active),
+html[data-amoled="1"]:not([data-theme="light"]) .btn:not(.primary),
+html[data-amoled="1"]:not([data-theme="light"]) .search input,
+html[data-amoled="1"]:not([data-theme="light"]) .episodeList button,
+html[data-amoled="1"]:not([data-theme="light"]) .episodeGrid button,
+html[data-amoled="1"]:not([data-theme="light"]) .km-sheet-item-15,
+html[data-amoled="1"]:not([data-theme="light"]) .sort-option:not(.chosen),
+html[data-amoled="1"]:not([data-theme="light"]) .genre-tile {
+ background: #0a0a0e !important;
+ border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html[data-amoled="1"]:not([data-theme="light"]) .poster,
+html[data-amoled="1"]:not([data-theme="light"]) .km-continue-art-15 {
+ background: #0a0a0e !important;
+ border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ------------------------------------------- Pure black toggle pill in UI --- */
+.km-amoled-pill-152 {
+ flex: none;
+ display: inline-flex;
+ align-items: center;
+ gap: 6px;
+ padding: 5px 11px;
+ border-radius: 999px;
+ font-size: 11px;
+ font-weight: 800;
+ letter-spacing: 0.04em;
+ border: 1px solid rgba(255, 255, 255, 0.16);
+ background: rgba(255, 255, 255, 0.06);
+ color: var(--muted, #b5a8c0);
+ transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.km-amoled-pill-152::before {
+ content: '';
+ width: 7px;
+ height: 7px;
+ border-radius: 50%;
+ background: currentColor;
+ opacity: 0.55;
+}
+
+.km-amoled-row-152[aria-pressed="true"] .km-amoled-pill-152 {
+ border-color: var(--ku-accent, var(--cyan, #a65be4));
+ background: color-mix(in srgb, var(--ku-accent, var(--cyan, #a65be4)) 18%, transparent);
+ color: var(--ku-accent-soft, var(--ink, #ffffff));
+}
+
+.km-amoled-row-152[aria-pressed="true"] .km-amoled-pill-152::before {
+ background: var(--ku-accent, var(--cyan, #a65be4));
+ opacity: 1;
+}
+
+/* ----------------------------------------- Home & Browse v2 Skeletons --- */
+@keyframes km-shimmer-152 {
+ 0% { transform: translateX(-100%); }
+ 100% { transform: translateX(100%); }
+}
+
+/* Keep the fallback #spotlight > .hero matching .hero-slide (214px) while loading */
+#main.home-surface576.km-home-loading-152 #spotlight > .hero {
+ position: relative;
+ overflow: hidden;
+ min-height: 214px;
+ border-radius: 18px;
+}
+
+#main.home-surface576.km-home-loading-152 #spotlight > .hero::after,
+.km-skel-poster-152::after,
+.km-skel-line-152::after {
+ content: '';
+ position: absolute;
+ inset: 0;
+ background: linear-gradient(
+  90deg,
+  transparent 0%,
+  rgba(255, 255, 255, 0.07) 48%,
+  rgba(255, 255, 255, 0.12) 52%,
+  transparent 100%
+ );
+ transform: translateX(-100%);
+ animation: km-shimmer-152 1.35s ease-in-out infinite;
+ pointer-events: none;
+}
+
+/* Keep aria-live loading status accessible to screen readers while skeletons show */
+.shelf.km-has-skel-152 > .rail-message {
+ position: absolute !important;
+ width: 1px !important;
+ height: 1px !important;
+ padding: 0 !important;
+ margin: -1px !important;
+ overflow: hidden !important;
+ clip: rect(0, 0, 0, 0) !important;
+ white-space: nowrap !important;
+ border: 0 !important;
+}
+
+.km-skel-shelf-152 {
+ display: grid;
+ grid-auto-flow: column;
+ grid-auto-columns: calc((100% - 26px) / 3.25);
+ gap: 9px;
+ overflow: hidden;
+}
+
+@media (max-width: 350px) {
+ .km-skel-shelf-152 {
+  grid-auto-columns: calc((100% - 20px) / 3.05);
+ }
+}
+
+.km-skel-results-152 {
+ display: grid;
+ grid-template-columns: repeat(3, minmax(0, 1fr));
+ gap: 13px 9px;
+ margin-bottom: 12px;
+}
+
+@media (min-width: 500px) {
+ .km-skel-results-152 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+ }
+}
+
+.km-skel-card-152 {
+ min-width: 0;
+}
+
+.km-skel-poster-152 {
+ position: relative;
+ aspect-ratio: 2 / 3;
+ border-radius: 10px;
+ overflow: hidden;
+ background: rgba(255, 255, 255, 0.045);
+ border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.km-skel-line-152 {
+ position: relative;
+ overflow: hidden;
+ height: 11px;
+ margin-top: 8px;
+ border-radius: 5px;
+ width: 84%;
+ background: rgba(255, 255, 255, 0.055);
+}
+
+.km-skel-line-152.km-skel-short-152 {
+ height: 9px;
+ margin-top: 5px;
+ width: 52%;
+ background: rgba(255, 255, 255, 0.038);
+}
+
+html[data-amoled="1"]:not([data-theme="light"]) .km-skel-poster-152 {
+ background: #0a0a0e;
+ border-color: rgba(255, 255, 255, 0.09);
+}
+
+@media (prefers-reduced-motion: reduce) {
+ #main.home-surface576.km-home-loading-152 #spotlight > .hero::after,
+ .km-skel-poster-152::after,
+ .km-skel-line-152::after {
+  animation: none !important;
+ }
+}
