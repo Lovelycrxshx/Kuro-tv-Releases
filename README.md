@@ -1,63 +1,38 @@
 # Kuro TV — Releases
 
-Kuro TV is an anime streaming app (Android, versionCode 132, versionName `1.5.5-libs18-fastfail`)
-with a unified multi-source search over 17+ streaming providers, HLS playback, mirror failover,
-and a themeable UI with a teal default accent.
+Kuro TV is an anime streaming app (Android). Latest source release: **1.5.6**
+(versionCode 133, versionName `1.5.6`) with a unified multi-source search over
+17+ streaming providers, HLS playback, mirror failover, and a themeable UI.
 
-This repository hosts the app preview images and the release source artifacts.
-
-## App Screen Previews
-
-| Detail / Catalog | Search | Library | Player |
-| --- | --- | --- | --- |
-| ![Detail](kuro-preview-1-detail.png) | ![Search](kuro-preview-2-search.png) | ![Library](kuro-preview-3-library.png) | ![Player](kuro-preview-4-player.png) |
-
-## Visual Preview
-
-![Kuro Visual Preview](kuro-visual-preview.png)
-
-## Profile Art Previews
-
-Profile pictures (PFP) with matching banners, as shown in the profile art section.
-
-| Set 1 | Set 2 |
-| --- | --- |
-| ![Profile Art 1](kuro-pfp-banner-preview-1.png) | ![Profile Art 2](kuro-pfp-banner-preview-2.png) |
-
-### Manga-style PFP + Banner Sets
-
-The manga-style profile art sets (2, 3 and 4 below are shipped in the app as profile art entries).
-
-| Set 1 | Set 2 |
-| --- | --- |
-| ![Manga PFP Banner 1](kuro-manga-pfp-banner-1.png) | ![Manga PFP Banner 2](kuro-manga-pfp-banner-2.png) |
-
-| Set 3 | Set 4 |
-| --- | --- |
-| ![Manga PFP Banner 3](kuro-manga-pfp-banner-3.png) | ![Manga PFP Banner 4](kuro-manga-pfp-banner-4.png) |
+This repository hosts the release source artifacts.
 
 ## Repository Layout
 
 | Path | Contents |
 | --- | --- |
-| `kuro-*.png` | App screen, visual, and profile-art preview images shown above |
-| `google_drive/v4/` | **Latest** source release: `Kuro-1.5.5-libs18-fastfail-vc132-source-v4.zip`, source as `.txt`, and `SHA256SUMS.txt` |
-| `google_drive/v3/` | Superseded v3 source artifacts (teal default + 3 manga-style profile art entries) |
-| `google_drive/v2/` | Superseded v2 source artifacts |
+| `google_drive/v1.5.6/` | **Latest** source release: `Kuro-1.5.6-libs18-fastfail-vc133-source.zip`, source as `.txt`, and `SHA256SUMS.txt` |
+| `google_drive/v4/` | Superseded v4 source artifacts (six features: domain sweeper, position-lock, brute-force quality, unified search default, live theme preview) |
 
-## Latest Release (v4)
+## Latest Release (1.5.6)
 
-- `Kuro-1.5.5-libs18-fastfail-vc132-source-v4.zip` — full Android source, ready to build
+- `Kuro-1.5.6-libs18-fastfail-vc133-source.zip` — full Android source, ready to build
 - Source as plain text for quick browsing/diffing
 - `SHA256SUMS.txt` — checksums for verification
 
-v4 adds six features on top of v3:
+### What's new in 1.5.6
 
-1. **Domain health sweeper** — probes 20 streaming domains every 10 minutes, prunes dead mirrors automatically
-2. **Position-lock on server switch** — remembers playback position across failover server switches
-3. **Brute-force quality render** — 1080p→720p→480p→360p fallback on playback errors (HLS + direct URLs)
-4. **Unified search default** — all sources searched at startup instead of a single provider
-5. **Live theme accent preview** — real catalogue/player/dialog samples update instantly per swatch
-6. Teal default theme + 3 manga-style profile art entries (from v3)
+1. **Additional settings in Account — no login required.** A new *Additional settings*
+   row in the Account section opens themes, playback, privacy and updates for every
+   visitor, signed in or not.
+2. **Discord custom RPC requires a Discord login.** The Rich Presence and Presence
+   customization panels now show a lock notice and disable their controls until a
+   Discord account is connected in Profile → Account.
+3. **Profile art: avatars and banners fully separate.** The combined Paired Sets view
+   and Surprise pair action are removed. Every avatar (PFP) and every 16:9 banner is
+   chosen independently. Tab counts are now dynamic (43 entries).
+4. **Update button position fixed** for a clean fit in the header beside the other
+   header controls.
+5. Bug fixes and polish across the app.
 
-> The APK is built by the maintainer from the source zip — see the Drive artifacts for the download.
+> The APK is built by the maintainer from the source zip — see the Drive artifacts
+> for the download.
