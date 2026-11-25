@@ -1,0 +1,2 @@
+72e2c88b25d932cbd6d1a304cc32a15476a928f308a8a8b824eba5f5a608c8b4  Kuro-1.5.5-libs18-fastfail-vc132-source-v4.zip
+dd37439cf039eb43424a2ebee949fb64bf38064e4a633a5dba3ecc132b78e476  Kuro-1.5.5-libs18-fastfail-vc132-source-v4.txt
