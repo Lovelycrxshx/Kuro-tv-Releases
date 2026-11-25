@@ -1,25 +1,33 @@
 # Kuro TV
 
-An open-source media client designed for Android TV, Fire TV, and mobile devices.
+An open-source media client for Android TV, Fire TV, and mobile devices.
 
 [![Latest Release](https://img.shields.io/badge/Latest_Version-1.5.6-blue)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green.svg)](LICENSE)
 
-**Current release: 1.5.6** (`versionCode` 133) — release notes in [RELEASE-1.5.6.md](RELEASE-1.5.6.md).
-Notes for every earlier cut are in [archive/1.x/](archive/1.x/), and the same text is on the
-[releases page](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases).
+**Current release: 1.5.6** (`versionCode` 133) — release notes in [RELEASE-1.5.6.md](RELEASE-1.5.6.md),
+attached to the [latest release](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest).
 
 ---
 
 ## 📥 Download
 
-[![Download](design/download-button.svg)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.6/Kuro-tv-1.5.6.apk)
+The APK and its source archive are attached to the GitHub release as assets:
 
-* **[Direct APK download](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.6/Kuro-tv-1.5.6.apk)** — signed APK (`Kuro-tv-1.5.6.apk`, 49.5 MiB) straight from GitHub Releases.
-* **[Download page](https://lovelycrxshx.github.io/Kuro-tv-Releases/)** — direct GitHub APK download,
-  SHA-256 checksum and install steps.
-* **[Latest release](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)** — APK,
-  checksum and the matching source archive on GitHub Releases.
+* **[Direct APK download](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.6/Kuro-tv-1.5.6.apk)** —
+  signed APK (`Kuro-tv-1.5.6.apk`, ~49.5 MiB) straight from GitHub Releases.
+* **[Latest release](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)** — the APK, its
+  `.sha256` checksum, and the matching source archive (`Kuro-tv-1.5.6-Source.zip` + `.sha256`).
+
+Verify the download before installing:
+
+```
+sha256sum Kuro-tv-1.5.6.apk
+# compare against Kuro-tv-1.5.6.apk.sha256 on the release page
+
+apksigner verify --print-certs Kuro-tv-1.5.6.apk
+# CN=Kuro Anime
+```
 
 ---
 
@@ -34,57 +42,37 @@ Kuro updates itself, in the app, from this repository:
 * if that window has already passed, the update happens on the next check. Android always
   shows its own confirmation; no app can install silently.
 
-**One-time note for the 5.x line:** the numbers restarted at 1.0. A device still on 5.83 or
-older compares version names, and by that arithmetic `1.0` is below `5.83`, so it will not
+**One-time note for the 5.x line:** the version numbers restarted at 1.0. A device still on 5.83
+or older compares version names, and by that arithmetic `1.0` is below `5.83`, so it will not
 offer this release by itself — install 1.0 by hand once (same signing key, over the top) and
 every update after that is automatic again.
 
 ---
 
-## 🗂️ Sources & mirrors
-
-Kuro is a player / front-end and hosts no media. The catalogue comes from these public mirrors.
-
 ## 📺 Features
 
 * **Cinematic Title Detail v2** — full-bleed banner header, ★ score & studio pills, interactive
-  **Franchise & Watch-Order** strip, Canon / Filler / Recap badges, **Skip Filler** switch, and
-  batch offline downloads
-* **Streamlined YouTube-style Watch page** — 5 servers per page with an **Other servers** switcher,
-  3-row scrollable episode playlist card, and a **YouTube Desktop horizontal "More anime" shelf**
-  right below Anime details
-* **Smart Multi-Filter Browse & Voice Search** — combinable OLED filter pills (**Dub Available**,
-  **★ 8.0+**, Airing / Completed, Genre, Format, Year), native Android Voice Search mic pill, and
-  SUB | DUB poster pills
+  Franchise & Watch-Order strip, Canon / Filler / Recap badges, Skip Filler switch, batch offline downloads
+* **Streamlined YouTube-style Watch page** — 5 servers per page with an Other servers switcher,
+  3-row scrollable episode playlist card, and a YouTube Desktop "More anime" shelf
+* **Smart Multi-Filter Browse & Voice Search** — combinable OLED filter pills (Dub Available,
+  ★ 8.0+, Airing / Completed, Genre, Format, Year), native Android Voice Search mic pill, SUB | DUB poster pills
 * **Desktop-site Left-Rail & Android TV / Fire TV Leanback UI** — frosted-OLED left navigation rail,
-  widescreen hero & shelves, and glowing accent DPAD spatial focus
+  widescreen hero & shelves, glowing accent DPAD spatial focus
 * **Encrypted DNS (DoH) + 8-lane catalog engine + Multi-layer Ad-Guard** — built-in `1.1.1.1` /
-  `8.8.8.8` DoH resolver to unblock carrier-restricted mirrors without a VPN, HLS codec fallback,
-  low-RAM WebView crash recovery, and zero-popup player ad blocking
-* **40 Anime & Manga Profile Art sets + Two-way AniList / MAL Sync** — 40 curated face avatars and
-  matching `16:9` banners (`art-11`–`art-50`), live AniList & MyAnimeList sync cards, and integrated
-  Discord Rich Presence (Social SDK 1.11.24259) with a direct GitHub Releases **Download** button
+  `8.8.8.8` DoH resolver, HLS codec fallback, low-RAM WebView crash recovery, zero-popup player ad blocking
+* **Anime & Manga Profile Art + Two-way AniList / MAL Sync** — curated avatars and matching `16:9`
+  banners, live AniList & MyAnimeList sync cards, and Discord Rich Presence with a direct GitHub
+  Releases Download button
 * Native Media3 / ExoPlayer playback, offline downloads and picture-in-picture
 * **OLED Segmented Chapters & Pills player skin** across all server embeds, the built-in HLS player,
-  native Media3 playback, and offline downloads — with segmented OP / ED chapter markers and accent-lit pills
-* **Fullscreen swipe-up Up Next & Episodes sheet** plus a non-blocking **Auto-Next floating card** at episode end
+  native Media3 playback, and offline downloads
+* **Fullscreen swipe-up Up Next & Episodes sheet** plus a non-blocking Auto-Next floating card
 * Built against Android 15 (API 35) with 16 KB page-aligned native libraries
-* Clean, ad-free navigation
-* Lightweight playback engine with subtitle support
-* Skip suggestions on every episode — a source marker or your own marker always wins, and a
-  suggestion never skips by itself
-* **Continue watching** — Home opens with the episodes you have started, the minutes you are in,
-  and one tap back to the right episode
-* **Long press a poster** — Open, add or remove from My List, or hide it from Home (with a
-  **Hidden titles** manager in Settings → Privacy and links)
-* **Twenty accents + Pure black (OLED)** chosen in Settings (defaulting to **Signature Violet**), with the native dialogs, bars and
-  player following
-* **Shimmer loading skeletons** on Home and Browse so catalogues never jump when artwork arrives
-* **Local `.json` Backup & restore** — lists, history, episode resume checkpoints, profile art,
-  accent, OLED mode and settings
-* **Downloads upkeep** — count and size, delete watched, keep the latest episode per series,
-  delete all, and an optional quiet sweep every 7 or 30 days
-* **What's new** — one card per build on Home, and developer contact & notices in Settings → Contact developer & notice for bugs and error
+* **Continue watching**, **Long-press poster** actions, **Twenty accents + Pure black (OLED)**,
+  **Shimmer loading skeletons**, **Local `.json` Backup & restore**, and **Downloads upkeep**
+* **What's new** — one card per build on Home, and developer contact & notices in
+  Settings → Contact developer & notice for bugs and error
 
 ---
 
@@ -103,16 +91,8 @@ and logins: same package `app.lovelycrxshx.kuro`, same signing key.
 
 ## ⚠️ Disclaimer
 
-Kuro TV is purely a media player / front-end interface. It does not host, upload, or control any external media content or streams. All scrapers and metadata providers are run locally by the user.
-
----
-
-## 🗺️ Roadmap
-
-What's next for the 1.x line — an update channel with a real beta ring, the DPAD/focus
-overhaul, the airing calendar and custom themes — lives in
-**[ROADMAP.md](ROADMAP.md)**. The 5.x line is closed, and 1.0–1.5.3 are history: both are in
-**[archive/](archive/)**.
+Kuro TV is purely a media player / front-end interface. It does not host, upload, or control any
+external media content or streams. All scrapers and metadata providers are run locally by the user.
 
 ---
 
