@@ -1,7 +1,7 @@
 # Kuro TV — Release Notes
 
-Latest release: **1.5.6** (versionCode 133) — source available on GitHub Releases
-and Google Drive.
+Latest release: **1.5.6** (versionCode 133) — APK and source are hosted directly
+in this repository under `releases/`.
 
 ## Latest — 1.5.6
 
@@ -40,6 +40,10 @@ and Google Drive.
 
 ### Download
 
+All files are in the `releases/` folder of this repository:
+
+- `Kuro-tv-1.5.6.apk` — the app APK (install over the top; same package and
+  signing key as previous versions, no uninstall needed)
 - `Kuro-1.5.6-libs18-fastfail-vc133-source.zip` — full Android source, ready
   to build (the APK is built by the maintainer from this zip)
 - `Kuro-1.5.6-libs18-fastfail-vc133-source.txt` — source as plain text
