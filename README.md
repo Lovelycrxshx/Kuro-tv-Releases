@@ -2,10 +2,10 @@
 
 An open-source media client designed for Android TV, Fire TV, and mobile devices.
 
-[![Latest Release](https://img.shields.io/badge/Latest_Version-1.5.4-blue)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)
+[![Latest Release](https://img.shields.io/badge/Latest_Version-1.5.6-blue)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green.svg)](LICENSE)
 
-**Current release: 1.5.4** (`versionCode` 96) — release notes in [RELEASE-1.5.4.md](RELEASE-1.5.4.md).
+**Current release: 1.5.6** (`versionCode` 133) — release notes in [RELEASE-1.5.6.md](RELEASE-1.5.6.md).
 Notes for every earlier cut are in [archive/1.x/](archive/1.x/), and the same text is on the
 [releases page](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases).
 
@@ -13,9 +13,9 @@ Notes for every earlier cut are in [archive/1.x/](archive/1.x/), and the same te
 
 ## 📥 Download
 
-[![Download](design/download-button.svg)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.4/Kuro-tv-1.5.4.apk)
+[![Download](design/download-button.svg)](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.6/Kuro-tv-1.5.6.apk)
 
-* **[Direct APK download](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.4/Kuro-tv-1.5.4.apk)** — signed APK (`Kuro-tv-1.5.4.apk`, 50.6 MiB) straight from GitHub Releases.
+* **[Direct APK download](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/download/v1.5.6/Kuro-tv-1.5.6.apk)** — signed APK (`Kuro-tv-1.5.6.apk`, 49.5 MiB) straight from GitHub Releases.
 * **[Download page](https://lovelycrxshx.github.io/Kuro-tv-Releases/)** — direct GitHub APK download,
   SHA-256 checksum and install steps.
 * **[Latest release](https://github.com/Lovelycrxshx/Kuro-tv-Releases/releases/latest)** — APK,
