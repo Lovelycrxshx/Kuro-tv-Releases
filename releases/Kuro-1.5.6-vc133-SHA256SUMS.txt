@@ -1,2 +1,0 @@
-04a48314a07377c9025eb8a626b53982d92d8a2985c899d8ba71fa112fddce2c  Kuro-1.5.6-libs18-fastfail-vc133-source.zip
-9e7c6f916b5ed289d29f6e56174468e5c86f35bd37bb6a81d09b9d2c74ddd4cf  Kuro-1.5.6-libs18-fastfail-vc133-source.txt
