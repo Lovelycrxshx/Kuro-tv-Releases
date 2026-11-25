@@ -105,52 +105,24 @@ jobs:
           echo "Signature verified against the pinned Kuro Anime certificate."
           echo "APK SHA-256: $ACTUAL"
 
-      - name: Build slim source archive (clean Gradle project tree only)
+      - name: Stage the committed source archive
         run: |
           set -euo pipefail
-          URL="https://drive.usercontent.google.com/download?id=${SOURCE_ID}&export=download&confirm=t"
-          code=$(curl -sSL --retry 3 --retry-delay 4 -o "$RUNNER_TEMP/src.zip" -w '%{http_code}' "$URL")
-          bytes=$(stat -c%s "$RUNNER_TEMP/src.zip" 2>/dev/null || echo 0)
-          echo "HTTP $code, $bytes bytes"
-          [ "$code" = "200" ] && [ "$bytes" -gt 1000000 ] \
-            || { echo "::error::source download failed (HTTP $code, $bytes bytes)"; exit 1; }
-          WORK="$RUNNER_TEMP/kuro-src"
-          rm -rf "$WORK" && mkdir -p "$WORK"
-          unzip -q "$RUNNER_TEMP/src.zip" -d "$WORK"
-          PROJECT=$(dirname "$(find "$WORK" -maxdepth 3 -name settings.gradle -print -quit)")
-          [ -n "$PROJECT" ] || { echo "::error::no settings.gradle in the source zip"; exit 1; }
-          rm -f "$PROJECT/assets/profile-art/pfp/art-"*.webp "$PROJECT/assets/profile-art/banner/art-"*.webp
-          ( cd assets-1.1 && find . -type f -print0 ) | while IFS= read -r -d '' f; do
-            mkdir -p "$PROJECT/assets/$(dirname "$f")"
-            cp -f "assets-1.1/$f" "$PROJECT/assets/$f"
-          done
-          ( cd assets-beta && find . -type f -print0 ) | while IFS= read -r -d '' f; do
-            mkdir -p "$PROJECT/assets/$(dirname "$f")"
-            cp -f "assets-beta/$f" "$PROJECT/assets/$f"
-          done
-          sed -i -E "s/versionCode +[0-9]+/versionCode ${VERSION_CODE}/" "$PROJECT/build.gradle"
-          sed -i -E "s/versionName +'[^']*'/versionName '${VERSION}'/" "$PROJECT/build.gradle"
-          grep -nE "versionName|versionCode" "$PROJECT/build.gradle"
-          python3 tools/webview_assets_1.3.py "$PROJECT" assets-1.1 assets-beta
-          python3 tools/theme_native_1.2.py "$PROJECT"
-          python3 tools/discord_link_1.5.py "$PROJECT"
-          python3 tools/discord_rpc_download_1.5.py "$PROJECT"
-          python3 tools/update_button_1.5.py "$PROJECT"
-          python3 tools/offline_beta_1.5.py "$PROJECT"
-          python3 tools/polish_1.5.2.py "$PROJECT"
-          python3 tools/ui_1.5.4.py "$PROJECT"
-          cp -f design/native-src/tests/native-panel/src/test/java/app/lovelycrxshx/kuro/KuroUpdater572Test.java \
-            "$PROJECT/tests/native-panel/src/test/java/app/lovelycrxshx/kuro/KuroUpdater572Test.java"
-
-          rm -f "$GITHUB_WORKSPACE/dist/$APK_NAME-Source.zip"
-          ( cd "$PROJECT" && zip -qr "$GITHUB_WORKSPACE/dist/$APK_NAME-Source.zip" . )
-
-          SRC_SIZE=$(stat -c%s "$GITHUB_WORKSPACE/dist/$APK_NAME-Source.zip")
+          # The clean, verified v1.5.6 source archive is committed in releases/. Stage it
+          # into dist/ (re-stamp the sha256 companion to the release asset name) instead of
+          # rebuilding it on the runner, so the published source is byte-for-byte the one in
+          # the repo.
+          SRC="releases/$APK_NAME-Source.zip"
+          [ -s "$SRC" ] || { echo "::error::$SRC is missing from the branch"; exit 1; }
+          SRC_SIZE=$(stat -c%s "$SRC")
           echo "Source.zip size: $SRC_SIZE bytes"
           if [ "$SRC_SIZE" -lt 1000000 ] || [ "$SRC_SIZE" -gt 50000000 ]; then
-            echo "::error::Source.zip size ($SRC_SIZE bytes) out of expected 1..50 MB range (check PROJECT root)"
+            echo "::error::Source.zip size ($SRC_SIZE bytes) out of expected 1..50 MB range"
             exit 1
           fi
+          cp -f "$SRC" "dist/$APK_NAME-Source.zip"
+          # sanity: the committed archive must be a clean project (no .git, no dist APKs)
+          # and carry the expected v1.5.6 markers
           python3 - "dist/$APK_NAME-Source.zip" <<'PY'
           import re, sys, zipfile
           with zipfile.ZipFile(sys.argv[1]) as z:
