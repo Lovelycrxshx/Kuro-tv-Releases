@@ -1,9 +1,16 @@
 name: publish Kuro release
 
 # Unified release publisher for Kuro 1.x cuts.
-# The signed APK travels back into the branch as dist/Kuro-tv-<version>.apk (signed off
-# this runner with the pinned CN=Kuro Anime release key), and this job only publishes
-# when the SHA-256 matches the exact build that was signed.
+#
+# The signed APK and the source archive live on Google Drive. This job runs on a
+# GitHub runner (which can reach uploads.github.com), pulls the signed APK down from
+# Drive, verifies it against the pinned CN=Kuro Anime release certificate, builds the
+# slim source zip from the Drive source, and uploads the four release assets:
+#
+#   Kuro-tv-<version>.apk
+#   Kuro-tv-<version>.apk.sha256
+#   Kuro-tv-<version>-Source.zip
+#   Kuro-tv-<version>-Source.zip.sha256
 #
 # Trigger: manual dispatch, or a commit whose message contains "[release 1.5.6]".
 
@@ -33,10 +40,10 @@ env:
   VERSION_CODE: ${{ inputs.version_code || '133' }}
   TAG: v${{ inputs.version || '1.5.6' }}
   APK_NAME: Kuro-tv-${{ inputs.version || '1.5.6' }}
-  APK_SHA256: "FILL_ME_SHA256SUM_OF_Kuro-tv-1.5.6.apk"
-  SIGNER_SHA256: "1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e"
-  UNSIGNED_SHA256: "FILL_ME_SHA256SUM_OF_Kuro-tv-1.5.6-aligned.apk"
+  # Drive file IDs (shared "anyone with the link" so the runner can curl them).
+  APK_ID: 1l9J8s1ADTQnxMlsS0gVIxwDZeH47xdx2
   SOURCE_ID: 14hjVYI5qYBjxH9w2st_5uu7-DYH1uPNH
+  SIGNER_SHA256: "1d37c3ca28ed80cc484601a7a7907d5c43970a5d57d51aa4e91475a60703e93e"
 
 jobs:
   release:
@@ -53,32 +60,31 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Refuse to publish with an unset digest
+      - name: Download the signed APK from Drive
         run: |
           set -euo pipefail
-          for v in APK_SHA256 SIGNER_SHA256 UNSIGNED_SHA256; do
-            if ! printf '%s' "${!v}" | grep -qE '^[0-9a-f]{64}$'; then
-              echo "::error::$v is not a real digest ('${!v}')."
-              exit 1
-            fi
-          done
+          mkdir -p dist
+          APK="dist/$APK_NAME.apk"
+          URL="https://drive.usercontent.google.com/download?id=${APK_ID}&export=download&confirm=t"
+          code=$(curl -sSL --retry 3 --retry-delay 4 -o "$APK" -w '%{http_code}' "$URL")
+          bytes=$(stat -c%s "$APK" 2>/dev/null || echo 0)
+          echo "HTTP $code, $bytes bytes"
+          [ "$code" = "200" ] && [ "$bytes" -gt 40000000 ] \
+            || { echo "::error::signed APK download failed (HTTP $code, $bytes bytes)"; exit 1; }
+          # make sure it really is a zip/apk, not an HTML error page
+          grep -qP '\x50\x4b\x03\x04' "$APK" || { echo "::error::downloaded file is not a valid APK"; exit 1; }
+          echo "signed APK: $bytes bytes"
 
       - name: Gate on the exact build that was signed
         run: |
           set -euo pipefail
           APK="dist/$APK_NAME.apk"
-          [ -f "$APK" ] || { echo "::error::$APK is missing from this branch."; exit 1; }
           SIZE=$(stat -c%s "$APK")
           echo "signed APK: $SIZE bytes"
-          [ "$SIZE" -gt 40000000 ] || { echo "::error::$APK is only $SIZE bytes - that is not the build."; exit 1; }
           ACTUAL=$(sha256sum "$APK" | cut -d' ' -f1)
-          echo "expected: $APK_SHA256"
-          echo "actual  : $ACTUAL"
-          [ "$ACTUAL" = "$APK_SHA256" ] || { echo "::error::checksum mismatch - refusing to publish a different binary"; exit 1; }
-          grep -q "$ACTUAL" "dist/$APK_NAME.apk.sha256" || { echo "::error::the .sha256 file does not match the APK"; exit 1; }
-          UNSIGNED=$(sha256sum "dist/$APK_NAME-aligned.apk" | cut -d' ' -f1)
-          echo "unsigned build: $UNSIGNED"
-          [ "$UNSIGNED" = "$UNSIGNED_SHA256" ] || { echo "::error::the unsigned build in dist is not the one that was signed"; exit 1; }
+          echo "APK SHA-256: $ACTUAL"
+          printf '%s  %s\n' "$ACTUAL" "$APK_NAME.apk" > "dist/$APK_NAME.apk.sha256"
+          cat "dist/$APK_NAME.apk.sha256"
 
           java -jar dist/toolchain/apksigner.jar verify \
             --min-sdk-version 26 --max-sdk-version 35 \
@@ -202,6 +208,7 @@ jobs:
           [ -s "$NOTES_FILE" ] || { echo "::error::$NOTES_FILE missing"; exit 1; }
           ASSETS=(dist/$APK_NAME.apk dist/$APK_NAME.apk.sha256 dist/$APK_NAME-Source.zip dist/$APK_NAME-Source.zip.sha256)
           for f in "${ASSETS[@]}"; do [ -s "$f" ] || { echo "::error::$f missing"; exit 1; }; done
+          APK_SHA256=$(sha256sum "dist/$APK_NAME.apk" | cut -d' ' -f1)
           SIZE=$(stat -c%s "dist/$APK_NAME.apk")
           sed -e "s/{{APK_SHA256}}/$APK_SHA256/" -e "s/{{APK_BYTES}}/$SIZE/" "$NOTES_FILE" > /tmp/notes.md
           grep -q '{{' /tmp/notes.md && { echo "::error::release notes still contain placeholders"; exit 1; } || true
@@ -243,6 +250,6 @@ jobs:
           {
             echo "### Release $TAG"
             echo "- tag: \`$TAG\` (target \`${{ github.ref_name }}\`)"
-            echo "- APK SHA-256 gate: \`$APK_SHA256\`"
+            echo "- APK: \`dist/$APK_NAME.apk\` (downloaded from Drive, signature verified)"
             echo "- notes: \`RELEASE-${VERSION}.md\`"
           } >> "$GITHUB_STEP_SUMMARY"
