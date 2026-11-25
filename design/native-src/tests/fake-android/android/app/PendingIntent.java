@@ -1,0 +1,1 @@
+package android.app;import android.content.*;public class PendingIntent {public static final int FLAG_UPDATE_CURRENT=1,FLAG_IMMUTABLE=2;public Intent intent;public static PendingIntent getActivity(Context c,int id,Intent i,int flags){PendingIntent p=new PendingIntent();p.intent=i;return p;}}
